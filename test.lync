@@ -1,12 +1,7 @@
-// Test memory leak detection
+// Test string literals
 def main(): int {
-    ptr: own int = alloc 42;
-    free ptr;
-    return 0;
-}
-
-def foo(): int {
-    x: own int = alloc 100;
-    free x;  // Correct - freed before return
+    print("Hello, world!");
+    print("Value:", 42);
+    print("Escape test: \n\t\"quoted\"");
     return 0;
 }

@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     // --- LEXER ---
     stage_trace_enter(STAGE_LEXER, "starting lexical analysis");
     int token_count;
-    Token* tokens = tokenize(code, &token_count);
+    Token* tokens = tokenize(code, &token_count, input_file);
     stage_trace_exit(STAGE_LEXER, "completed, %d tokens", token_count);
     print_tokens(tokens, token_count);
 

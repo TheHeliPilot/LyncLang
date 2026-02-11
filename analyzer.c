@@ -20,6 +20,12 @@ Scope* make_scope(Scope* parent) {
 }
 
 void declare(Scope* scope, char* name, TokenType type, Ownership ownership) {
+    // Check if trying to declare 'print' as a variable
+    if (strcmp(name, "print") == 0) {
+        stage_error(STAGE_ANALYZER, NO_LOC,
+                    "'print' is a reserved built-in function and cannot be used as a variable name");
+    }
+
     for (int i = 0; i < scope->count; i++) {
         if (strcmp(scope->symbols[i].name, name) == 0)
             stage_error(STAGE_ANALYZER, NO_LOC,
@@ -56,17 +62,33 @@ Symbol* lookup(Scope* scope, char* name) {
 }
 
 TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
+    TokenType result;
+
     switch (e->type) {
         case INT_LIT_E:
-            return INT_KEYWORD_T;
+            result = INT_KEYWORD_T;
+            break;
 
         case BOOL_LIT_E:
-            return BOOL_KEYWORD_T;
+            result = BOOL_KEYWORD_T;
+            break;
+
+        case STR_LIT_E:
+            result = STR_KEYWORD_T;
+            break;
 
         case VAR_E: {
             Symbol* sym = lookup(scope, e->as.var.name);
-            if (sym == nullptr)
-                stage_error(STAGE_ANALYZER, e->loc, "variable '%s' is not declared", e->as.var.name);
+            if (sym == nullptr) {
+                // Check if trying to use 'print' as a variable (give better error message)
+                if (strcmp(e->as.var.name, "print") == 0) {
+                    stage_error(STAGE_ANALYZER, e->loc, "'print' is a built-in function, not a variable (use print(...) to call it)");
+                } else {
+                    stage_error(STAGE_ANALYZER, e->loc, "variable '%s' is not declared", e->as.var.name);
+                }
+                result = VOID_KEYWORD_T;
+                break;
+            }
 
             if (sym->ownership == OWNERSHIP_OWN && sym->state == FREED)
                 stage_error(STAGE_ANALYZER, e->loc, "use after free: variable '%s' has been freed", e->as.var.name);
@@ -76,7 +98,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 stage_error(STAGE_ANALYZER, e->loc, "use after owner no longer in scope: owner '%s' of '%s' is out of scope", lookup(scope, sym->owner)->name, e->as.var.name);
 
             e->as.var.ownership = sym->ownership;
-            return sym->type;
+            result = sym->type;
+            break;
         }
 
         case UN_OP_E: {
@@ -85,16 +108,16 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             if (e->as.un_op.op == MINUS_T) {
                 if (operand != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "unary '-' requires int, got %s", token_type_name(operand));
-                return INT_KEYWORD_T;
-            }
-            if (e->as.un_op.op == NEGATION_T) {
+                result = INT_KEYWORD_T;
+            } else if (e->as.un_op.op == NEGATION_T) {
                 if (operand != BOOL_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "'!' requires bool, got %s", token_type_name(operand));
-                return BOOL_KEYWORD_T;
+                result = BOOL_KEYWORD_T;
+            } else {
+                stage_error(STAGE_ANALYZER, e->loc, "unknown unary operator %s", token_type_name(e->as.un_op.op));
+                result = INT_KEYWORD_T;
             }
-
-            stage_error(STAGE_ANALYZER, e->loc, "unknown unary operator %s", token_type_name(e->as.un_op.op));
-            return INT_KEYWORD_T;
+            break;
         }
 
         case BIN_OP_E: {
@@ -108,44 +131,70 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be int, got %s", token_type_name(op), token_type_name(left));
                 if (right != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be int, got %s", token_type_name(op), token_type_name(right));
-                return INT_KEYWORD_T;
+                result = INT_KEYWORD_T;
             }
-
             // comparison: int op int -> bool
-            if (op == LESS_T || op == MORE_T || op == LESS_EQUALS_T || op == MORE_EQUALS_T) {
+            else if (op == LESS_T || op == MORE_T || op == LESS_EQUALS_T || op == MORE_EQUALS_T) {
                 if (left != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be int, got %s", token_type_name(op), token_type_name(left));
                 if (right != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be int, got %s", token_type_name(op), token_type_name(right));
-                return BOOL_KEYWORD_T;
+                result = BOOL_KEYWORD_T;
             }
-
             // equality: same type op same type -> bool
-            if (op == DOUBLE_EQUALS_T || op == NOT_EQUALS_T) {
+            else if (op == DOUBLE_EQUALS_T || op == NOT_EQUALS_T) {
                 if (left != right)
                     stage_error(STAGE_ANALYZER, e->loc, "cannot compare %s with %s using '%s'", token_type_name(left), token_type_name(right), token_type_name(op));
-                return BOOL_KEYWORD_T;
+                result = BOOL_KEYWORD_T;
             }
-
             // logical: bool op bool -> bool
-            if (op == AND_T || op == OR_T) {
+            else if (op == AND_T || op == OR_T) {
                 if (left != BOOL_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be bool, got %s", token_type_name(op), token_type_name(left));
                 if (right != BOOL_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be bool, got %s", token_type_name(op), token_type_name(right));
-                return BOOL_KEYWORD_T;
+                result = BOOL_KEYWORD_T;
+            } else {
+                stage_error(STAGE_ANALYZER, e->loc, "unknown binary operator %s", token_type_name(op));
+                result = INT_KEYWORD_T;
             }
-
-            stage_error(STAGE_ANALYZER, e->loc, "unknown binary operator %s", token_type_name(op));
-            return INT_KEYWORD_T;
+            break;
         }
         case FUNC_CALL_E: {
-            FuncSign *fsign = lookup_func_name(funcTable, e->as.func_call.name);
-            if (fsign == nullptr)
-                stage_error(STAGE_ANALYZER, e->loc, "Function %s not defined", e->as.func_call.name);
+            // Handle built-in 'print' function
+            if(strcmp(e->as.func_call.name, "print") == 0) {
+                // Type-check each argument
+                for (int i = 0; i < e->as.func_call.count; ++i) {
+                    TokenType argType = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
 
-            if (fsign->paramNum != e->as.func_call.count)
-                stage_error(STAGE_ANALYZER, e->loc, "Parameter count mismatch");
+                    // Only allow int, bool, and string
+                    if (argType != INT_KEYWORD_T && argType != BOOL_KEYWORD_T && argType != STR_KEYWORD_T) {
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
+                                   "print only supports int, bool, and string, got %s",
+                                   token_type_name(argType));
+                    }
+                }
+
+                // Warn if print is called with no arguments
+                if (e->as.func_call.count == 0) {
+                    stage_warning(STAGE_ANALYZER, e->loc, "print called with no arguments");
+                }
+
+                result = VOID_KEYWORD_T;
+                break;
+            }
+
+            FuncSign *fsign = lookup_func_name(funcTable, e->as.func_call.name);
+            if (fsign == nullptr) {
+                stage_error(STAGE_ANALYZER, e->loc, "function '%s' is not defined", e->as.func_call.name);
+                result = VOID_KEYWORD_T;
+                break;
+            }
+
+            if (fsign->paramNum != e->as.func_call.count) {
+                stage_error(STAGE_ANALYZER, e->loc, "function '%s' expects %d arguments, got %d",
+                           e->as.func_call.name, fsign->paramNum, e->as.func_call.count);
+            }
 
             for (int i = 0; i < fsign->paramNum; ++i) {
                 TokenType exprT = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
@@ -154,18 +203,19 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 if (fsign->parameters[i].ownership == OWNERSHIP_OWN) {
                     //must be passing a variable (not a literal)
                     if (e->as.func_call.params[i]->type != VAR_E)
-                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "Can only move owned variables to 'own' parameters");
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "can only move owned variables to 'own' parameters");
 
                     //get the variable symbol
                     Symbol* sym = lookup(scope, e->as.func_call.params[i]->as.var.name);
+                    if (sym == nullptr) break;  // Already reported by analyze_expr
 
                     //must be an 'own' variable
                     if (sym->ownership != OWNERSHIP_OWN)
-                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "Cannot move non-owned variable to 'own' parameter");
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "cannot move non-owned variable to 'own' parameter");
 
                     //must be alive (not freed or already moved)
                     if (sym->state != ALIVE)
-                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "Cannot move '%s', it has been moved or freed", sym->name);
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "cannot move '%s', it has been moved or freed", sym->name);
 
                     //transfer ownership - mark as MOVED
                     sym->state = MOVED;
@@ -173,13 +223,18 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
 
                 //type check
                 if (fsign->parameters[i].type != exprT)
-                    stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "Parameter type mismatch");
+                    stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
+                               "parameter %d type mismatch: expected %s, got %s",
+                               i + 1, token_type_name(fsign->parameters[i].type), token_type_name(exprT));
             }
-            return fsign->retType;
+            result = fsign->retType;
+            break;
         }
 
         case FUNC_RET_E:
-            return analyze_expr(scope, funcTable, e->as.func_ret_expr);
+            result = analyze_expr(scope, funcTable, e->as.func_ret_expr);
+            break;
+
         case MATCH_E: {
             TokenType targetType = analyze_expr(scope, funcTable, e->as.match.var);
 
@@ -216,18 +271,27 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             if (!hasDefault)
                 stage_error(STAGE_ANALYZER, e->loc, "match expression must have a default '_' branch");
 
-            return resultType;
+            result = resultType;
+            break;
         }
         case ALLOC_E: {
             e->as.alloc.type = analyze_expr(scope, funcTable, e->as.alloc.initialValue);
-            return e->as.alloc.type;
+            result = e->as.alloc.type;
+            break;
         }
         case VOID_E:
-            return VOID_KEYWORD_T;
+            result = VOID_KEYWORD_T;
+            break;
+
+        default:
+            stage_error(STAGE_ANALYZER, e->loc, "unknown expression type %d", e->type);
+            result = INT_KEYWORD_T;
+            break;
     }
 
-    stage_error(STAGE_ANALYZER, e->loc, "unknown expression type %d", e->type);
-    return INT_KEYWORD_T;
+    // Store the analyzed type in the expression
+    e->analyzedType = result;
+    return result;
 }
 
 void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
@@ -348,8 +412,10 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 
         case FREE_S: {
             Symbol* sym = lookup(scope, s->as.free_stmt.varName);
-            if (sym == nullptr)
+            if (sym == nullptr) {
                 stage_error(STAGE_ANALYZER, s->loc, "cannot free '%s', variable not declared", s->as.free_stmt.varName);
+                break;  // Can't continue checking without symbol
+            }
 
             // CHECK: Can only free 'own' variables
             if (sym->ownership != OWNERSHIP_OWN)
@@ -371,6 +437,11 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 }
 
 void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
+    //check if trying to define 'print' as a function
+    if(strcmp("print", func->signature->name) == 0) {
+        stage_error(STAGE_ANALYZER, NO_LOC, "'print' is a reserved built-in function and cannot be redefined");
+    }
+
     //check for duplicate signature
     if(lookup_func_sign(table, func->signature)) stage_error(STAGE_ANALYZER, NO_LOC, "Function signature of function %s defined more then once", func->signature->name);
 

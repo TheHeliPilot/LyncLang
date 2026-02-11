@@ -1,0 +1,15 @@
+// Test print error handling
+
+def foo(): void {
+    x: int = 5;
+}
+
+def main(): int {
+    // Error: trying to print a void function call
+    print foo();
+
+    // Warning: print with no arguments
+    print;
+
+    return 0;
+}

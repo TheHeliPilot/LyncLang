@@ -60,6 +60,23 @@ void emit_expr(Expr* e, FILE* out) {
             fprintf(out, e->as.bool_val ? "true" : "false");
             break;
 
+        case STR_LIT_E: {
+            // Re-escape the string for C output
+            fprintf(out, "\"");
+            for (char* s = e->as.str_val; *s != '\0'; s++) {
+                switch (*s) {
+                    case '\n': fprintf(out, "\\n"); break;
+                    case '\t': fprintf(out, "\\t"); break;
+                    case '\r': fprintf(out, "\\r"); break;
+                    case '\\': fprintf(out, "\\\\"); break;
+                    case '"': fprintf(out, "\\\""); break;
+                    default: fprintf(out, "%c", *s); break;
+                }
+            }
+            fprintf(out, "\"");
+            break;
+        }
+
         case VAR_E:
             fprintf(out, "%s%s", e->as.var.ownership != OWNERSHIP_NONE ? "*" : "", e->as.var.name);
             break;
@@ -103,6 +120,46 @@ void emit_expr(Expr* e, FILE* out) {
         }
 
         case FUNC_CALL_E: {
+            //built in string
+            if(strcmp(e->as.func_call.name, "print") == 0) {
+
+                fprintf(out, "printf(\"");
+
+                for (int i = 0; i < e->as.func_call.count; ++i) {
+                    Expr* p = e->as.func_call.params[i];
+
+                    if (p->analyzedType == INT_KEYWORD_T) {
+                        fprintf(out, "%%d");
+                    } else if (p->analyzedType == BOOL_KEYWORD_T) {
+                        fprintf(out, "%%s");
+                    } else if (p->analyzedType == STR_KEYWORD_T) {
+                        fprintf(out, "%%s");
+                    }
+
+                    if (i < e->as.func_call.count - 1) {
+                        fprintf(out, " ");
+                    }
+                }
+                fprintf(out, "\\n\"");
+
+                for (int i = 0; i < e->as.func_call.count; ++i) {
+                    Expr* p = e->as.func_call.params[i];
+                    fprintf(out, ", ");
+
+                    if (p->analyzedType == BOOL_KEYWORD_T) {
+                        fprintf(out, "(");
+                        emit_expr(p, out);
+                        fprintf(out, " ? \"true\" : \"false\")");
+                    } else {
+                        emit_expr(p, out);
+                    }
+                }
+
+                fprintf(out, ")");
+                return;
+            }
+
+            //regular function call
             fprintf(out, "%s(", e->as.func_call.name);
             for (int i = 0; i < e->as.func_call.count; ++i) {
                 if(i != 0) fprintf(out, ", ");

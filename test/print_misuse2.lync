@@ -1,0 +1,5 @@
+// Test print misuse - using print as variable reference
+def main(): int {
+    x: int = print;  // Error: using print as a variable
+    return 0;
+}

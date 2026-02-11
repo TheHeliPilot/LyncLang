@@ -1,0 +1,7 @@
+// Test string literals
+def main(): int {
+    print "Hello, world!";
+    print "Value:", 42;
+    print "Escape test: \n\t\"quoted\"";
+    return 0;
+}

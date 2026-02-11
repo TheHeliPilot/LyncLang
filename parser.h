@@ -49,7 +49,7 @@ typedef struct {
 
 typedef enum {
     //literals
-    INT_LIT_E, BOOL_LIT_E,
+    INT_LIT_E, BOOL_LIT_E, STR_LIT_E,
 
     //vars
     VAR_E,
@@ -71,11 +71,14 @@ typedef enum {
 struct Expr {
     ExprType type;
     SourceLocation loc;
+    TokenType analyzedType;  // Filled in by analyzer
 
     union {
         int int_val;
 
         int bool_val;
+
+        char* str_val;
 
         struct {
             char* name;
@@ -203,6 +206,7 @@ Token* expect(Parser*, TokenType);
 // Expr constructors
 Expr* makeIntLit(SourceLocation, int);
 Expr* makeBoolLit(SourceLocation, bool);
+Expr* makeStrLit(SourceLocation, char*);
 Expr* makeVar(SourceLocation, char*);
 Expr* makeFuncCall(SourceLocation, char*, Expr**, int);
 Expr* makeUnOp(SourceLocation, TokenType, Expr*);

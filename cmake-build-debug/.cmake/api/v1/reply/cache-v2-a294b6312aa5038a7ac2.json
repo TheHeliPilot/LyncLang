@@ -515,7 +515,7 @@
 				}
 			],
 			"type" : "PATH",
-			"value" : "C:/Program Files (x86)/CMinusMinus"
+			"value" : "C:/Program Files (x86)/Lync"
 		},
 		{
 			"name" : "CMAKE_LINKER",
@@ -1124,42 +1124,6 @@
 			],
 			"type" : "BOOL",
 			"value" : "FALSE"
-		},
-		{
-			"name" : "CMinusMinus_BINARY_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug"
-		},
-		{
-			"name" : "CMinusMinus_IS_TOP_LEVEL",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "ON"
-		},
-		{
-			"name" : "CMinusMinus_SOURCE_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "C:/Users/bucka/CLionProjects/CMinusMinus"
 		},
 		{
 			"name" : "Lync_BINARY_DIR",

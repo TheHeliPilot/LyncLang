@@ -135,6 +135,10 @@ Expr* parseFactor(Parser* p) {
             Token* t = consume(p);
             return makeBoolLit(TOK_LOC(t), *(int*)t->value);
         }
+        case STR_LIT_T: {
+            Token* t = consume(p);
+            return makeStrLit(TOK_LOC(t), (char*)t->value);
+        }
         case VAR_T: {
             Token* t = consume(p);
             if (peek(p, 0)->type == L_PAREN_T) {
@@ -383,16 +387,6 @@ Stmt* parseStatement(Parser* p) {
             s->as.for_stmt.body = b;
             return s;
         }
-        case RETURN_T: {
-            Stmt* s = malloc(sizeof(Stmt));
-            Expr* e = parseExpr(p);
-            expect(p, SEMICOLON_T);
-
-            s->type = EXPR_STMT_S;
-            s->loc = e->loc;  // Use expression's location
-            s->as.expr_stmt = e;
-            return s;
-        }
         case MATCH_T: {
             Stmt* s = malloc(sizeof(Stmt));
             Token* matchTok = consume(p);
@@ -448,6 +442,17 @@ Stmt* parseStatement(Parser* p) {
             s->loc = TOK_LOC(freeTok);
             s->as.free_stmt.varName = var->value;
             expect(p, SEMICOLON_T);
+            return s;
+        }
+        case RETURN_T: {
+            // Parse as expression statement
+            Expr* e = parseExpr(p);
+            expect(p, SEMICOLON_T);
+
+            Stmt* s = malloc(sizeof(Stmt));
+            s->type = EXPR_STMT_S;
+            s->loc = e->loc;
+            s->as.expr_stmt = e;
             return s;
         }
         default:
@@ -514,6 +519,13 @@ Expr* makeBoolLit(SourceLocation loc, bool val) {
     e->type = BOOL_LIT_E;
     e->loc = loc;
     e->as.bool_val = val;
+    return e;
+}
+Expr* makeStrLit(SourceLocation loc, char* val) {
+    Expr* e = malloc(sizeof(Expr));
+    e->type = STR_LIT_E;
+    e->loc = loc;
+    e->as.str_val = val;
     return e;
 }
 Expr* makeVar(SourceLocation loc, char* name) {

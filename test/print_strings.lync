@@ -1,0 +1,11 @@
+// Test print with strings
+def main(): int {
+    x: int = 42;
+
+    print("Hello, world!");
+    print("Value:", x);
+    print(x, "is the answer");
+    print("Multiple:", 1, 2, 3, "values");
+
+    return 0;
+}

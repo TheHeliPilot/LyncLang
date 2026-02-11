@@ -8,7 +8,7 @@
 extern ErrorCollector* g_error_collector;
 extern bool g_trace_mode;
 
-Token* tokenize(char* code, int* out_count) {
+Token* tokenize(char* code, int* out_count, const char* filename) {
     int capacity = 20;
     int count = 0;
     Token* tokens = malloc(capacity * sizeof(Token));
@@ -16,7 +16,6 @@ Token* tokenize(char* code, int* out_count) {
     // Position tracking
     int line = 1;
     int column = 1;
-    const char* filename = "test.lync";  // TODO: pass as parameter
 
     int i = 0;
     while (code[i] != '\0') {
@@ -64,6 +63,78 @@ Token* tokenize(char* code, int* out_count) {
             continue;
         }
 
+        // String literals
+        if (c == '"') {
+            i++;  // skip opening quote
+            column++;
+            int str_start = i;
+            int str_len = 0;
+
+            // Find closing quote and calculate length
+            while (code[i] != '"' && code[i] != '\0' && code[i] != '\n') {
+                if (code[i] == '\\' && code[i + 1] != '\0') {
+                    // Handle escape sequences
+                    i++;
+                    column++;
+                    str_len++;
+                }
+                i++;
+                column++;
+                str_len++;
+            }
+
+            // Check for unterminated string
+            if (code[i] != '"') {
+                SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
+                add_error(g_error_collector, STAGE_LEXER, loc, "unterminated string literal");
+                continue;
+            }
+
+            // Allocate and copy string
+            char* str = malloc(str_len + 1);
+            int str_i = 0;
+            int j = str_start;
+
+            while (j < i) {
+                if (code[j] == '\\' && j + 1 < i) {
+                    // Handle escape sequences
+                    j++;
+                    switch (code[j]) {
+                        case 'n': str[str_i++] = '\n'; break;
+                        case 't': str[str_i++] = '\t'; break;
+                        case 'r': str[str_i++] = '\r'; break;
+                        case '\\': str[str_i++] = '\\'; break;
+                        case '"': str[str_i++] = '"'; break;
+                        default:
+                            // Unknown escape sequence - just include the character
+                            str[str_i++] = code[j];
+                            break;
+                    }
+                    j++;
+                } else {
+                    str[str_i++] = code[j++];
+                }
+            }
+            str[str_i] = '\0';
+
+            i++;  // skip closing quote
+            column++;
+
+            tokens[count++] = (Token){
+                .type = STR_LIT_T,
+                .value = str,
+                .line = line,
+                .column = start_col,
+                .filename = filename
+            };
+
+            if (count >= capacity) {
+                capacity *= 2;
+                tokens = realloc(tokens, capacity * sizeof(Token));
+            }
+            continue;
+        }
+
         // Keywords and identifiers
         if ((code[i] >= 'a' && code[i] <= 'z') || (code[i] >= 'A' && code[i] <= 'Z')) {
             int start = i;
@@ -89,6 +160,7 @@ Token* tokenize(char* code, int* out_count) {
             else if (strcmp(word, "int") == 0) { type = INT_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "void") == 0) { type = VOID_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "bool") == 0) { type = BOOL_KEYWORD_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "str") == 0) { type = STR_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "def") == 0) { type = DEF_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "while") == 0) { type = WHILE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "do") == 0) { type = DO_T; value = NULL; free_word = true; }
@@ -100,7 +172,6 @@ Token* tokenize(char* code, int* out_count) {
             else if (strcmp(word, "match") == 0) { type = MATCH_T; value = NULL; free_word = true; }
             else if (strcmp(word, "own") == 0) { type = OWN_T; value = NULL; free_word = true; }
             else if (strcmp(word, "ref") == 0) { type = REF_T; value = NULL; free_word = true; }
-            else if (strcmp(word, "print") == 0) { type = PRINT_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "true") == 0) {
                 type = BOOL_LIT_T;
                 int* val = malloc(sizeof(int));
@@ -338,7 +409,7 @@ void print_tokens(Token* tokens, int count) {
         if (tokens[i].value != NULL) {
             if (tokens[i].type == INT_LIT_T || tokens[i].type == BOOL_LIT_T) {
                 fprintf(stderr, " = %d", *(int*)tokens[i].value);
-            } else if (tokens[i].type == VAR_T) {
+            } else if (tokens[i].type == VAR_T || tokens[i].type == STR_LIT_T) {
                 fprintf(stderr, " = \"%s\"", (char*)tokens[i].value);
             }
         }
@@ -352,6 +423,7 @@ const char* token_type_name(TokenType type) {
     switch (type) {
         case INT_LIT_T: return "int literal";
         case BOOL_LIT_T: return "bool literal";
+        case STR_LIT_T: return "string literal";
         case VAR_T: return "identifier";
         case PLUS_T: return "+";
         case MINUS_T: return "-";
@@ -383,6 +455,7 @@ const char* token_type_name(TokenType type) {
         case MATCH_T: return "match";
         case INT_KEYWORD_T: return "int";
         case BOOL_KEYWORD_T: return "bool";
+        case STR_KEYWORD_T: return "str";
         case DEF_KEYWORD_T: return "def";
         case EOF_T: return "EOF";
         case COMMA_T: return ",";

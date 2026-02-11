@@ -1,0 +1,7 @@
+// Test print misuse errors
+def main(): int {
+    // Error: trying to use print as variable name
+    print: int = 5;
+
+    return 0;
+}

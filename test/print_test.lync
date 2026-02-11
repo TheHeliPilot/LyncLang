@@ -1,0 +1,30 @@
+// Test print functionality
+
+def main(): int {
+    // Test printing literals
+    print 42;
+    print true;
+    print false;
+
+    // Test printing variables
+    x: int = 100;
+    y: bool = true;
+    print x;
+    print y;
+
+    // Test printing expressions
+    print 5 + 3;
+    print 10 - 2;
+    print x + 50;
+    print y && false;
+
+    // Test printing multiple values
+    print 1, 2, 3;
+    print true, false;
+    print x, y;
+
+    // Test mixed types
+    print 42, true, x, false;
+
+    return 0;
+}

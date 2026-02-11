@@ -11,6 +11,7 @@ typedef enum {
     // Literals
     INT_LIT_T,
     BOOL_LIT_T,
+    STR_LIT_T,
     VAR_T,
 
     // Arithmetic operators
@@ -55,6 +56,7 @@ typedef enum {
     // Type keywords
     INT_KEYWORD_T,
     BOOL_KEYWORD_T,
+    STR_KEYWORD_T,
     VOID_KEYWORD_T,
 
     // Function stuff
@@ -82,7 +84,7 @@ typedef struct {
     const char* filename;
 } Token;
 
-Token* tokenize(char*, int*);
+Token* tokenize(char* code, int* out_count, const char* filename);
 void print_tokens(Token* tokens, int count);
 const char* token_type_name(TokenType);
 
