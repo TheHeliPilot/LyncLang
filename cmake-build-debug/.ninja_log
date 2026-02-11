@@ -1,0 +1,18 @@
+# ninja log v6
+9	68	7924735190393889	CMakeFiles/CMinusMinus.dir/main.c.obj	244370adc98341bf
+41	352	7924734808993321	CMakeFiles/CMinusMinus.dir/codegen.c.obj	afbd6115b201e534
+38	362	7924734808961175	CMakeFiles/CMinusMinus.dir/analyzer.c.obj	ef57f0199d2d9806
+13	75	7924735190423902	CMakeFiles/CMinusMinus.dir/lexer.c.obj	f3d8a0b1ae23e3da
+35	376	7924734808926028	CMakeFiles/CMinusMinus.dir/parser.c.obj	da9a1db23a70d308
+75	251	7924735191052133	CMinusMinus.exe	192e46a0271ef966
+16	68	7924735190458974	CMakeFiles/CMinusMinus.dir/error.c.obj	51e051be22890ed7
+9	392	7924735428104507	build.ninja	8a2e9b0c0407197b
+18	80	7924735428995623	CMakeFiles/CMinusMinus.dir/main.c.obj	a10347766d2c3437
+21	88	7924735429025643	CMakeFiles/CMinusMinus.dir/lexer.c.obj	66c28cf19eea4388
+34	93	7924735429153075	CMakeFiles/CMinusMinus.dir/error.c.obj	4b1065b4a1bdacbf
+31	97	7924735429113072	CMakeFiles/CMinusMinus.dir/codegen.c.obj	c88f2c1e3818e604
+27	104	7924735429083075	CMakeFiles/CMinusMinus.dir/analyzer.c.obj	f1aa145c8ba696e8
+24	113	7924735429050700	CMakeFiles/CMinusMinus.dir/parser.c.obj	5834b6ec65a5c8c7
+113	174	7924735429937219	CMinusMinus.exe	192e46a0271ef966
+2	56	7924735869535844	CMakeFiles/CMinusMinus.dir/main.c.obj	a10347766d2c3437
+57	119	7924735870082653	CMinusMinus.exe	192e46a0271ef966

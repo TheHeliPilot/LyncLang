@@ -1,0 +1,14 @@
+// Test trace/debug mode output - run with -trace flag
+def factorial(n: int): int {
+    if (n <= 1) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
+}
+
+def main(): int {
+    x: int = 5;
+    result: int = factorial(x);
+    return 0;
+}

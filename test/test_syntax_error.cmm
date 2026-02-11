@@ -1,0 +1,5 @@
+// Test syntax error - should exit immediately with location
+def main(): int {
+    x: int = 5  // Missing semicolon
+    return 0;
+}

@@ -1,0 +1,348 @@
+//
+// Created by bucka on 2/9/2026.
+//
+
+#include "codegen.h"
+
+char* type_to_c_type(TokenType t) {
+    switch (t) {
+        case INT_KEYWORD_T: return "int64_t";
+        case BOOL_KEYWORD_T: return "bool";
+        case VOID_KEYWORD_T: return "void";
+        default: return "-???-";
+    }
+}
+
+//emit indentation (2 spaces per level)
+void emit_indent(FILE* out, int level) {
+    for (int i = 0; i < level; i++) {
+        fprintf(out, "  ");
+    }
+}
+void emit_func(Func* f, FILE* out) {
+    if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
+    else fprintf(out, "%s", type_to_c_type(f->signature->retType));
+    fprintf(out, " %s(", f->signature->name);
+
+    for (int i = 0; i < f->signature->paramNum; ++i) {
+        if(i > 0) fprintf(out, ", ");
+        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), f->signature->parameters[i].ownership != OWNERSHIP_NONE ? "*" : "");
+        fprintf(out, " %s", f->signature->parameters[i].name);
+    }
+    fprintf(out, ")\n");
+
+    emit_stmt(f->body, out, 0);
+}
+
+void emit_func_decl(Func* f, FILE* out) {
+    if(strcmp(f->signature->name, "main") == 0) return;
+    fprintf(out, "%s", type_to_c_type(f->signature->retType));
+    fprintf(out, " %s(", f->signature->name);
+
+    for (int i = 0; i < f->signature->paramNum; ++i) {
+        if(i > 0) fprintf(out, ", ");
+        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), f->signature->parameters[i].ownership != OWNERSHIP_NONE ? "*" : "");
+        fprintf(out, " %s", f->signature->parameters[i].name);
+    }
+    fprintf(out, ");\n");
+}
+
+//emit an expression (no newlines, just the code)
+void emit_expr(Expr* e, FILE* out) {
+    if (e == NULL) return;
+
+    switch (e->type) {
+        case INT_LIT_E:
+            fprintf(out, "%d", e->as.int_val);
+            break;
+
+        case BOOL_LIT_E:
+            fprintf(out, e->as.bool_val ? "true" : "false");
+            break;
+
+        case VAR_E:
+            fprintf(out, "%s%s", e->as.var.ownership != OWNERSHIP_NONE ? "*" : "", e->as.var.name);
+            break;
+
+        case UN_OP_E: {
+            fprintf(out, "(");
+            if (e->as.un_op.op == MINUS_T) {
+                fprintf(out, "-");
+            } else if (e->as.un_op.op == NEGATION_T) {
+                fprintf(out, "!");
+            }
+            emit_expr(e->as.un_op.expr, out);
+            fprintf(out, ")");
+            break;
+        }
+
+        case BIN_OP_E: {
+            //emit: (left op right)
+            fprintf(out, "(");
+            emit_expr(e->as.bin_op.exprL, out);
+
+            switch (e->as.bin_op.op) {
+                case PLUS_T: fprintf(out, " + "); break;
+                case MINUS_T: fprintf(out, " - "); break;
+                case STAR_T: fprintf(out, " * "); break;
+                case SLASH_T: fprintf(out, " / "); break;
+                case DOUBLE_EQUALS_T: fprintf(out, " == "); break;
+                case NOT_EQUALS_T: fprintf(out, " != "); break;
+                case LESS_T: fprintf(out, " < "); break;
+                case MORE_T: fprintf(out, " > "); break;
+                case LESS_EQUALS_T: fprintf(out, " <= "); break;
+                case MORE_EQUALS_T: fprintf(out, " >= "); break;
+                case AND_T: fprintf(out, " && "); break;
+                case OR_T: fprintf(out, " || "); break;
+                default: fprintf(out, " ??? "); break;
+            }
+
+            emit_expr(e->as.bin_op.exprR, out);
+            fprintf(out, ")");
+            break;
+        }
+
+        case FUNC_CALL_E: {
+            fprintf(out, "%s(", e->as.func_call.name);
+            for (int i = 0; i < e->as.func_call.count; ++i) {
+                if(i != 0) fprintf(out, ", ");
+                emit_expr(e->as.func_call.params[i], out);
+            }
+            fprintf(out, ")");
+            break;
+        }
+
+        case FUNC_RET_E: {
+            // If it's a simple return, keep it on one line.
+            // If it's a match, use the temporary variable block.
+            if (e->as.func_ret_expr->type == MATCH_E) {
+                emit_indent(out, 0);
+                fprintf(out, "{\n");
+                emit_indent(out, 0 + 1);
+                fprintf(out, "int64_t _ret;\n");
+                emit_assign_expr_to_var(e->as.func_ret_expr, "_ret", OWNERSHIP_NONE, out, 0 + 1);
+                emit_indent(out, 0 + 1);
+                fprintf(out, "return _ret;\n");
+                emit_indent(out, 0);
+                fprintf(out, "}\n");
+            } else {
+                emit_indent(out, 0);
+                fprintf(out, "return ");
+                emit_expr(e->as.func_ret_expr, out);
+                fprintf(out, ";\n");
+            }
+            break;
+        }
+
+        case ALLOC_E: {
+            break;
+        }
+    }
+}
+
+void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* out, int indent) {
+    if (e->type == MATCH_E) {
+        int defaultIdx = -1;
+
+        for (int i = 0; i < e->as.match.branchCount; i++) {
+            MatchBranchExpr branch = e->as.match.branches[i];
+
+            if (branch.caseExpr->type == VOID_E) {
+                defaultIdx = i; // Save the wildcard for the final 'else'
+                continue;
+            }
+
+            emit_indent(out, indent);
+            if (i == 0) fprintf(out, "if (");
+            else fprintf(out, "else if (");
+
+            emit_expr(e->as.match.var, out);
+            fprintf(out, " == ");
+            emit_expr(branch.caseExpr, out);
+            fprintf(out, ") {\n");
+
+            // Recurse: handles nested matches or simple values
+            emit_assign_expr_to_var(branch.caseRet, targetVar, o, out, indent + 1);
+
+            emit_indent(out, indent);
+            fprintf(out, "}\n");
+        }
+
+        // Output the wildcard as a final 'else'
+        if (defaultIdx != -1) {
+            emit_indent(out, indent);
+            fprintf(out, "else {\n");
+            emit_assign_expr_to_var(e->as.match.branches[defaultIdx].caseRet, targetVar, o, out, indent + 1);
+            emit_indent(out, indent);
+            fprintf(out, "}\n");
+        }
+    } else {
+        // Base case: just a normal assignment
+        emit_indent(out, indent);
+        fprintf(out, "%s%s = ", o != OWNERSHIP_NONE ? "*" : "", targetVar);
+        emit_expr(e, out);
+        fprintf(out, ";\n");
+    }
+}
+
+// Emit a statement (with indentation and newlines)
+void emit_stmt(Stmt* s, FILE* out, int indent) {
+    if (s == NULL) return;
+
+    switch (s->type) {
+        // Inside emit_stmt switch case VAR_DECL_S:
+        case VAR_DECL_S:
+            emit_indent(out, indent);
+            fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
+            fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
+
+            // Check if it's an allocation
+            if (s->as.var_decl.expr->type == ALLOC_E) {
+                // Emit: int64_t *x = malloc(sizeof(int64_t));
+                fprintf(out, " = malloc(sizeof(%s));\n", type_to_c_type(s->as.var_decl.varType));
+
+                // Now assign the initial value: *x = initialValue;
+                emit_assign_expr_to_var(s->as.var_decl.expr->as.alloc.initialValue,
+                                        s->as.var_decl.name,
+                                        s->as.var_decl.ownership,
+                                        out,
+                                        indent);
+            } else {
+                // Normal declaration
+                fprintf(out, ";\n");
+                emit_assign_expr_to_var(s->as.var_decl.expr,
+                                        s->as.var_decl.name,
+                                        s->as.var_decl.ownership,
+                                        out,
+                                        indent);
+            }
+            break;
+
+        case ASSIGN_S:
+            emit_assign_expr_to_var(s->as.var_assign.expr, s->as.var_assign.name, s->as.var_assign.ownership, out, indent);
+            break;
+
+        case IF_S:
+            emit_indent(out, indent);
+            fprintf(out, "if (");
+            emit_expr(s->as.if_stmt.cond, out);
+            fprintf(out, ") ");
+
+            //true
+            if (s->as.if_stmt.trueStmt->type == BLOCK_S) {
+                emit_stmt(s->as.if_stmt.trueStmt, out, indent);
+            } else {
+                fprintf(out, "{\n");
+                emit_stmt(s->as.if_stmt.trueStmt, out, indent + 1);
+                emit_indent(out, indent);
+                fprintf(out, "}");
+            }
+
+            //false
+            if (s->as.if_stmt.falseStmt != NULL) {
+                fprintf(out, " else ");
+                if (s->as.if_stmt.falseStmt->type == BLOCK_S) {
+                    emit_stmt(s->as.if_stmt.falseStmt, out, indent);
+                } else {
+                    fprintf(out, "{\n");
+                    emit_stmt(s->as.if_stmt.falseStmt, out, indent + 1);
+                    emit_indent(out, indent);
+                    fprintf(out, "}");
+                }
+            }
+            fprintf(out, "\n");
+            break;
+
+        case WHILE_S:
+            emit_indent(out, indent);
+            fprintf(out, "while (");
+            emit_expr(s->as.while_stmt.cond, out);
+            fprintf(out, ") ");
+            emit_stmt(s->as.while_stmt.body, out, indent);
+            break;
+
+        case DO_WHILE_S:
+            emit_indent(out, indent);
+            fprintf(out, "do ");
+            emit_stmt(s->as.do_while_stmt.body, out, indent);
+            emit_indent(out, indent);
+            fprintf(out, "while (");
+            emit_expr(s->as.do_while_stmt.cond, out);
+            fprintf(out, ");\n");
+            break;
+
+        case FOR_S:
+            emit_indent(out, indent);
+            fprintf(out, "for (int %s = ", s->as.for_stmt.varName);
+            emit_expr(s->as.for_stmt.min, out);
+            fprintf(out, "; %s <= ", s->as.for_stmt.varName);
+            emit_expr(s->as.for_stmt.max, out);
+            fprintf(out, "; %s++) ", s->as.for_stmt.varName);
+            emit_stmt(s->as.for_stmt.body, out, indent);
+            break;
+
+        case BLOCK_S:
+            emit_indent(out, indent);
+            fprintf(out, "{\n");
+            for (int i = 0; i < s->as.block_stmt.count; i++) {
+                emit_stmt(s->as.block_stmt.stmts[i], out, indent + 1);
+            }
+            emit_indent(out, indent);
+            fprintf(out, "}\n");
+            break;
+
+        case EXPR_STMT_S:
+            emit_indent(out, indent);
+            emit_expr(s->as.expr_stmt, out);
+            fprintf(out, ";\n");
+            break;
+
+        case MATCH_S: {
+            for (int i = 0; i < s->as.match_stmt.branchCount; ++i) {
+                MatchBranchStmt b = s->as.match_stmt.branches[i];
+
+                if(i == 0) {
+                    fprintf(out, "if (");
+                    emit_expr(b.caseExpr, out);
+                    fprintf(out, ") {\n");
+                } else if ( b.caseExpr->type == VOID_E) {
+                    fprintf(out, "else {\n");
+                } else {
+                    fprintf(out, "else if (");
+                    emit_expr(b.caseExpr, out);
+                    fprintf(out, ") {\n");
+                }
+
+                for (int j = 0; j < b.stmtCount; ++j) {
+                    emit_stmt(b.stmts[j], out, indent);
+                }
+
+                fprintf(out, "}\n");
+            }
+            break;
+        }
+
+        case FREE_S: {
+            emit_indent(out, indent);
+            fprintf(out, "free(%s);\n", s->as.free_stmt.varName);
+            break;
+        }
+    }
+}
+
+//main codegen entry point
+void generate_code(Func** program, int count, FILE* output) {
+    //emit C headers
+    fprintf(output, "#include <stdio.h>\n");
+    fprintf(output, "#include <stdlib.h>\n");
+    fprintf(output, "#include <stdint.h>\n");
+    fprintf(output, "#include <stdbool.h>\n\n");
+
+    for (int i = 0; i < count; ++i) {
+        emit_func_decl(program[i], output);
+    }
+
+    for (int i = 0; i < count; ++i) {
+        emit_func(program[i], output);
+    }
+}

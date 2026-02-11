@@ -1,0 +1,23 @@
+// Test successful compilation - no errors or warnings
+def add(a: int, b: int): int {
+    return a + b;
+}
+
+def main(): int {
+    x: int = 5;
+    y: int = 10;
+    result: int = add(x, y);
+
+    if (result > 10) {
+        result = result - 5;
+    } else {
+        result = result + 5;
+    }
+
+    // Correct ownership usage
+    ptr: own int = alloc 42;
+    value: int = *ptr;
+    free ptr;
+
+    return 0;
+}

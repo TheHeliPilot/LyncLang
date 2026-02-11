@@ -1,0 +1,13 @@
+// Test multiple semantic errors - should collect all before exiting
+def main(): int {
+    x: int = 5;
+    y: int = true;  // Type mismatch error
+
+    z: int = w;  // Undefined variable error
+
+    if (x) {  // Type error: condition must be bool
+        x = false;  // Type mismatch in assignment
+    }
+
+    return 0;
+}

@@ -1,0 +1,19 @@
+// Test various type errors
+def main(): int {
+    x: int = 5;
+    y: bool = true;
+
+    // Error: arithmetic on bool
+    result: int = y + 10;
+
+    // Error: logical operation on int
+    cond: bool = x && y;
+
+    // Error: comparison type mismatch
+    check: bool = (x == y);
+
+    // Error: unary minus on bool
+    neg: bool = -y;
+
+    return 0;
+}

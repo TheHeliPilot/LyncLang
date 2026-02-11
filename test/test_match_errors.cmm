@@ -1,0 +1,26 @@
+// Test match expression errors
+def main(): int {
+    x: int = 5;
+
+    // Error: no default _ branch
+    result: int = match x {
+        1: 10;
+        2: 20;
+    };
+
+    // Error: inconsistent return types
+    result2: int = match x {
+        1: 10;
+        2: true;  // Returns bool instead of int
+        _: 30;
+    };
+
+    // Error: pattern type doesn't match target
+    y: bool = true;
+    result3: int = match y {
+        1: 10;  // Pattern is int, target is bool
+        _: 20;
+    };
+
+    return 0;
+}

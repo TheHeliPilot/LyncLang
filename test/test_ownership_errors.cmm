@@ -1,0 +1,17 @@
+// Test ownership system errors
+def main(): int {
+    // Error: 'own' variable not initialized with alloc
+    ptr: own int = 5;
+
+    // Correct way
+    ptr2: own int = alloc 10;
+
+    // Error: use after free
+    free ptr2;
+    x: int = *ptr2;
+
+    // Error: double free
+    free ptr2;
+
+    return 0;
+}

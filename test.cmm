@@ -1,0 +1,52 @@
+def main() : int {
+    x: own int = alloc 5;
+
+    r: int = match x {
+        1 : 10;
+        5 : 50;
+        _ : 0;
+    };
+
+    y: int = match r {
+        50 : match x {
+            5 : 100;
+            _ : 0;
+        };
+        _ : 1;
+    };
+
+    b: bool = match x > 3 {
+        true : true;
+        false : false;
+        _ : false;
+    };
+
+    match x > 3 {
+        true: {x = x + 2;}
+        false: {x = x - 2;}
+    };
+
+    free x;
+    
+    return y;
+}
+
+def doubleF(n: own int) : int {
+    return match n {
+        0 : 0;
+        1 : 2;
+        _ : n + n;
+    };
+
+    free n;
+}
+
+def grade(score: int) : int {
+    result: int = match score {
+        100 : 5;
+        90 : 4;
+        80 : 3;
+        _ : 0;
+    };
+    return result;
+}

@@ -1,0 +1,13 @@
+// Test lexer error recovery
+def main(): int {
+    // Single & should suggest &&
+    x: bool = true & false;
+
+    // Single | should suggest ||
+    y: bool = true | false;
+
+    // Invalid character (if @ is not supported)
+    // z: int = 5 @ 3;
+
+    return 0;
+}

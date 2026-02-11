@@ -1,0 +1,12 @@
+// Test memory leak detection
+def main(): int {
+    ptr: own int = alloc 42;
+    // Error: memory leak - ptr not freed before function end
+    return 0;
+}
+
+def foo(): int {
+    x: own int = alloc 100;
+    free x;  // Correct - freed before return
+    return 0;
+}
