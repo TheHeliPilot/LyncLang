@@ -4,6 +4,9 @@
 
 #include "analyzer.h"
 
+// Forward declaration
+void check_function_cleanup(Scope* scope);
+
 Scope* make_scope(Scope* parent) {
     Scope* scope = malloc(sizeof(Scope));
     scope->capacity = 2;
@@ -245,9 +248,11 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 
         case ASSIGN_S: {
             Symbol* sym = lookup(scope, s->as.var_assign.name);
-            s->as.var_assign.ownership = sym->ownership;
-            if (sym == nullptr)
+            if (sym == nullptr) {
                 stage_error(STAGE_ANALYZER, s->loc, "cannot assign to '%s', variable not declared", s->as.var_assign.name);
+                break;  // Can't continue checking without symbol
+            }
+            s->as.var_assign.ownership = sym->ownership;
             TokenType t = analyze_expr(scope, funcTable, s->as.var_assign.expr);
             if (t != sym->type)
                 stage_error(STAGE_ANALYZER, s->loc, "cannot assign %s to '%s' of type %s",
@@ -307,6 +312,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             for (int i = 0; i < s->as.block_stmt.count; ++i) {
                 analyze_stmt(block, funcTable, s->as.block_stmt.stmts[i]);
             }
+            check_function_cleanup(block);
             free(block);
             break;
         }

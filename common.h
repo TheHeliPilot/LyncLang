@@ -41,12 +41,16 @@ typedef struct {
 // Global state
 extern ErrorCollector* g_error_collector;
 extern bool g_trace_mode;
+extern int g_trace_depth;
 
 // Forward declarations from error.h
 void add_error(ErrorCollector* ec, ErrorStage stage, SourceLocation loc, const char* fmt, ...);
+void vadd_error(ErrorCollector* ec, ErrorStage stage, SourceLocation loc, const char* fmt, va_list args);
 void add_warning(ErrorCollector* ec, ErrorStage stage, SourceLocation loc, const char* fmt, ...);
+void add_note(ErrorCollector* ec, ErrorStage stage, SourceLocation loc, const char* fmt, ...);
 void print_messages(ErrorCollector* ec);
 bool has_errors(ErrorCollector* ec);
+bool has_warnings(ErrorCollector* ec);
 
 // Helper to create a dummy location (temporary until we add AST locations)
 #define NO_LOC ((SourceLocation){.line = 0, .column = 0, .filename = "unknown"})
@@ -59,16 +63,9 @@ bool has_errors(ErrorCollector* ec);
 static inline void _stage_error_helper(ErrorCollector* ec, ErrorStage stage, SourceLocation loc, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    char buffer[1024];
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    vadd_error(ec, stage, loc, fmt, args);
     va_end(args);
-    add_error(ec, stage, loc, "%s", buffer);
 }
-
-// Overload for old-style calls without location (temporary)
-#define stage_error_no_loc(stage, fmt, ...) do { \
-    add_error(g_error_collector, stage, NO_LOC, fmt, ##__VA_ARGS__); \
-} while(0)
 
 // Fatal errors (syntax errors - exit immediately)
 #define stage_fatal(stage, loc, fmt, ...) do { \
@@ -81,16 +78,28 @@ static inline void _stage_error_helper(ErrorCollector* ec, ErrorStage stage, Sou
 #define stage_warning(stage, loc, fmt, ...) \
     add_warning(g_error_collector, stage, loc, fmt, ##__VA_ARGS__)
 
+// Notes (attached context for errors/warnings, never exit)
+#define stage_note(stage, loc, fmt, ...) \
+    add_note(g_error_collector, stage, loc, fmt, ##__VA_ARGS__)
+
 // Trace logging (runtime controlled via -trace flag)
 #define stage_trace(stage, fmt, ...) do { \
     if (g_trace_mode) { \
-        printf("[%s:trace] ", stage_name(stage)); \
-        printf(fmt, ##__VA_ARGS__); \
-        printf("\n"); \
+        for (int _i = 0; _i < g_trace_depth; _i++) fprintf(stderr, "  "); \
+        fprintf(stderr, "[%s:trace] ", stage_name(stage)); \
+        fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fprintf(stderr, "\n"); \
     } \
 } while(0)
 
-// Legacy stage_debug for backwards compatibility during transition
-#define stage_debug(stage, fmt, ...) stage_trace(stage, fmt, ##__VA_ARGS__)
+#define stage_trace_enter(stage, fmt, ...) do { \
+    stage_trace(stage, fmt, ##__VA_ARGS__); \
+    g_trace_depth++; \
+} while(0)
+
+#define stage_trace_exit(stage, fmt, ...) do { \
+    if (g_trace_depth > 0) g_trace_depth--; \
+    stage_trace(stage, fmt, ##__VA_ARGS__); \
+} while(0)
 
 #endif //CMINUSMINUS_COMMON_H

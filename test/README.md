@@ -30,6 +30,7 @@ This directory contains test files for the new error collection and reporting sy
 **Expected behavior:** Detect unfreed 'own' variable in main()
 **Command:** `./CMinusMinus ../test/test_memory_leak.cmm`
 **Expected output:** Memory leak error for 'ptr' in main
+**Note:** Currently only checks function-level scope, not nested block scopes (known limitation)
 
 ### 5. `test_type_errors.cmm`
 **Purpose:** Test various type checking errors

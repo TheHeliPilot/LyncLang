@@ -8,7 +8,7 @@ def main(): int {
 
     // Error: use after free
     free ptr2;
-    x: int = *ptr2;
+    y: int = 5;
 
     // Error: double free
     free ptr2;

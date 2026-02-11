@@ -233,7 +233,7 @@ Expr* parseFactor(Parser* p) {
 }
 
 Func** parseProgram(Parser* p, int* length) {
-    stage_debug(STAGE_PARSER, "parse program begin");
+    stage_trace(STAGE_PARSER, "parse program begin");
 
     int* funcCount = malloc(sizeof(int));
     *funcCount = 0;
@@ -245,14 +245,14 @@ Func** parseProgram(Parser* p, int* length) {
     *length = *funcCount;
     free(funcCount);
 
-    stage_debug(STAGE_PARSER, "parse program end");
+    stage_trace(STAGE_PARSER, "parse program end");
 
     return funcs;
 }
 Stmt* parseStatement(Parser* p) {
     Token* t = peek(p, 0);
 
-    stage_debug(STAGE_PARSER,
+    stage_trace(STAGE_PARSER,
                 "parse statement starting with %s",
                 token_type_name(t->type));
 
@@ -623,10 +623,10 @@ bool checkFuncSign(FuncSign* a, FuncSign* b) {
     return (a->retType == b->retType && a->name == b->name);
 }
 
-// AST printing functions
+// AST printing functions (only active in trace mode, output to stderr)
 void print_indent(int depth) {
     for (int i = 0; i < depth; i++) {
-        printf("  ");
+        fprintf(stderr, "  ");
     }
 }
 
@@ -636,32 +636,32 @@ void print_stmt(Stmt* s, int depth);
 void print_expr(Expr* e, int depth) {
     if (e == NULL) {
         print_indent(depth);
-        printf("NULL\n");
+        fprintf(stderr, "NULL\n");
         return;
     }
 
     print_indent(depth);
     switch (e->type) {
         case INT_LIT_E:
-            printf("IntLit: %d\n", e->as.int_val);
+            fprintf(stderr, "IntLit: %d\n", e->as.int_val);
             break;
         case BOOL_LIT_E:
-            printf("BoolLit: %s\n", e->as.bool_val ? "true" : "false");
+            fprintf(stderr, "BoolLit: %s\n", e->as.bool_val ? "true" : "false");
             break;
         case VAR_E:
-            printf("Var: %s\n", e->as.var);
+            fprintf(stderr, "Var: %s\n", e->as.var);
             break;
         case UN_OP_E:
-            printf("UnaryOp: %s\n", token_type_name(e->as.un_op.op));
+            fprintf(stderr, "UnaryOp: %s\n", token_type_name(e->as.un_op.op));
             print_expr(e->as.un_op.expr, depth + 1);
             break;
         case BIN_OP_E:
-            printf("BinaryOp: %s\n", token_type_name(e->as.bin_op.op));
+            fprintf(stderr, "BinaryOp: %s\n", token_type_name(e->as.bin_op.op));
             print_indent(depth);
-            printf("Left:\n");
+            fprintf(stderr, "Left:\n");
             print_expr(e->as.bin_op.exprL, depth + 1);
             print_indent(depth);
-            printf("Right:\n");
+            fprintf(stderr, "Right:\n");
             print_expr(e->as.bin_op.exprR, depth + 1);
             break;
     }
@@ -670,96 +670,97 @@ void print_expr(Expr* e, int depth) {
 void print_stmt(Stmt* s, int depth) {
     if (s == NULL) {
         print_indent(depth);
-        printf("NULL\n");
+        fprintf(stderr, "NULL\n");
         return;
     }
 
     print_indent(depth);
     switch (s->type) {
         case VAR_DECL_S:
-            printf("VarDecl: %s : %s\n", s->as.var_decl.name,
+            fprintf(stderr, "VarDecl: %s : %s\n", s->as.var_decl.name,
                    token_type_name(s->as.var_decl.varType));
             print_indent(depth);
-            printf("Init:\n");
+            fprintf(stderr, "Init:\n");
             print_expr(s->as.var_decl.expr, depth + 1);
             break;
 
         case ASSIGN_S:
-            printf("Assign: %s\n", s->as.var_assign.name);
+            fprintf(stderr, "Assign: %s\n", s->as.var_assign.name);
             print_indent(depth);
-            printf("Value:\n");
+            fprintf(stderr, "Value:\n");
             print_expr(s->as.var_assign.expr, depth + 1);
             break;
 
         case IF_S:
-            printf("If:\n");
+            fprintf(stderr, "If:\n");
             print_indent(depth);
-            printf("Condition:\n");
+            fprintf(stderr, "Condition:\n");
             print_expr(s->as.if_stmt.cond, depth + 1);
             print_indent(depth);
-            printf("Then:\n");
+            fprintf(stderr, "Then:\n");
             print_stmt(s->as.if_stmt.trueStmt, depth + 1);
 
             // Only print else if it exists
             if (s->as.if_stmt.falseStmt != NULL) {
                 print_indent(depth);
-                printf("Else:\n");
+                fprintf(stderr, "Else:\n");
                 print_stmt(s->as.if_stmt.falseStmt, depth + 1);
             }
             break;
 
         case WHILE_S:
-            printf("While:\n");
+            fprintf(stderr, "While:\n");
             print_indent(depth);
-            printf("Condition:\n");
+            fprintf(stderr, "Condition:\n");
             print_expr(s->as.while_stmt.cond, depth + 1);
             print_indent(depth);
-            printf("Body:\n");
+            fprintf(stderr, "Body:\n");
             print_stmt(s->as.while_stmt.body, depth + 1);
             break;
 
         case DO_WHILE_S:
-            printf("DoWhile:\n");
+            fprintf(stderr, "DoWhile:\n");
             print_indent(depth);
-            printf("Body:\n");
+            fprintf(stderr, "Body:\n");
             print_stmt(s->as.do_while_stmt.body, depth + 1);
             print_indent(depth);
-            printf("Condition:\n");
+            fprintf(stderr, "Condition:\n");
             print_expr(s->as.do_while_stmt.cond, depth + 1);
             break;
 
         case FOR_S:
-            printf("For: %s\n", s->as.for_stmt.varName);
+            fprintf(stderr, "For: %s\n", s->as.for_stmt.varName);
             print_indent(depth);
-            printf("Min:\n");
+            fprintf(stderr, "Min:\n");
             print_expr(s->as.for_stmt.min, depth + 1);
             print_indent(depth);
-            printf("Max:\n");
+            fprintf(stderr, "Max:\n");
             print_expr(s->as.for_stmt.max, depth + 1);
             print_indent(depth);
-            printf("Body:\n");
+            fprintf(stderr, "Body:\n");
             print_stmt(s->as.for_stmt.body, depth + 1);
             break;
 
         case BLOCK_S:
-            printf("Block (%d statements):\n", s->as.block_stmt.count);
+            fprintf(stderr, "Block (%d statements):\n", s->as.block_stmt.count);
             for (int i = 0; i < s->as.block_stmt.count; i++) {
                 print_stmt(s->as.block_stmt.stmts[i], depth + 1);
             }
             break;
 
         case EXPR_STMT_S:
-            printf("ExprStmt:\n");
+            fprintf(stderr, "ExprStmt:\n");
             print_expr(s->as.expr_stmt, depth + 1);
             break;
     }
 }
 
-void print_ast(Stmt** program, int count) {
-    printf("\n=== AST ===\n");
+void print_ast(Func** program, int count) {
+    if (!g_trace_mode) return;
+    fprintf(stderr, "\n=== AST (%d functions) ===\n", count);
     for (int i = 0; i < count; i++) {
-        printf("Top-level statement %d:\n", i);
-        print_stmt(program[i], 1);
+        fprintf(stderr, "Function: %s\n", program[i]->signature->name);
+        print_stmt(program[i]->body, 1);
     }
-    printf("===========\n");
+    fprintf(stderr, "===========\n");
 }

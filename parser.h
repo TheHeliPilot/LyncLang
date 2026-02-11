@@ -233,6 +233,6 @@ Expr* parseFactor(Parser*);
 Func** parseFunctions(Parser* p, int*);
 FuncParam* parseFuncParams(Parser*, int*);
 
-void print_ast(Stmt**, int);
+void print_ast(Func**, int);
 
 #endif //CMINUSMINUS_PARSER_H

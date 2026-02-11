@@ -16,7 +16,6 @@ def main(): int {
 
     // Correct ownership usage
     ptr: own int = alloc 42;
-    value: int = *ptr;
     free ptr;
 
     return 0;

@@ -6,6 +6,7 @@
 #include "error.h"
 
 extern ErrorCollector* g_error_collector;
+extern bool g_trace_mode;
 
 Token* tokenize(char* code, int* out_count) {
     int capacity = 20;
@@ -328,22 +329,23 @@ resize_check:
 }
 
 void print_tokens(Token* tokens, int count) {
-    printf("=== TOKENS (%d) ===\n", count);
+    if (!g_trace_mode) return;
+    fprintf(stderr, "=== TOKENS (%d) ===\n", count);
     for (int i = 0; i < count; i++) {
-        printf("[%3d] [%s:%d:%d] ", i, tokens[i].filename, tokens[i].line, tokens[i].column);
-        printf("%s", token_type_name(tokens[i].type));
+        fprintf(stderr, "[%3d] [%s:%d:%d] ", i, tokens[i].filename, tokens[i].line, tokens[i].column);
+        fprintf(stderr, "%s", token_type_name(tokens[i].type));
 
         if (tokens[i].value != NULL) {
             if (tokens[i].type == INT_LIT_T || tokens[i].type == BOOL_LIT_T) {
-                printf(" = %d", *(int*)tokens[i].value);
+                fprintf(stderr, " = %d", *(int*)tokens[i].value);
             } else if (tokens[i].type == VAR_T) {
-                printf(" = \"%s\"", (char*)tokens[i].value);
+                fprintf(stderr, " = \"%s\"", (char*)tokens[i].value);
             }
         }
 
-        printf("\n");
+        fprintf(stderr, "\n");
     }
-    printf("==================\n");
+    fprintf(stderr, "==================\n");
 }
 
 const char* token_type_name(TokenType type) {

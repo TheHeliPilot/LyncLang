@@ -1,5 +1,6 @@
 // Test syntax error - should exit immediately with location
 def main(): int {
-    x: int = 5  // Missing semicolon
+    x: int = 5
+    y: int = 10;  // Line above is missing semicolon
     return 0;
 }
