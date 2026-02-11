@@ -1,4 +1,4 @@
-# C--
+# Lync
 
 **A systems programming language with manual memory management, compile-time ownership tracking, and pattern matching — transpiles to C.**
 
@@ -6,13 +6,13 @@
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
 
-File extension: `.cmm`
+File extension: `.lync`
 
 ---
 
 ## Overview
 
-C-- sits between C and Rust. You get manual memory management like C — you `alloc` and `free` by hand — but the compiler statically tracks ownership and catches memory bugs at compile time, like Rust. There's no garbage collector and no runtime overhead from safety checks. The output is readable, standard C.
+Lync sits between C and Rust. You get manual memory management like C — you `alloc` and `free` by hand — but the compiler statically tracks ownership and catches memory bugs at compile time, like Rust. There's no garbage collector and no runtime overhead from safety checks. The output is readable, standard C.
 
 - **Explicit memory control** — you decide when to allocate and free
 - **Compile-time safety** — memory leaks, double free, and use-after-free are caught before your code runs
@@ -39,7 +39,7 @@ cmake --build build
 ### Write a program
 
 ```c
-// example.cmm
+// example.lync
 def add(a: int, b: int): int {
     return a + b;
 }
@@ -57,7 +57,7 @@ def main(): int {
 ### Compile and run
 
 ```bash
-./CMinusMinus example.cmm -o example.c
+./lync example.lync -o example.c
 cc example.c -o example
 ./example
 ```
@@ -71,7 +71,7 @@ The compiler produces a `.c` file which you then compile with any C compiler.
 ## CLI Reference
 
 ```
-CMinusMinus [options] [input_file]
+lync [options] [input_file]
 ```
 
 | Flag | Description |
@@ -81,7 +81,7 @@ CMinusMinus [options] [input_file]
 | `-no-color` | Disable ANSI-colored diagnostics |
 | `-h`, `--help` | Show help message |
 
-If no input file is specified, defaults to `test.cmm`.
+If no input file is specified, defaults to `test.lync`.
 
 ---
 
@@ -89,7 +89,7 @@ If no input file is specified, defaults to `test.cmm`.
 
 ### Types
 
-| C-- Type | Description | C Equivalent |
+| Lync Type | Description | C Equivalent |
 |----------|-------------|--------------|
 | `int` | 64-bit signed integer | `int64_t` |
 | `bool` | Boolean (`true` / `false`) | `bool` |
@@ -151,7 +151,7 @@ do {
     x = x - 1;
 } (x > 0);
 ```
-> Note: C-- uses `do { } (cond);` — there is no `while` keyword in the do-while syntax.
+> Note: Lync uses `do { } (cond);` — there is no `while` keyword in the do-while syntax.
 
 **for (range)**
 ```c
@@ -164,7 +164,7 @@ for (i: 0 to 10) {
 
 ### Match
 
-C-- supports both match **expressions** (return a value) and match **statements** (execute code blocks).
+Lync supports both match **expressions** (return a value) and match **statements** (execute code blocks).
 
 **Match expression:**
 ```c
@@ -216,7 +216,7 @@ match x {
 
 ## Ownership System
 
-The ownership system is the core feature of C--. It tracks heap memory at compile time, ensuring every allocation is properly freed — with zero runtime overhead.
+The ownership system is the core feature of Lync. It tracks heap memory at compile time, ensuring every allocation is properly freed — with zero runtime overhead.
 
 ### Qualifiers
 
@@ -308,7 +308,7 @@ def main(): int {
 
 All ownership checks are **compile-time only**. The generated C has no safety overhead:
 
-**C-- source:**
+**Lync source:**
 ```c
 ptr: own int = alloc 42;
 free ptr;
@@ -344,8 +344,8 @@ Where `stage` is one of: `lexer`, `parser`, `analyzer`, `codegen`.
 ### Example Output
 
 ```
-[test.cmm:4:5] analyzer:error: 'own' variables must be initialized with 'alloc'
-[test.cmm:10:5] analyzer:error: double free: variable 'ptr2' has already been freed
+[test.lync:4:5] analyzer:error: 'own' variables must be initialized with 'alloc'
+[test.lync:10:5] analyzer:error: double free: variable 'ptr2' has already been freed
 
 2 errors generated.
 ```
@@ -363,7 +363,7 @@ Where `stage` is one of: `lexer`, `parser`, `analyzer`, `codegen`.
 ## Compiler Architecture
 
 ```
-Source (.cmm)
+Source (.lync)
      |
      v
    Lexer         tokenization
@@ -503,7 +503,7 @@ Long-term goals beyond the core language:
 
 - **Dynamic arrays / lists** — as a standard library, not a built-in
 - **Templates** — C++ style generics for containers and algorithms
-- **`str` type** — a string type built as stdlib *in C-- itself* (not a primitive), using `char` + `own` + length tracking
+- **`str` type** — a string type built as stdlib *in Lync itself* (not a primitive), using `char` + `own` + length tracking
 - **Owned struct fields** — `own` and `ref` qualifiers inside struct definitions
 - **`const` keyword** — immutable variable declarations
 - **VS Code integration** — syntax highlighting, inline diagnostics, build tasks

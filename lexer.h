@@ -2,8 +2,8 @@
 // Created by bucka on 2/9/2026.
 //
 
-#ifndef CMINUSMINUS_LEXER_H
-#define CMINUSMINUS_LEXER_H
+#ifndef LYNC_LEXER_H
+#define LYNC_LEXER_H
 
 #include "common.h"
 
@@ -87,4 +87,4 @@ void print_tokens(Token* tokens, int count);
 const char* token_type_name(TokenType);
 
 
-#endif //CMINUSMINUS_LEXER_H
+#endif //LYNC_LEXER_H

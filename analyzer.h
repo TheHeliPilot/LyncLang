@@ -2,8 +2,8 @@
 // Created by bucka on 2/9/2026.
 //
 
-#ifndef CMINUSMINUS_ANALYZER_H
-#define CMINUSMINUS_ANALYZER_H
+#ifndef LYNC_ANALYZER_H
+#define LYNC_ANALYZER_H
 
 #include "common.h"
 #include "parser.h"
@@ -19,6 +19,7 @@ typedef struct {
     char* name;
     Ownership ownership;
     VarState state;
+    char* owner;
     bool is_nullable;
 } Symbol;
 
@@ -52,4 +53,4 @@ TokenType analyze_expr(Scope*, FuncTable*, Expr*);
 void analyze_stmt(Scope*, FuncTable*, Stmt*);
 void analyze_program(Func**, int);
 
-#endif //CMINUSMINUS_ANALYZER_H
+#endif //LYNC_ANALYZER_H

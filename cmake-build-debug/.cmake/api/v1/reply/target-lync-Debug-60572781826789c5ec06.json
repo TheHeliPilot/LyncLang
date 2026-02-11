@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "CMinusMinus.exe"
+			"path" : "lync.exe"
 		},
 		{
-			"path" : "CMinusMinus.pdb"
+			"path" : "lync.pdb"
 		}
 	],
 	"backtrace" : 1,
@@ -61,7 +61,7 @@
 			]
 		}
 	],
-	"id" : "CMinusMinus::@6890427a1f51a3e7e1df",
+	"id" : "lync::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -81,8 +81,8 @@
 		],
 		"language" : "C"
 	},
-	"name" : "CMinusMinus",
-	"nameOnDisk" : "CMinusMinus.exe",
+	"name" : "lync",
+	"nameOnDisk" : "lync.exe",
 	"paths" : 
 	{
 		"build" : ".",

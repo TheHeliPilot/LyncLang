@@ -16,7 +16,7 @@ Token* tokenize(char* code, int* out_count) {
     // Position tracking
     int line = 1;
     int column = 1;
-    const char* filename = "test.cmm";  // TODO: pass as parameter
+    const char* filename = "test.lync";  // TODO: pass as parameter
 
     int i = 0;
     while (code[i] != '\0') {

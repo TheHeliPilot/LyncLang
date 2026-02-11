@@ -2,8 +2,8 @@
 // Created by bucka on 2/10/2026.
 //
 
-#ifndef CMINUSMINUS_ERROR_H
-#define CMINUSMINUS_ERROR_H
+#ifndef LYNC_ERROR_H
+#define LYNC_ERROR_H
 
 #include <stdbool.h>
 #include "common.h"
@@ -49,4 +49,4 @@ bool has_errors(ErrorCollector* ec);
 bool has_warnings(ErrorCollector* ec);
 void print_messages(ErrorCollector* ec);
 
-#endif //CMINUSMINUS_ERROR_H
+#endif //LYNC_ERROR_H

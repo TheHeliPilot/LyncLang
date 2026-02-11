@@ -8,6 +8,7 @@ int main()
 {
   int64_t *ptr = malloc(sizeof(int64_t));
   *ptr = 42;
+  free(ptr);
   return 0;
 ;
 }

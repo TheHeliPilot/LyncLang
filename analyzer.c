@@ -72,6 +72,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 stage_error(STAGE_ANALYZER, e->loc, "use after free: variable '%s' has been freed", e->as.var.name);
             if (sym->ownership == OWNERSHIP_OWN && sym->state == MOVED)
                 stage_error(STAGE_ANALYZER, e->loc, "use after move: variable '%s' has been moved", e->as.var.name);
+            if (sym->ownership == OWNERSHIP_REF && lookup(scope, sym->owner)->state != ALIVE)
+                stage_error(STAGE_ANALYZER, e->loc, "use after owner no longer in scope: owner '%s' of '%s' is out of scope", lookup(scope, sym->owner)->name, e->as.var.name);
 
             e->as.var.ownership = sym->ownership;
             return sym->type;
@@ -257,6 +259,14 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             if (t != sym->type)
                 stage_error(STAGE_ANALYZER, s->loc, "cannot assign %s to '%s' of type %s",
                       token_type_name(t), s->as.var_assign.name, token_type_name(sym->type));
+            if (t == VAR_T) {
+                if(sym->ownership == OWNERSHIP_REF) {
+                    if(s->as.var_assign.expr->as.var.ownership != OWNERSHIP_OWN)
+                        stage_error(STAGE_ANALYZER, s->loc, "assigning non-own variable to '%s' not allowed!", s->as.var_assign.name);
+
+                    sym->owner = s->as.var_assign.expr->as.var.name;
+                }
+            }
             break;
         }
 

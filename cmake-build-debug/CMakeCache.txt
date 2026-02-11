@@ -128,7 +128,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=CMinusMinus
+CMAKE_PROJECT_NAME:STATIC=Lync
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/ranlib.exe
@@ -221,6 +221,15 @@ CMinusMinus_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 CMinusMinus_SOURCE_DIR:STATIC=C:/Users/bucka/CLionProjects/CMinusMinus
+
+//Value Computed by CMake
+Lync_BINARY_DIR:STATIC=C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug
+
+//Value Computed by CMake
+Lync_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+Lync_SOURCE_DIR:STATIC=C:/Users/bucka/CLionProjects/CMinusMinus
 
 
 ########################

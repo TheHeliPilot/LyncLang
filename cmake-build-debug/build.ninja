@@ -11,7 +11,7 @@
 # =============================================================================
 
 # =============================================================================
-# Project: CMinusMinus
+# Project: Lync
 # Configurations: Debug
 # =============================================================================
 
@@ -41,67 +41,67 @@ include CMakeFiles/rules.ninja
 
 cmake_ninja_workdir = C$:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/
 # =============================================================================
-# Object build statements for EXECUTABLE target CMinusMinus
+# Object build statements for EXECUTABLE target lync
 
 
 #############################################
-# Order-only phony target for CMinusMinus
+# Order-only phony target for lync
 
-build cmake_object_order_depends_target_CMinusMinus: phony || .
+build cmake_object_order_depends_target_lync: phony || .
 
-build CMakeFiles/CMinusMinus.dir/main.c.obj: C_COMPILER__CMinusMinus_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/main.c || cmake_object_order_depends_target_CMinusMinus
-  DEP_FILE = CMakeFiles\CMinusMinus.dir\main.c.obj.d
+build CMakeFiles/lync.dir/main.c.obj: C_COMPILER__lync_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/main.c || cmake_object_order_depends_target_lync
+  DEP_FILE = CMakeFiles\lync.dir\main.c.obj.d
   FLAGS = -g -std=gnu2x -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
-  OBJECT_FILE_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
+  OBJECT_FILE_DIR = CMakeFiles\lync.dir
 
-build CMakeFiles/CMinusMinus.dir/lexer.c.obj: C_COMPILER__CMinusMinus_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/lexer.c || cmake_object_order_depends_target_CMinusMinus
-  DEP_FILE = CMakeFiles\CMinusMinus.dir\lexer.c.obj.d
+build CMakeFiles/lync.dir/lexer.c.obj: C_COMPILER__lync_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/lexer.c || cmake_object_order_depends_target_lync
+  DEP_FILE = CMakeFiles\lync.dir\lexer.c.obj.d
   FLAGS = -g -std=gnu2x -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
-  OBJECT_FILE_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
+  OBJECT_FILE_DIR = CMakeFiles\lync.dir
 
-build CMakeFiles/CMinusMinus.dir/parser.c.obj: C_COMPILER__CMinusMinus_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/parser.c || cmake_object_order_depends_target_CMinusMinus
-  DEP_FILE = CMakeFiles\CMinusMinus.dir\parser.c.obj.d
+build CMakeFiles/lync.dir/parser.c.obj: C_COMPILER__lync_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/parser.c || cmake_object_order_depends_target_lync
+  DEP_FILE = CMakeFiles\lync.dir\parser.c.obj.d
   FLAGS = -g -std=gnu2x -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
-  OBJECT_FILE_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
+  OBJECT_FILE_DIR = CMakeFiles\lync.dir
 
-build CMakeFiles/CMinusMinus.dir/analyzer.c.obj: C_COMPILER__CMinusMinus_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/analyzer.c || cmake_object_order_depends_target_CMinusMinus
-  DEP_FILE = CMakeFiles\CMinusMinus.dir\analyzer.c.obj.d
+build CMakeFiles/lync.dir/analyzer.c.obj: C_COMPILER__lync_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/analyzer.c || cmake_object_order_depends_target_lync
+  DEP_FILE = CMakeFiles\lync.dir\analyzer.c.obj.d
   FLAGS = -g -std=gnu2x -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
-  OBJECT_FILE_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
+  OBJECT_FILE_DIR = CMakeFiles\lync.dir
 
-build CMakeFiles/CMinusMinus.dir/codegen.c.obj: C_COMPILER__CMinusMinus_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/codegen.c || cmake_object_order_depends_target_CMinusMinus
-  DEP_FILE = CMakeFiles\CMinusMinus.dir\codegen.c.obj.d
+build CMakeFiles/lync.dir/codegen.c.obj: C_COMPILER__lync_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/codegen.c || cmake_object_order_depends_target_lync
+  DEP_FILE = CMakeFiles\lync.dir\codegen.c.obj.d
   FLAGS = -g -std=gnu2x -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
-  OBJECT_FILE_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
+  OBJECT_FILE_DIR = CMakeFiles\lync.dir
 
-build CMakeFiles/CMinusMinus.dir/error.c.obj: C_COMPILER__CMinusMinus_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/error.c || cmake_object_order_depends_target_CMinusMinus
-  DEP_FILE = CMakeFiles\CMinusMinus.dir\error.c.obj.d
+build CMakeFiles/lync.dir/error.c.obj: C_COMPILER__lync_unscanned_Debug C$:/Users/bucka/CLionProjects/CMinusMinus/error.c || cmake_object_order_depends_target_lync
+  DEP_FILE = CMakeFiles\lync.dir\error.c.obj.d
   FLAGS = -g -std=gnu2x -fdiagnostics-color=always
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
-  OBJECT_FILE_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
+  OBJECT_FILE_DIR = CMakeFiles\lync.dir
 
 
 # =============================================================================
-# Link build statements for EXECUTABLE target CMinusMinus
+# Link build statements for EXECUTABLE target lync
 
 
 #############################################
-# Link the executable CMinusMinus.exe
+# Link the executable lync.exe
 
-build CMinusMinus.exe: C_EXECUTABLE_LINKER__CMinusMinus_Debug CMakeFiles/CMinusMinus.dir/main.c.obj CMakeFiles/CMinusMinus.dir/lexer.c.obj CMakeFiles/CMinusMinus.dir/parser.c.obj CMakeFiles/CMinusMinus.dir/analyzer.c.obj CMakeFiles/CMinusMinus.dir/codegen.c.obj CMakeFiles/CMinusMinus.dir/error.c.obj
+build lync.exe: C_EXECUTABLE_LINKER__lync_Debug CMakeFiles/lync.dir/main.c.obj CMakeFiles/lync.dir/lexer.c.obj CMakeFiles/lync.dir/parser.c.obj CMakeFiles/lync.dir/analyzer.c.obj CMakeFiles/lync.dir/codegen.c.obj CMakeFiles/lync.dir/error.c.obj
   FLAGS = -g
   LINK_LIBRARIES = -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
-  OBJECT_DIR = CMakeFiles\CMinusMinus.dir
+  OBJECT_DIR = CMakeFiles\lync.dir
   POST_BUILD = cd .
   PRE_LINK = cd .
-  TARGET_FILE = CMinusMinus.exe
-  TARGET_IMPLIB = libCMinusMinus.dll.a
-  TARGET_PDB = CMinusMinus.exe.dbg
+  TARGET_FILE = lync.exe
+  TARGET_IMPLIB = liblync.dll.a
+  TARGET_PDB = lync.exe.dbg
 
 
 #############################################
@@ -129,7 +129,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 # =============================================================================
 # Target aliases.
 
-build CMinusMinus: phony CMinusMinus.exe
+build lync: phony lync.exe
 
 # =============================================================================
 # Folder targets.
@@ -139,7 +139,7 @@ build CMinusMinus: phony CMinusMinus.exe
 #############################################
 # Folder: C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug
 
-build all: phony CMinusMinus.exe
+build all: phony lync.exe
 
 # =============================================================================
 # Built-in targets

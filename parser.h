@@ -2,8 +2,8 @@
 // Created by bucka on 2/9/2026.
 //
 
-#ifndef CMINUSMINUS_PARSER_H
-#define CMINUSMINUS_PARSER_H
+#ifndef LYNC_PARSER_H
+#define LYNC_PARSER_H
 
 #include "common.h"
 #include "lexer.h"
@@ -235,4 +235,4 @@ FuncParam* parseFuncParams(Parser*, int*);
 
 void print_ast(Func**, int);
 
-#endif //CMINUSMINUS_PARSER_H
+#endif //LYNC_PARSER_H

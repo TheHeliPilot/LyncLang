@@ -2,8 +2,8 @@
 // Created by bucka on 2/9/2026.
 //
 
-#ifndef CMINUSMINUS_COMMON_H
-#define CMINUSMINUS_COMMON_H
+#ifndef LYNC_COMMON_H
+#define LYNC_COMMON_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,4 +102,4 @@ static inline void _stage_error_helper(ErrorCollector* ec, ErrorStage stage, Sou
     stage_trace(stage, fmt, ##__VA_ARGS__); \
 } while(0)
 
-#endif //CMINUSMINUS_COMMON_H
+#endif //LYNC_COMMON_H

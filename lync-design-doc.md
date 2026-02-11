@@ -1,10 +1,10 @@
-# C-- Language Design Document
+# Lync Language Design Document
 
 ---
 
 ## Overview
 
-**C--** is a systems programming language with manual memory management, safe nullable pointers, and pattern matching. It compiles to C via a compiler written in C.
+**Lync** is a systems programming language with manual memory management, safe nullable pointers, and pattern matching. It compiles to C via a compiler written in C.
 
 ### Philosophy
 - C-like simplicity
@@ -59,7 +59,7 @@ const y: int = 10;
 
 ## 3. Memory Management (Hybrid Ownership Model)
 
-C-- combines manual `free()` calls with compile-time ownership validation.
+Lync combines manual `free()` calls with compile-time ownership validation.
 
 ---
 
@@ -328,7 +328,7 @@ print(value);
 Pipeline:
 
 ```
-Source (.cmm)
+Source (.lync)
     ↓
 Lexer
     ↓
@@ -376,7 +376,7 @@ All safety checks exist only at compile time.
 
 ### Match Translation Example
 
-#### C-- Source
+#### Lync Source
 ```rust
 match x {
     0 : print("zero");

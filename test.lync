@@ -1,7 +1,7 @@
 // Test memory leak detection
 def main(): int {
     ptr: own int = alloc 42;
-    // Error: memory leak - ptr not freed before function end
+    free ptr;
     return 0;
 }
 
