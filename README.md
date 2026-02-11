@@ -41,30 +41,35 @@ cmake --build build
 ```c
 // example.lync
 def add(a: int, b: int): int {
-    return a + b;
+return a + b;
 }
 
 def main(): int {
-    result: int = add(3, 4);
+result: int = add(3, 4);
 
-    ptr: own int = alloc 42;
-    free ptr;
+ptr: own int = alloc 42;
+free ptr;
 
-    return 0;
+return 0;
 }
 ```
 
 ### Compile and run
 
+**Option 1: Separate steps**
 ```bash
-./lync example.lync -o example.c
-cc example.c -o example
+./lync example.lync          # Produces example executable
 ./example
 ```
 
-The compiler produces a `.c` file which you then compile with any C compiler.
+**Option 2: Run mode**
+```bash
+./lync run example.lync      # Compile and execute in one step
+```
 
-> **Note:** `print` is not yet implemented. See the [Roadmap](#roadmap) for upcoming features.
+The compiler transpiles to C, automatically detects your C compiler (gcc, clang, or MSVC), compiles the generated C code, and produces a native executable. The intermediate `.c` file is cleaned up automatically unless you specify `--emit-c`.
+
+> **Note:** `print` is partially implemented (prints int, bool, and string literals). Full implementation with formatting coming in Phase 2.
 
 ---
 
@@ -72,16 +77,21 @@ The compiler produces a `.c` file which you then compile with any C compiler.
 
 ```
 lync [options] [input_file]
+lync run [options] [input_file]
 ```
 
 | Flag | Description |
 |------|-------------|
-| `-o <file>` | Output C file (default: `test.c`) |
+| `run` | Compile and immediately execute (shorthand mode) |
+| `-o <file>` | Output executable name (default: input name without extension) |
+| `--emit-c` | Keep the intermediate .c file after compilation |
 | `-trace` | Enable debug trace output (stderr) |
 | `-no-color` | Disable ANSI-colored diagnostics |
 | `-h`, `--help` | Show help message |
 
 If no input file is specified, defaults to `test.lync`.
+
+**Cross-platform support:** The compiler auto-detects available C compilers (gcc, clang, MSVC) and manages intermediate files and executable extensions automatically on Windows, macOS, and Linux.
 
 ---
 
@@ -93,6 +103,7 @@ If no input file is specified, defaults to `test.lync`.
 |----------|-------------|--------------|
 | `int` | 64-bit signed integer | `int64_t` |
 | `bool` | Boolean (`true` / `false`) | `bool` |
+| `string` | String literal (read-only) | `const char*` |
 | `void` | No return value (functions only) | `void` |
 
 ### Variables
@@ -107,6 +118,16 @@ x = 10;
 ```
 
 All types must be explicitly annotated. Variables are mutable by default.
+
+### String Literals
+
+```c
+print "Hello, world!";
+print "Value:", 42;
+print "Escape sequences: \n\t\"quoted\"";
+```
+
+String literals support escape sequences: `\n` (newline), `\t` (tab), `\r` (carriage return), `\\` (backslash), `\"` (quote). Strings are currently read-only and can only be used with `print`.
 
 ### Functions
 
@@ -212,6 +233,16 @@ match x {
    comment */
 ```
 
+### Print Statement
+
+```c
+print 42;                    // Print a single value
+print true, false;           // Print multiple values (comma-separated)
+print "Result:", x + 5;      // Mix literals and expressions
+```
+
+The `print` statement is a built-in for output. It accepts `int`, `bool`, and `string` values. Multiple values can be printed with comma separation. `print` is reserved and cannot be used as a variable name.
+
 ---
 
 ## Ownership System
@@ -238,6 +269,8 @@ r: ref int = some_own_var;
 ```
 - Borrows a reference to an `own` variable
 - Cannot be freed (compile error if you try)
+- The compiler tracks which `own` variable the `ref` borrows from
+- Using a `ref` after its owner goes out of scope is a compile error
 
 **No qualifier — stack value**
 ```c
@@ -303,6 +336,20 @@ def main(): int {
     return 0;
 }
 ```
+
+**Use after owner out of scope**
+```c
+def main(): int {
+    r: ref int;
+    {
+        ptr: own int = alloc 42;
+        r = ptr;  // r borrows from ptr
+    }  // ptr goes out of scope here
+    x: int = r;  // error: use after owner no longer in scope
+    return 0;
+}
+```
+The compiler tracks the lifetime of the owner and prevents using a `ref` after its `own` source is freed or out of scope.
 
 ### How It Compiles
 
@@ -395,11 +442,39 @@ Written in **C (C23 standard)** with zero external dependencies.
 
 ---
 
+## Implemented Features (Recent Updates)
+
+### Reference Ownership Tracking (✅ Implemented)
+
+The compiler now tracks which `own` variable each `ref` borrows from. This enables compile-time detection of:
+- Using a `ref` after its owner has been freed
+- Using a `ref` after its owner goes out of scope
+- Attempting to assign a non-`own` variable to a `ref`
+
+### Print Built-in (✅ Partially Implemented)
+
+The `print` statement is now available for basic output:
+- Supports `int`, `bool`, and `string` types
+- Multiple values with comma separation: `print "Result:", x, true;`
+- Type-checked at compile time (unsupported types trigger errors)
+- Reserved keyword (cannot be used as a variable name)
+- Warns on empty `print()` calls
+
+### String Literals (✅ Implemented)
+
+String literals with escape sequence support:
+- Basic escapes: `\n`, `\t`, `\r`, `\\`, `\"`
+- Compile to `const char*` in C
+- Currently limited to use with `print` (more features planned)
+
+---
+
 ## Planned Features
 
-- **Borrow tracking** — track which `ref` borrows from which `own`, prevent dangling references
-- **Print built-in** — `print` keyword for output (already reserved in the lexer)
+- **Enhanced borrow tracking** — prevent freeing an `own` while `ref`s to it exist
+- **Print formatting** — format specifiers, custom output formatting
 - **Float and char types** — `float` (64-bit) and `char` primitives
+- **String variables** — assignable string variables (beyond literals)
 - **Nullable types** — `int?`, `own?` with match-based null safety
 - **Match expansion** — range patterns, exhaustiveness checking
 - **Structs** — user-defined data types with auto-dereferencing
@@ -409,28 +484,33 @@ Written in **C (C23 standard)** with zero external dependencies.
 
 ## Roadmap
 
-### Phase 1: Ref Expansion
+### Phase 1: Ref Expansion (**In Progress** ✅)
 
-Upgrade the borrow system with lifetime-lite tracking — no explicit annotations like Rust, but the compiler will know which `ref` borrows from which `own`.
+~~Basic ownership tracking is complete~~. Remaining work:
 
-- Track borrow relationships between `ref` and `own` variables
-- Prevent dangling refs (using a `ref` after its source `own` is freed)
-- Prevent freeing an `own` while `ref`s to it still exist
-- No explicit lifetime annotations — simpler than Rust's approach
+- ~~Track borrow relationships between `ref` and `own` variables~~ ✅
+- ~~Prevent dangling refs (using a `ref` after its source `own` is freed)~~ ✅
+- ~~Prevent using a `ref` after owner goes out of scope~~ ✅
+- **TODO:** Prevent freeing an `own` while `ref`s to it still exist
+- **TODO:** Lifetime validation for nested scopes and complex control flow
 
-### Phase 2: Print + Float/Char
+### Phase 2: Print + Float/Char (**In Progress** ✅)
 
-Add output capability and expand the type system with new primitives.
+Expand output capabilities and the type system.
 
-- Implement the `print` keyword (already reserved in the lexer)
-- Add `float` type (maps to `double` in C)
-- Add `char` type
+- ~~Implement basic `print` statement~~ ✅
+- ~~String literal support~~ ✅
+- **TODO:** Print formatting (format specifiers like `%d`, `%s`)
+- **TODO:** String variables (not just literals)
+- **TODO:** Add `float` type (maps to `double` in C)
+- **TODO:** Add `char` type
 
 ```c
-// Preview syntax
+// Preview syntax (not yet implemented)
+name: string = "Alice";
 x: float = 3.14;
 c: char = 'A';
-print(x);
+print("Name: %s, Value: %.2f", name, x);
 ```
 
 ### Phase 3: Nullable Types
