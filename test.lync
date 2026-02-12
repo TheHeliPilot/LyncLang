@@ -1,45 +1,16 @@
-// Lync Optimizer Test - Simplified for Function-Style print()
-
+// Note: This features Phase 3 syntax which is currently in the roadmap
 def main(): int {
-    // 1. Constant Folding & Arithmetic Identity
-    // Expected C: int64_t a = 20;
-    a: int = (10 + 10) * 1 + 0;
+    maybe_ptr: own? int = alloc 42;
 
-    // 2. Boolean Folding & Peephole (!!x)
-    // Expected C: bool b = true;
-    b: bool = !!(5 > 2) && (true || false);
+    i: int = 5;
 
-    // 3. Dead Code Elimination (Branch Removal)
-    if (false) {
-        print("FAIL: DCE failed - unreachable if");
-    } else {
-        print("PASS: DCE works on else");
-    }
+    if(some(maybe_ptr)){}
 
-    // 4. Loop Bound Folding
-    // Expected C: for loop from 0 to 5
-    for (i: 0 to 2 + 3) {
-        print("Looping...");
-    }
-
-    // 5. Match Expression Folding
-    // Expected C: int64_t val = 1;
-    val: int = match 10 {
-        10: 1;
-        _: 0;
+    match maybe_ptr {
+        some(maybe_ptr): {}
+        _: {}
     };
 
-    // 6. Ownership Consistency
-    // Optimizer must not touch alloc/free due to side effects
-    p: own int = alloc 100;
-    print("Value exists");
-    free p;
-
+    free maybe_ptr;
     return 0;
-}
-
-// 7. Unreachable Code after Return
-def unreachable(): int {
-    return 5;
-    print("FAIL: Code after return was not eliminated");
 }

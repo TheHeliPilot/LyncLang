@@ -161,8 +161,9 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "else") == 0) { type = ELSE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "int") == 0) { type = INT_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "void") == 0) { type = VOID_KEYWORD_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "null") == 0) { type = NULL_LIT_T; value = NULL; free_word = true; }
             else if (strcmp(word, "bool") == 0) { type = BOOL_KEYWORD_T; value = NULL; free_word = true; }
-            else if (strcmp(word, "str") == 0) { type = STR_KEYWORD_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "string") == 0) { type = STR_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "def") == 0) { type = DEF_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "while") == 0) { type = WHILE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "do") == 0) { type = DO_T; value = NULL; free_word = true; }
@@ -172,6 +173,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "alloc") == 0) { type = ALLOC_T; value = NULL; free_word = true; }
             else if (strcmp(word, "free") == 0) { type = FREE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "match") == 0) { type = MATCH_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "some") == 0) { type = SOME_T; value = NULL; free_word = true; }
             else if (strcmp(word, "own") == 0) { type = OWN_T; value = NULL; free_word = true; }
             else if (strcmp(word, "ref") == 0) { type = REF_T; value = NULL; free_word = true; }
             else if (strcmp(word, "true") == 0) {
@@ -431,6 +433,7 @@ const char* token_type_name(TokenType type) {
         case INT_LIT_T: return "int literal";
         case BOOL_LIT_T: return "bool literal";
         case STR_LIT_T: return "string literal";
+        case NULL_LIT_T: return "null";
         case VAR_T: return "identifier";
         case PLUS_T: return "+";
         case MINUS_T: return "-";
@@ -460,6 +463,7 @@ const char* token_type_name(TokenType type) {
         case FOR_T: return "for";
         case TO_T: return "to";
         case MATCH_T: return "match";
+        case SOME_T: return "some";
         case INT_KEYWORD_T: return "int";
         case BOOL_KEYWORD_T: return "bool";
         case STR_KEYWORD_T: return "str";

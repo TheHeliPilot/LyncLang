@@ -1,0 +1,18 @@
+// Test warning system - should compile but show warnings
+def unused_param(x: int, y: int): int {
+    // Warning: parameter 'y' is never used
+    return x + 5;
+}
+
+def main(): int {
+    // Warning: variable 'unused' is never used
+    unused: int = 10;
+
+    // Warning: parameter 'result' is never used
+    result: int = unused_param(5, 3);
+
+    x: int = 42;
+    y: int = x + 1;  // y is used
+
+    return y;
+}

@@ -189,6 +189,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             break;
         }
 
+        case NULL_LIT_E: {
+            fprintf(out, "NULL");
+            break;
+        }
+
         case VAR_E:
             fprintf(out, "%s%s", e->as.var.ownership != OWNERSHIP_NONE ? "*" : "", e->as.var.name);
             break;
@@ -312,6 +317,12 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             break;
         }
 
+        case SOME_E: {
+            fprintf(out, "(");
+            emit_expr(e->as.some.var, out, fstn);
+            fprintf(out, ") == NULL");
+        }
+
         case ALLOC_E: {
             break;
         }
@@ -357,7 +368,7 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
     } else {
         // Base case: just a normal assignment
         emit_indent(out, indent);
-        fprintf(out, "%s%s = ", o != OWNERSHIP_NONE ? "*" : "", targetVar);
+        fprintf(out, "%s%s = ", (o != OWNERSHIP_NONE && e->analyzedType != NULL_LIT_T) ? "*" : "", targetVar);
         emit_expr(e, out, fstn);
         fprintf(out, ";\n");
     }

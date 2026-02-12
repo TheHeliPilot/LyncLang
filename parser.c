@@ -139,6 +139,10 @@ Expr* parseFactor(Parser* p) {
             Token* t = consume(p);
             return makeStrLit(TOK_LOC(t), (char*)t->value);
         }
+        case NULL_LIT_T: {
+            Token* t = consume(p);
+            return makeNullLit(TOK_LOC(t));
+        }
         case VAR_T: {
             Token* t = consume(p);
             if (peek(p, 0)->type == L_PAREN_T) {
@@ -210,6 +214,18 @@ Expr* parseFactor(Parser* p) {
             e->as.match.var = target;
             e->as.match.branches = branches;
             e->as.match.branchCount = count;
+            return e;
+        }
+        case SOME_T: {
+            Expr* e = malloc(sizeof(Expr));
+
+            consume(p);
+            expect(p, L_PAREN_T);
+            Expr* v = parseExpr(p);
+            expect(p, R_PAREN_T);
+
+            e->type = SOME_E;
+            e->as.match.var = v;
             return e;
         }
         case RETURN_T: {
@@ -292,6 +308,7 @@ Stmt* parseStatement(Parser* p) {
                 }
 
                 TokenType varType = consume(p)->type;
+
                 expect(p, EQUALS_T);
                 Expr *e = parseExpr(p);
                 expect(p, SEMICOLON_T);
@@ -519,8 +536,14 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
             o = OWNERSHIP_REF;
         }
 
+        bool isNullable = false;
+        if(peek(p, 0)->type == QUESTION_MARK_T) {
+            consume(p);
+            isNullable = true;
+        }
+
         Token* type = consume(p);
-        FuncParam fp = (FuncParam){.type = type->type, .name = t->value, .ownership = o};
+        FuncParam fp = (FuncParam){.type = type->type, .name = t->value, .ownership = o, .isNullable = isNullable};
         fps = realloc(fps, sizeof(FuncParam) * (counter + 1));
         fps[counter] = fp;
         counter++;
@@ -550,6 +573,12 @@ Expr* makeStrLit(SourceLocation loc, char* val) {
     e->type = STR_LIT_E;
     e->loc = loc;
     e->as.str_val = val;
+    return e;
+}
+Expr* makeNullLit(SourceLocation loc) {
+    Expr* e = malloc(sizeof(Expr));
+    e->type = NULL_LIT_E;
+    e->loc = loc;
     return e;
 }
 Expr* makeVar(SourceLocation loc, char* name) {

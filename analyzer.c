@@ -92,6 +92,10 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             result = STR_KEYWORD_T;
             break;
 
+        case NULL_LIT_E:
+            result = NULL_LIT_T;
+            break;
+
         case VAR_E: {
             Symbol* sym = lookup(scope, e->as.var.name);
             if (sym == nullptr) {
@@ -350,6 +354,10 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             result = resultType;
             break;
         }
+        case SOME_E: {
+            result = BOOL_KEYWORD_T;
+            break;
+        }
         case ALLOC_E: {
             e->as.alloc.type = analyze_expr(scope, funcTable, e->as.alloc.initialValue);
             result = e->as.alloc.type;
@@ -375,13 +383,13 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         case VAR_DECL_S: {
             TokenType t = analyze_expr(scope, funcTable, s->as.var_decl.expr);
 
-            if (s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.expr->type != ALLOC_E)
+            if (s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.expr->type != ALLOC_E && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
                 stage_error(STAGE_ANALYZER, s->loc, "'own' variables must be initialized with 'alloc'");
 
             if (s->as.var_decl.expr->type == ALLOC_E && s->as.var_decl.ownership != OWNERSHIP_OWN)
                 stage_error(STAGE_ANALYZER, s->loc, "'alloc' can only be used with 'own' variables");
 
-            if (t != s->as.var_decl.varType)
+            if (t != s->as.var_decl.varType && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
                 stage_error(STAGE_ANALYZER, s->loc, "variable '%s' declared as %s but initialized with %s",
                       s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
             declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership);

@@ -52,12 +52,14 @@ typedef enum {
     MATCH_T,
     UNDERSCORE_T,
     RETURN_T,
+    SOME_T,
 
     // Type keywords
     INT_KEYWORD_T,
     BOOL_KEYWORD_T,
     STR_KEYWORD_T,
     VOID_KEYWORD_T,
+    NULL_LIT_T,
 
     // Function stuff
     DEF_KEYWORD_T,

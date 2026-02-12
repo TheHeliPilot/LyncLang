@@ -22,6 +22,7 @@ typedef struct {
     TokenType type;
     char* name;
     Ownership ownership;
+    bool isNullable;
 } FuncParam;
 
 typedef struct {
@@ -49,7 +50,7 @@ typedef struct {
 
 typedef enum {
     //literals
-    INT_LIT_E, BOOL_LIT_E, STR_LIT_E,
+    INT_LIT_E, BOOL_LIT_E, STR_LIT_E, NULL_LIT_E,
 
     //vars
     VAR_E,
@@ -62,6 +63,9 @@ typedef enum {
 
     //mem
     ALLOC_E,
+
+    //match
+    SOME_E,
 
     //operations
     UN_OP_E, BIN_OP_E,
@@ -115,6 +119,10 @@ struct Expr {
             MatchBranchExpr* branches;
             int branchCount;
         } match;
+
+        struct {
+            Expr* var;
+        } some;
     } as;
 };
 
@@ -208,6 +216,7 @@ Token* expect(Parser*, TokenType);
 Expr* makeIntLit(SourceLocation, int);
 Expr* makeBoolLit(SourceLocation, bool);
 Expr* makeStrLit(SourceLocation, char*);
+Expr* makeNullLit(SourceLocation);
 Expr* makeVar(SourceLocation, char*);
 Expr* makeFuncCall(SourceLocation, char*, Expr**, int);
 Expr* makeUnOp(SourceLocation, TokenType, Expr*);
