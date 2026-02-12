@@ -105,12 +105,11 @@ If no input file is specified, defaults to `test.lync`.
 | `bool` | Boolean (`true` / `false`) | `bool` |
 | `string` | String literal (read-only) | `const char*` |
 | `void` | No return value (functions only) | `void` |
-| `T?` | Nullable type (any type + `?`) | pointer with null checks |
-
-**Nullable types:** Any owned or reference type can be made nullable by adding `?`:
-- `own? int` — nullable owned integer (can be `null` or a valid pointer)
-- `ref? int` — nullable reference
+**Nullable pointers:** Owned and reference types can be made nullable by adding `?`:
+- `own? int` — nullable owned pointer (can be `null` or a valid pointer)
+- `ref? int` — nullable reference pointer
 - Must be unwrapped via `match` with `some`/`null` patterns before use
+- Only pointer types (`own`, `ref`) can be nullable, not base types
 
 ### Variables
 
@@ -292,9 +291,9 @@ result: int = match maybe_ptr {
 ### Print Statement
 
 ```c
-print 42;                    // Print a single value
-print true, false;           // Print multiple values (comma-separated)
-print "Result:", x + 5;      // Mix literals and expressions
+print(42);                    // Print a single value
+print(true, false);           // Print multiple values (comma-separated)
+print("Result:", x + 5);      // Mix literals and expressions
 ```
 
 The `print` statement is a built-in for output. It accepts `int`, `bool`, and `string` values. Multiple values can be printed with comma separation. `print` is reserved and cannot be used as a variable name.
@@ -515,8 +514,8 @@ maybe: own? int = alloc 42;
 
 // Match unwrapping
 match maybe {
-    some(val): { print val; }
-    null: { print "null"; }
+    some(val): { print(val); }
+    null: { print("null"); }
 };
 
 // Conditional unwrapping
@@ -538,7 +537,7 @@ The compiler now tracks which `own` variable each `ref` borrows from. This enabl
 
 The `print` statement is now available for basic output:
 - Supports `int`, `bool`, and `string` types
-- Multiple values with comma separation: `print "Result:", x, true;`
+- Multiple values with comma separation: `print("Result:", x, true);`
 - Type-checked at compile time (unsupported types trigger errors)
 - Reserved keyword (cannot be used as a variable name)
 - Warns on empty `print()` calls
@@ -554,12 +553,10 @@ String literals with escape sequence support:
 
 ## Planned Features
 
-- **Enhanced borrow tracking** — prevent freeing an `own` while `ref`s to it exist
 - **Print formatting** — format specifiers, custom output formatting
 - **Float and char types** — `float` (64-bit) and `char` primitives
 - **String variables** — assignable string variables (beyond literals)
-- **Nullable types** — `int?`, `own?` with match-based null safety
-- **Match expansion** — range patterns, exhaustiveness checking
+- **Match expansion** — range patterns, boolean patterns, exhaustiveness checking, unreachable warnings
 - **Structs** — user-defined data types with auto-dereferencing
 - **Arrays** — fixed-size stack arrays
 
@@ -567,15 +564,16 @@ String literals with escape sequence support:
 
 ## Roadmap
 
-### Phase 1: Ref Expansion (**In Progress** ✅)
+### Phase 1: Ref Expansion (**Completed** ✅)
 
-~~Basic ownership tracking is complete~~. Remaining work:
+~~Basic ownership tracking is complete~~. All ref tracking features implemented:
 
 - ~~Track borrow relationships between `ref` and `own` variables~~ ✅
 - ~~Prevent dangling refs (using a `ref` after its source `own` is freed)~~ ✅
 - ~~Prevent using a `ref` after owner goes out of scope~~ ✅
-- **TODO:** Prevent freeing an `own` while `ref`s to it still exist
-- **TODO:** Lifetime validation for nested scopes and complex control flow
+- ~~Error when trying to use a `ref` after its `own` source is freed or out of scope~~ ✅
+
+**Note:** The compiler does not prevent freeing an `own` while `ref`s to it exist — this is intentional. Using the `ref` after the `own` is freed will trigger a compile error at the usage site.
 
 ### Phase 2: Print + Float/Char (**In Progress** ✅)
 
@@ -598,9 +596,9 @@ print("Name: %s, Value: %.2f", name, x);
 
 ### Phase 3: Nullable Types (**Completed** ✅)
 
-Any type can be nullable with the `?` suffix. Acts like an `Option` type — you must explicitly unwrap before use.
+Pointer types can be made nullable with the `?` suffix. Acts like an `Option` type — you must explicitly unwrap before use.
 
-- ~~Nullable types: `int?`, `bool?`, `own?`, `ref?`~~ ✅
+- ~~Nullable pointers: `own?`, `ref?`~~ ✅
 - ~~Must unwrap via `match` with `some` / `null` branches~~ ✅
 - ~~Using a nullable value without unwrapping is a compile error~~ ✅
 - ~~Flow-sensitive unwrapping: variables are known to be non-null within `if(some(x))` blocks~~ ✅
