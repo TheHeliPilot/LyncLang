@@ -139,8 +139,9 @@ bool constant_folding_stmt(Stmt* s) {
             modified |= fold_expression(&s->as.match_stmt.var);
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
                 MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
-                if (branch->caseExpr->type != VOID_E) {
-                    modified |= fold_expression(&branch->caseExpr);
+                // For VALUE_PATTERN, fold the expression
+                if (branch->pattern->type == VALUE_PATTERN) {
+                    modified |= fold_expression(&branch->pattern->as.value_expr);
                 }
                 for (int j = 0; j < branch->stmtCount; j++) {
                     modified |= constant_folding_stmt(branch->stmts[j]);
@@ -445,8 +446,9 @@ bool peephole_optimizations_stmt(Stmt* s) {
             modified |= peephole_optimize_expr(&s->as.match_stmt.var);
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
                 MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
-                if (branch->caseExpr->type != VOID_E) {
-                    modified |= peephole_optimize_expr(&branch->caseExpr);
+                // For VALUE_PATTERN, optimize the expression
+                if (branch->pattern->type == VALUE_PATTERN) {
+                    modified |= peephole_optimize_expr(&branch->pattern->as.value_expr);
                 }
                 for (int j = 0; j < branch->stmtCount; j++) {
                     modified |= peephole_optimizations_stmt(branch->stmts[j]);

@@ -19,7 +19,7 @@ Scope* make_scope(Scope* parent) {
     return scope;
 }
 
-void declare(Scope* scope, char* name, TokenType type, Ownership ownership) {
+void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool isNullable) {
     // Check if trying to declare 'print' as a variable
     if (strcmp(name, "print") == 0) {
         stage_error(STAGE_ANALYZER, NO_LOC,
@@ -32,11 +32,11 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership) {
                         "variable '%s' already declared in this scope", name);
     }
 
-    stage_trace(STAGE_ANALYZER, "declare %s : %s",
-                name, token_type_name(type));
+    stage_trace(STAGE_ANALYZER, "declare %s : %s%s",
+                name, isNullable ? "nullable " : "", token_type_name(type));
 
     scope->symbols[scope->count++] =
-            (Symbol){.type = type, .name = name, .ownership = ownership, .is_nullable = false, .state = ALIVE};
+            (Symbol){.type = type, .name = name, .ownership = ownership, .is_nullable = isNullable, .state = ALIVE, .is_unwrapped = false};
 
     if (scope->capacity == scope->count) {
         scope->capacity *= 2;
@@ -115,6 +115,16 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 stage_error(STAGE_ANALYZER, e->loc, "use after move: variable '%s' has been moved", e->as.var.name);
             if (sym->ownership == OWNERSHIP_REF && lookup(scope, sym->owner)->state != ALIVE)
                 stage_error(STAGE_ANALYZER, e->loc, "use after owner no longer in scope: owner '%s' of '%s' is out of scope", lookup(scope, sym->owner)->name, e->as.var.name);
+
+            // Check for nullable usage in expressions (only allowed if unwrapped)
+            if (sym->is_nullable && !sym->is_unwrapped) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                    "nullable variable '%s' must be unwrapped before use",
+                    e->as.var.name);
+                stage_note(STAGE_ANALYZER, e->loc,
+                    "use 'match %s { some(val): { ... } null: { ... } }' to safely unwrap, or 'if(some(%s))' to check",
+                    e->as.var.name, e->as.var.name);
+            }
 
             e->as.var.ownership = sym->ownership;
             result = sym->type;
@@ -316,28 +326,96 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             break;
 
         case MATCH_E: {
-            TokenType targetType = analyze_expr(scope, funcTable, e->as.match.var);
+            // Get the matched variable (special handling for nullable to bypass unwrap check)
+            Symbol* matchedSym = nullptr;
+            TokenType targetType = VOID_KEYWORD_T;
 
-            TokenType resultType = VOID_KEYWORD_T;  // will be set by first branch
+            if (e->as.match.var->type == VAR_E) {
+                matchedSym = lookup(scope, e->as.match.var->as.var.name);
+                if (matchedSym) {
+                    targetType = matchedSym->type;
+                } else {
+                    stage_error(STAGE_ANALYZER, e->loc, "variable '%s' is not declared",
+                               e->as.match.var->as.var.name);
+                }
+            } else {
+                // For non-variable expressions, analyze normally
+                targetType = analyze_expr(scope, funcTable, e->as.match.var);
+            }
 
+            bool isNullableMatch = (matchedSym && matchedSym->is_nullable);
             bool hasDefault = false;
+            bool hasSome = false, hasNull = false;
+            TokenType resultType = VOID_KEYWORD_T;
 
             for (int i = 0; i < e->as.match.branchCount; i++) {
                 MatchBranchExpr* branch = &e->as.match.branches[i];
 
-                // check pattern type (skip wildcard _)
-                if (branch->caseExpr->type == VOID_E) {
+                // Validate pattern types
+                if (branch->pattern->type == SOME_PATTERN) {
+                    hasSome = true;
+                    if (!isNullableMatch)
+                        stage_error(STAGE_ANALYZER, branch->pattern->loc,
+                            "some() pattern can only be used on nullable types");
+                }
+                else if (branch->pattern->type == NULL_PATTERN) {
+                    hasNull = true;
+                    if (!isNullableMatch)
+                        stage_error(STAGE_ANALYZER, branch->pattern->loc,
+                            "null pattern can only be used on nullable types");
+                }
+                else if (branch->pattern->type == WILDCARD_PATTERN) {
                     hasDefault = true;
-                } else {
-                    TokenType patternType = analyze_expr(scope, funcTable, branch->caseExpr);
+                    hasSome = hasNull = true;
+                }
+                else if (branch->pattern->type == VALUE_PATTERN) {
+                    TokenType patternType = analyze_expr(scope, funcTable, branch->pattern->as.value_expr);
                     if (patternType != targetType)
-                        stage_error(STAGE_ANALYZER, branch->caseExpr->loc,
+                        stage_error(STAGE_ANALYZER, branch->pattern->loc,
                                     "match pattern type %s doesn't match target type %s",
                                     token_type_name(patternType), token_type_name(targetType));
                 }
 
-                // check body type
-                TokenType bodyType = analyze_expr(scope, funcTable, branch->caseRet);
+                // For SOME_PATTERN in expression match, create a temporary scope with the binding
+                Scope* branchScope = scope;
+                if (branch->pattern->type == SOME_PATTERN && matchedSym) {
+                    branchScope = make_scope(scope);
+
+                    // Binding is always a reference (borrows from original)
+                    Ownership bindingOwnership = (matchedSym->ownership == OWNERSHIP_NONE)
+                        ? OWNERSHIP_NONE
+                        : OWNERSHIP_REF;
+
+                    declare(branchScope,
+                           branch->pattern->as.binding_name,
+                           matchedSym->type,
+                           bindingOwnership,
+                           false);  // binding is NOT nullable
+
+                    // Set owner for ref tracking
+                    if (bindingOwnership == OWNERSHIP_REF) {
+                        Symbol* bindingSym = lookup(branchScope, branch->pattern->as.binding_name);
+                        if (bindingSym) {
+                            bindingSym->owner = matchedSym->name;
+                        }
+                    }
+
+                    // Store type for codegen
+                    branch->analyzed_type = matchedSym->type;
+
+                    // Mark original variable as unwrapped in this branch scope
+                    Symbol* origSym = lookup(branchScope, matchedSym->name);
+                    if (origSym) {
+                        origSym->is_unwrapped = true;
+                    }
+                }
+
+                TokenType bodyType = analyze_expr(branchScope, funcTable, branch->caseRet);
+
+                // Clean up temporary scope
+                if (branchScope != scope) {
+                    free(branchScope);
+                }
 
                 if (i == 0) {
                     resultType = bodyType;
@@ -348,13 +426,33 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 }
             }
 
-            if (!hasDefault)
+            if (isNullableMatch && (!hasSome || !hasNull)) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                    "match on nullable type must handle both some and null cases");
+            }
+
+            if (!hasDefault && !isNullableMatch)
                 stage_error(STAGE_ANALYZER, e->loc, "match expression must have a default '_' branch");
 
             result = resultType;
             break;
         }
         case SOME_E: {
+            // some() is allowed to access nullable variables without unwrapping
+            // Just verify the variable exists and is nullable
+            if (e->as.some.var->type == VAR_E) {
+                Symbol* sym = lookup(scope, e->as.some.var->as.var.name);
+                if (sym == nullptr) {
+                    stage_error(STAGE_ANALYZER, e->loc, "variable '%s' is not declared", e->as.some.var->as.var.name);
+                } else if (!sym->is_nullable) {
+                    stage_warning(STAGE_ANALYZER, e->loc,
+                        "some() used on non-nullable variable '%s' (always true if not null)",
+                        e->as.some.var->as.var.name);
+                }
+            } else {
+                // If it's not a simple variable, analyze it normally
+                analyze_expr(scope, funcTable, e->as.some.var);
+            }
             result = BOOL_KEYWORD_T;
             break;
         }
@@ -392,7 +490,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             if (t != s->as.var_decl.varType && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
                 stage_error(STAGE_ANALYZER, s->loc, "variable '%s' declared as %s but initialized with %s",
                       s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
-            declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership);
+            declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable);
             break;
         }
 
@@ -422,9 +520,27 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             TokenType c = analyze_expr(scope, funcTable, s->as.if_stmt.cond);
             if (c != BOOL_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "if condition must be bool, got %s", token_type_name(c));
+
+            // Check if condition is some(variable) to mark it as unwrapped in true branch
+            bool isSomeCheck = false;
+            char* unwrappedVarName = nullptr;
+            if (s->as.if_stmt.cond->type == SOME_E &&
+                s->as.if_stmt.cond->as.some.var->type == VAR_E) {
+                isSomeCheck = true;
+                unwrappedVarName = s->as.if_stmt.cond->as.some.var->as.var.name;
+            }
+
             Scope* tScope = make_scope(scope);
+            // Mark variable as unwrapped in the true branch (where we know it's non-null)
+            if (isSomeCheck) {
+                Symbol* sym = lookup(tScope, unwrappedVarName);
+                if (sym) {
+                    sym->is_unwrapped = true;
+                }
+            }
             analyze_stmt(tScope, funcTable, s->as.if_stmt.trueStmt);
             free(tScope);
+
             if (s->as.if_stmt.falseStmt != nullptr) {
                 Scope* fScope = make_scope(scope);
                 analyze_stmt(fScope, funcTable, s->as.if_stmt.falseStmt);
@@ -455,7 +571,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 
         case FOR_S: {
             Scope* body = make_scope(scope);
-            declare(body, s->as.for_stmt.varName, INT_KEYWORD_T, OWNERSHIP_NONE);
+            declare(body, s->as.for_stmt.varName, INT_KEYWORD_T, OWNERSHIP_NONE, false);
             if (analyze_expr(body, funcTable, s->as.for_stmt.min) != INT_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "for loop min must be int");
             if (analyze_expr(body, funcTable, s->as.for_stmt.max) != INT_KEYWORD_T)
@@ -481,16 +597,106 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         }
 
         case MATCH_S: {
-            analyze_expr(scope, funcTable, s->as.match_stmt.var);
-            for (int i = 0; i < s->as.match_stmt.branchCount; ++i) {
-                MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
-                if (branch->caseExpr->type != VOID_E) {
-                    analyze_expr(scope, funcTable, branch->caseExpr);
+            // 1. Get the matched variable (special handling for nullable to bypass unwrap check)
+            Symbol* matchedSym = nullptr;
+            TokenType matchedType = VOID_KEYWORD_T;
+
+            if (s->as.match_stmt.var->type == VAR_E) {
+                matchedSym = lookup(scope, s->as.match_stmt.var->as.var.name);
+                if (matchedSym) {
+                    matchedType = matchedSym->type;
+                } else {
+                    stage_error(STAGE_ANALYZER, s->loc, "variable '%s' is not declared",
+                               s->as.match_stmt.var->as.var.name);
                 }
-                for (int j = 0; j < branch->stmtCount; ++j) {
-                    analyze_stmt(scope, funcTable, branch->stmts[j]);
+            } else {
+                // For non-variable expressions, analyze normally
+                matchedType = analyze_expr(scope, funcTable, s->as.match_stmt.var);
+            }
+
+            // 2. Determine if this is a nullable match
+            bool isNullableMatch = (matchedSym && matchedSym->is_nullable);
+
+            // 3. Validate pattern types
+            bool hasSome = false, hasNull = false;
+
+            for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
+                MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
+
+                if (branch->pattern->type == SOME_PATTERN) {
+                    hasSome = true;
+                    if (!isNullableMatch)
+                        stage_error(STAGE_ANALYZER, branch->pattern->loc,
+                            "some() pattern can only be used on nullable types");
+                }
+                else if (branch->pattern->type == NULL_PATTERN) {
+                    hasNull = true;
+                    if (!isNullableMatch)
+                        stage_error(STAGE_ANALYZER, branch->pattern->loc,
+                            "null pattern can only be used on nullable types");
+                }
+                else if (branch->pattern->type == WILDCARD_PATTERN) {
+                    hasSome = hasNull = true;  // wildcard covers both
                 }
             }
+
+            // 4. Exhaustiveness check for nullable types
+            if (isNullableMatch && (!hasSome || !hasNull)) {
+                stage_error(STAGE_ANALYZER, s->loc,
+                    "match on nullable type must handle both some and null cases");
+            }
+
+            // 5. Analyze each branch with appropriate scope
+            for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
+                MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
+                Scope* branchScope = make_scope(scope);
+
+                // For SOME_PATTERN, declare binding variable as non-nullable reference
+                if (branch->pattern->type == SOME_PATTERN && matchedSym) {
+                    // Binding is always a reference (borrows from original), not a new owned variable
+                    Ownership bindingOwnership = (matchedSym->ownership == OWNERSHIP_NONE)
+                        ? OWNERSHIP_NONE
+                        : OWNERSHIP_REF;
+
+                    declare(branchScope,
+                           branch->pattern->as.binding_name,
+                           matchedSym->type,
+                           bindingOwnership,
+                           false);  // binding is NOT nullable
+
+                    // Set owner for ref tracking (if it's a ref)
+                    if (bindingOwnership == OWNERSHIP_REF) {
+                        Symbol* bindingSym = lookup(branchScope, branch->pattern->as.binding_name);
+                        if (bindingSym) {
+                            bindingSym->owner = matchedSym->name;
+                        }
+                    }
+
+                    // Store type for codegen
+                    branch->analyzed_type = matchedSym->type;
+
+                    // Also mark the original variable as unwrapped in this scope
+                    Symbol* origSym = lookup(branchScope, matchedSym->name);
+                    if (origSym) {
+                        origSym->is_unwrapped = true;
+                    }
+                }
+
+                // For VALUE_PATTERN, analyze the pattern expression
+                if (branch->pattern->type == VALUE_PATTERN) {
+                    analyze_expr(branchScope, funcTable, branch->pattern->as.value_expr);
+                }
+
+                // Analyze branch statements
+                for (int j = 0; j < branch->stmtCount; j++) {
+                    analyze_stmt(branchScope, funcTable, branch->stmts[j]);
+                }
+
+                // Check ownership cleanup within branch
+                check_function_cleanup(branchScope);
+                free(branchScope);
+            }
+
             break;
         }
 
@@ -589,7 +795,7 @@ void analyze_program(Func** fs, int count) {
         Scope* funcScope = make_scope(global);
 
         for (int j = 0; j < fs[i]->signature->paramNum; ++j) {
-            declare(funcScope, fs[i]->signature->parameters[j].name, fs[i]->signature->parameters[j].type, fs[i]->signature->parameters[j].ownership);
+            declare(funcScope, fs[i]->signature->parameters[j].name, fs[i]->signature->parameters[j].type, fs[i]->signature->parameters[j].ownership, fs[i]->signature->parameters[j].isNullable);
         }
 
         analyze_stmt(funcScope, funcTable, fs[i]->body);

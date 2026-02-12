@@ -105,6 +105,12 @@ If no input file is specified, defaults to `test.lync`.
 | `bool` | Boolean (`true` / `false`) | `bool` |
 | `string` | String literal (read-only) | `const char*` |
 | `void` | No return value (functions only) | `void` |
+| `T?` | Nullable type (any type + `?`) | pointer with null checks |
+
+**Nullable types:** Any owned or reference type can be made nullable by adding `?`:
+- `own? int` — nullable owned integer (can be `null` or a valid pointer)
+- `ref? int` — nullable reference
+- Must be unwrapped via `match` with `some`/`null` patterns before use
 
 ### Variables
 
@@ -159,6 +165,17 @@ if (x > 10) {
 ```
 Condition must be `bool`. The `else` branch is optional.
 
+**Nullable checks with `some()`:**
+```c
+maybe: own? int = alloc 42;
+
+if(some(maybe)) {
+    // maybe is proven non-null here (flow-sensitive unwrapping)
+    x = maybe;  // safe to use without match
+}
+```
+The `some()` function checks if a nullable value is non-null. Inside the `if` block, the variable is automatically unwrapped and can be used directly.
+
 **while**
 ```c
 while (x > 0) {
@@ -208,10 +225,49 @@ match x {
 };
 ```
 
-- Wildcard `_` (default branch) is **required**
+**Pattern matching rules:**
+- Wildcard `_` (default branch) is required for value matches
 - All branches in a match expression must return the same type
 - Pattern types must match the target expression type
 - Compiles to if/else chains in C
+
+**Nullable unwrapping:**
+
+Match statements provide safe unwrapping of nullable types:
+
+```c
+maybe_ptr: own? int = alloc 42;
+
+// Statement match
+match maybe_ptr {
+    some(val): {
+        // val is 'own int' (non-nullable)
+        // safe to use here
+        i = val;
+    }
+    null: {
+        // handle null case
+    }
+};
+
+// Expression match
+result: int = match maybe_ptr {
+    some(val): val;  // val available in this expression
+    null: 0;
+};
+```
+
+**Pattern types:**
+- `some(binding)` — matches non-null, creates binding variable with unwrapped type
+- `null` — matches null value
+- `_` — wildcard (covers both some and null)
+- Value patterns — any expression for equality matching
+
+**Nullable match requirements:**
+- Nullable types **must** be matched with both `some` and `null` branches
+- Binding variables in `some(name)` are references to the original value
+- Bindings are automatically typed as non-nullable
+- Using nullable without unwrapping is a compile error
 
 ### Operators
 
@@ -444,6 +500,33 @@ Written in **C (C23 standard)** with zero external dependencies.
 
 ## Implemented Features (Recent Updates)
 
+### Nullable Types with Pattern Matching (✅ Implemented — Phase 3 Complete)
+
+Full nullable type support with safe unwrapping:
+- **Nullable syntax:** Any pointer type can be nullable with `?` suffix (`own? int`, `ref? int`)
+- **Pattern matching:** Unwrap with `some(binding)` and `null` patterns in match expressions and statements
+- **Flow-sensitive unwrapping:** Variables proven non-null via `if(some(x))` are automatically unwrapped in the block
+- **Compile-time safety:** Using nullable without unwrapping is a compile error
+- **Binding variables:** `some(val)` creates a non-nullable reference available in the branch
+- **Zero-cost:** All checks are compile-time; generated C uses simple null checks
+
+```c
+maybe: own? int = alloc 42;
+
+// Match unwrapping
+match maybe {
+    some(val): { print val; }
+    null: { print "null"; }
+};
+
+// Conditional unwrapping
+if(some(maybe)) {
+    x = maybe;  // safe to use
+}
+
+free maybe;
+```
+
 ### Reference Ownership Tracking (✅ Implemented)
 
 The compiler now tracks which `own` variable each `ref` borrows from. This enables compile-time detection of:
@@ -513,26 +596,45 @@ c: char = 'A';
 print("Name: %s, Value: %.2f", name, x);
 ```
 
-### Phase 3: Nullable Types
+### Phase 3: Nullable Types (**Completed** ✅)
 
 Any type can be nullable with the `?` suffix. Acts like an `Option` type — you must explicitly unwrap before use.
 
-- Nullable types: `int?`, `bool?`, `own?`, `ref?`
-- Must unwrap via `match` with `some` / `null` branches
-- Using a nullable value without unwrapping is a compile error
+- ~~Nullable types: `int?`, `bool?`, `own?`, `ref?`~~ ✅
+- ~~Must unwrap via `match` with `some` / `null` branches~~ ✅
+- ~~Using a nullable value without unwrapping is a compile error~~ ✅
+- ~~Flow-sensitive unwrapping: variables are known to be non-null within `if(some(x))` blocks~~ ✅
+- ~~Pattern matching with binding: `some(val)` creates a non-nullable reference~~ ✅
+- ~~Supported in both statement and expression matches~~ ✅
 
 ```c
-// Preview syntax
-maybe: own? int = alloc 42;
+// Nullable owned pointer
+maybe_ptr: own? int = alloc 42;
 
-match maybe {
+// Statement match with unwrapping
+match maybe_ptr {
     some(val): {
-        // val is safely unwrapped here
+        // val is 'own int' (non-nullable), safe to use
+        i = val;
     }
     null: {
         // handle null case
     }
 };
+
+// Expression match with unwrapping
+result: int = match maybe_ptr {
+    some(val): val;
+    null: 0;
+};
+
+// Flow-sensitive unwrapping with if
+if(some(maybe_ptr)) {
+    // maybe_ptr is known to be non-null here
+    x = maybe_ptr;
+}
+
+free maybe_ptr;
 ```
 
 ### Phase 4: Match Expansion

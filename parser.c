@@ -7,6 +7,9 @@
 // Helper to extract SourceLocation from Token
 #define TOK_LOC(tok) ((SourceLocation){.line = (tok)->line, .column = (tok)->column, .filename = (tok)->filename})
 
+// Forward declaration
+Pattern* parsePattern(Parser* p);
+
 Token* peek(Parser* parser, int offset) {
     if (parser->pos + offset >= parser->count) {
         // Use last token's location if available
@@ -193,11 +196,11 @@ Expr* parseFactor(Parser* p) {
             int count = 0;
             int capacity = 2;
             while (peek(p, 0)->type != R_BRACE_T) {
-                Expr* branchCond = parseExpr(p);
+                Pattern* pattern = parsePattern(p);
                 expect(p, COLON_T);
                 Expr* branchBody = parseExpr(p);
                 expect(p, SEMICOLON_T);
-                branches[count++] = (MatchBranchExpr){.caseExpr = branchCond, .caseRet = branchBody};
+                branches[count++] = (MatchBranchExpr){.pattern = pattern, .caseRet = branchBody};
 
                 if (count >= capacity) {
                     capacity *= 2;
@@ -275,6 +278,39 @@ Func** parseProgram(Parser* p, int* length) {
 
     return funcs;
 }
+
+Pattern* parsePattern(Parser* p) {
+    Pattern* pattern = malloc(sizeof(Pattern));
+    Token* tok = peek(p, 0);
+    pattern->loc = TOK_LOC(tok);
+
+    switch (tok->type) {
+        case NULL_LIT_T:
+            consume(p);
+            pattern->type = NULL_PATTERN;
+            break;
+        case UNDERSCORE_T:
+            consume(p);
+            pattern->type = WILDCARD_PATTERN;
+            break;
+        case SOME_T: {
+            consume(p);
+            expect(p, L_PAREN_T);
+            Token* bindingTok = expect(p, VAR_T);
+            expect(p, R_PAREN_T);
+            pattern->type = SOME_PATTERN;
+            pattern->as.binding_name = bindingTok->value;
+            break;
+        }
+        default:
+            pattern->type = VALUE_PATTERN;
+            pattern->as.value_expr = parseExpr(p);
+            break;
+    }
+
+    return pattern;
+}
+
 Stmt* parseStatement(Parser* p) {
     Token* t = peek(p, 0);
 
@@ -421,7 +457,7 @@ Stmt* parseStatement(Parser* p) {
             MatchBranchStmt* branches = malloc(sizeof(MatchBranchStmt) * 2);
 
             while (peek(p, 0)->type != R_BRACE_T) {
-                Expr* caseExpr = parseExpr(p);
+                Pattern* pattern = parsePattern(p);
                 expect(p, COLON_T);
                 expect(p, L_BRACE_T);
 
@@ -438,7 +474,7 @@ Stmt* parseStatement(Parser* p) {
                 }
                 expect(p, R_BRACE_T);
 
-                branches[bCount].caseExpr = caseExpr;
+                branches[bCount].pattern = pattern;
                 branches[bCount++].stmtCount = stmtCount;
 
                 if (bCount >= bSize) {

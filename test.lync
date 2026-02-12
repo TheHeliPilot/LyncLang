@@ -4,11 +4,15 @@ def main(): int {
 
     i: int = 5;
 
-    if(some(maybe_ptr)){}
-
     match maybe_ptr {
-        some(maybe_ptr): {}
-        _: {}
+        some(f): {
+            i = f;
+        }
+        null: {}
+    };
+    i = match maybe_ptr {
+        some(f): f;
+        null: 0;
     };
 
     free maybe_ptr;

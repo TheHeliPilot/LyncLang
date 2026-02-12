@@ -37,15 +37,33 @@ struct Func {
     Stmt* body;
 };
 
+typedef enum {
+    NULL_PATTERN,      // null
+    SOME_PATTERN,      // some(binding_name)
+    WILDCARD_PATTERN,  // _
+    VALUE_PATTERN,     // any expression (for non-nullable matches)
+} PatternType;
+
+typedef struct Pattern {
+    PatternType type;
+    SourceLocation loc;
+    union {
+        char* binding_name;  // for SOME_PATTERN
+        Expr* value_expr;    // for VALUE_PATTERN
+    } as;
+} Pattern;
+
 typedef struct {
-    Expr* caseExpr;
+    Pattern* pattern;       // CHANGED: was Expr* caseExpr
     Expr* caseRet;
+    TokenType analyzed_type; // for codegen (filled by analyzer)
 } MatchBranchExpr;
 
 typedef struct {
-    Expr* caseExpr;
+    Pattern* pattern;           // CHANGED: was Expr* caseExpr
     Stmt** stmts;
     int stmtCount;
+    TokenType analyzed_type;    // for codegen (filled by analyzer)
 } MatchBranchStmt;
 
 typedef enum {

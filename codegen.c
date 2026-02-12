@@ -20,6 +20,47 @@ void emit_indent(FILE* out, int level) {
     }
 }
 
+void emit_type(TokenType type, FILE* out) {
+    switch (type) {
+        case INT_KEYWORD_T: fprintf(out, "int64_t"); break;
+        case BOOL_KEYWORD_T: fprintf(out, "bool"); break;
+        case STR_KEYWORD_T: fprintf(out, "char"); break;
+        case VOID_KEYWORD_T: fprintf(out, "void"); break;
+        default: fprintf(out, "void"); break;
+    }
+}
+
+bool emit_pattern_condition(Pattern* pattern, Expr* matchVar, FILE* out, FuncSignToName* fstn) {
+    switch (pattern->type) {
+        case NULL_PATTERN:
+            // For nullable pointers, check the pointer itself, not dereferenced value
+            if (matchVar->type == VAR_E) {
+                fprintf(out, "%s", matchVar->as.var.name);
+            } else {
+                emit_expr(matchVar, out, fstn);
+            }
+            fprintf(out, " == NULL");
+            return false;
+        case SOME_PATTERN:
+            // For nullable pointers, check the pointer itself, not dereferenced value
+            if (matchVar->type == VAR_E) {
+                fprintf(out, "%s", matchVar->as.var.name);
+            } else {
+                emit_expr(matchVar, out, fstn);
+            }
+            fprintf(out, " != NULL");
+            return false;
+        case VALUE_PATTERN:
+            emit_expr(matchVar, out, fstn);
+            fprintf(out, " == ");
+            emit_expr(pattern->as.value_expr, out, fstn);
+            return false;
+        case WILDCARD_PATTERN:
+            return true;  // signals to use 'else'
+    }
+    return false;
+}
+
 char* get_mangled_name(FuncSign* sign) {
     static char buffer[512];
     char* ptr = buffer;
@@ -318,9 +359,15 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case SOME_E: {
-            fprintf(out, "(");
-            emit_expr(e->as.some.var, out, fstn);
-            fprintf(out, ") == NULL");
+            // For nullable pointers, don't dereference - check the pointer itself
+            if (e->as.some.var->type == VAR_E) {
+                fprintf(out, "%s != NULL", e->as.some.var->as.var.name);
+            } else {
+                fprintf(out, "(");
+                emit_expr(e->as.some.var, out, fstn);
+                fprintf(out, ") != NULL");
+            }
+            break;
         }
 
         case ALLOC_E: {
@@ -332,26 +379,48 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
 void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* out, int indent, FuncSignToName* fstn) {
     if (e->type == MATCH_E) {
         int defaultIdx = -1;
+        bool firstCondition = true;
+
+        // Find wildcard
+        for (int i = 0; i < e->as.match.branchCount; i++) {
+            if (e->as.match.branches[i].pattern->type == WILDCARD_PATTERN) {
+                defaultIdx = i;
+                break;
+            }
+        }
 
         for (int i = 0; i < e->as.match.branchCount; i++) {
-            MatchBranchExpr branch = e->as.match.branches[i];
+            if (i == defaultIdx) continue;  // handle wildcard at end
 
-            if (branch.caseExpr->type == VOID_E) {
-                defaultIdx = i; // Save the wildcard for the final 'else'
-                continue;
-            }
+            MatchBranchExpr* branch = &e->as.match.branches[i];
 
             emit_indent(out, indent);
-            if (i == 0) fprintf(out, "if (");
-            else fprintf(out, "else if (");
+            if (firstCondition) {
+                fprintf(out, "if (");
+                firstCondition = false;
+            } else {
+                fprintf(out, "else if (");
+            }
 
-            emit_expr(e->as.match.var, out, fstn);
-            fprintf(out, " == ");
-            emit_expr(branch.caseExpr, out, fstn);
+            emit_pattern_condition(branch->pattern, e->as.match.var, out, fstn);
             fprintf(out, ") {\n");
 
+            // If SOME_PATTERN, declare binding variable
+            if (branch->pattern->type == SOME_PATTERN) {
+                emit_indent(out, indent + 1);
+                emit_type(branch->analyzed_type, out);
+                fprintf(out, "* %s = ", branch->pattern->as.binding_name);
+                // Emit just the variable name, not dereferenced
+                if (e->as.match.var->type == VAR_E) {
+                    fprintf(out, "%s", e->as.match.var->as.var.name);
+                } else {
+                    emit_expr(e->as.match.var, out, fstn);
+                }
+                fprintf(out, ";\n");
+            }
+
             // Recurse: handles nested matches or simple values
-            emit_assign_expr_to_var(branch.caseRet, targetVar, o, out, indent + 1, fstn);
+            emit_assign_expr_to_var(branch->caseRet, targetVar, o, out, indent + 1, fstn);
 
             emit_indent(out, indent);
             fprintf(out, "}\n");
@@ -487,27 +556,69 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             break;
 
         case MATCH_S: {
-            for (int i = 0; i < s->as.match_stmt.branchCount; ++i) {
-                MatchBranchStmt b = s->as.match_stmt.branches[i];
+            int wildcardIdx = -1;
 
-                if(i == 0) {
+            // Find wildcard branch
+            for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
+                if (s->as.match_stmt.branches[i].pattern->type == WILDCARD_PATTERN) {
+                    wildcardIdx = i;
+                    break;
+                }
+            }
+
+            // Emit if-else chain
+            bool firstCondition = true;
+            for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
+                if (i == wildcardIdx) continue;  // handle wildcard at end
+
+                MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
+
+                emit_indent(out, indent);
+                if (firstCondition) {
                     fprintf(out, "if (");
-                    emit_expr(b.caseExpr, out, fstn);
-                    fprintf(out, ") {\n");
-                } else if ( b.caseExpr->type == VOID_E) {
-                    fprintf(out, "else {\n");
+                    firstCondition = false;
                 } else {
                     fprintf(out, "else if (");
-                    emit_expr(b.caseExpr, out, fstn);
-                    fprintf(out, ") {\n");
                 }
 
-                for (int j = 0; j < b.stmtCount; ++j) {
-                    emit_stmt(b.stmts[j], out, indent, fstn);
+                emit_pattern_condition(branch->pattern, s->as.match_stmt.var, out, fstn);
+                fprintf(out, ") {\n");
+
+                // If SOME_PATTERN, declare binding variable
+                if (branch->pattern->type == SOME_PATTERN) {
+                    emit_indent(out, indent + 1);
+                    emit_type(branch->analyzed_type, out);
+                    fprintf(out, "* %s = ", branch->pattern->as.binding_name);
+                    // Emit just the variable name, not dereferenced
+                    if (s->as.match_stmt.var->type == VAR_E) {
+                        fprintf(out, "%s", s->as.match_stmt.var->as.var.name);
+                    } else {
+                        emit_expr(s->as.match_stmt.var, out, fstn);
+                    }
+                    fprintf(out, ";\n");
                 }
 
+                // Emit branch statements
+                for (int j = 0; j < branch->stmtCount; j++) {
+                    emit_stmt(branch->stmts[j], out, indent + 1, fstn);
+                }
+
+                emit_indent(out, indent);
                 fprintf(out, "}\n");
             }
+
+            // Emit wildcard as final 'else'
+            if (wildcardIdx != -1) {
+                emit_indent(out, indent);
+                fprintf(out, "else {\n");
+                MatchBranchStmt* branch = &s->as.match_stmt.branches[wildcardIdx];
+                for (int j = 0; j < branch->stmtCount; j++) {
+                    emit_stmt(branch->stmts[j], out, indent + 1, fstn);
+                }
+                emit_indent(out, indent);
+                fprintf(out, "}\n");
+            }
+
             break;
         }
 

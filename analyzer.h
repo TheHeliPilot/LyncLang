@@ -22,6 +22,7 @@ typedef struct {
     char* owner;
     bool is_nullable;
     bool is_dangling;
+    bool is_unwrapped;  // true when inside a block where we've proven it's non-null
 } Symbol;
 
 typedef struct Scope Scope;
@@ -47,7 +48,7 @@ FuncSign* lookup_func_name(FuncTable *t, char *s);
 Scope* make_scope(Scope* parent);
 FuncTable* make_funcTable();
 
-void declare(Scope*, char* name, TokenType type, Ownership ownership);
+void declare(Scope*, char* name, TokenType type, Ownership ownership, bool isNullable);
 Symbol* lookup(Scope*, char* name);
 
 TokenType analyze_expr(Scope*, FuncTable*, Expr*);
