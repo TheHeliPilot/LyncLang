@@ -21,6 +21,7 @@ typedef struct {
     VarState state;
     char* owner;
     bool is_nullable;
+    bool is_dangling;
 } Symbol;
 
 typedef struct Scope Scope;

@@ -71,7 +71,7 @@ typedef enum {
 struct Expr {
     ExprType type;
     SourceLocation loc;
-    TokenType analyzedType;  // Filled in by analyzer
+    TokenType analyzedType;  //filled in by analyzer
 
     union {
         int int_val;
@@ -100,6 +100,7 @@ struct Expr {
             char* name;
             Expr** params;
             int count;
+            FuncSign* resolved_sign;
         } func_call;
 
         Expr* func_ret_expr;
@@ -221,7 +222,8 @@ Stmt* makeBlock(SourceLocation, Stmt**, int);
 Stmt* makeExprStmt(SourceLocation, Expr*);
 
 Func* makeFunc(char*, FuncParam*, int, TokenType, Stmt*);
-bool checkFuncSign(FuncSign*, FuncSign*);
+bool check_func_sign(FuncSign *a, FuncSign *b);
+bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters);
 
 // Parsing
 Func** parseProgram(Parser*, int*);

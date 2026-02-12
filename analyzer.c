@@ -61,6 +61,21 @@ Symbol* lookup(Scope* scope, char* name) {
     return NULL;
 }
 
+void mark_dangling_refs(Scope* scope, char* owner_name) {
+    for (int i = 0; i < scope->count; i++) {
+        Symbol* sym = &scope->symbols[i];
+        if (sym->ownership == OWNERSHIP_REF &&
+            sym->owner &&
+            strcmp(sym->owner, owner_name) == 0) {
+            sym->is_dangling = true;
+        }
+    }
+
+    if (scope->parent) {
+        mark_dangling_refs(scope->parent, owner_name);
+    }
+}
+
 TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
     TokenType result;
 
@@ -166,68 +181,129 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 // Type-check each argument
                 for (int i = 0; i < e->as.func_call.count; ++i) {
                     TokenType argType = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
-
-                    // Only allow int, bool, and string
                     if (argType != INT_KEYWORD_T && argType != BOOL_KEYWORD_T && argType != STR_KEYWORD_T) {
                         stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
-                                   "print only supports int, bool, and string, got %s",
-                                   token_type_name(argType));
+                                    "print only supports int, bool, and string, got %s",
+                                    token_type_name(argType));
                     }
                 }
-
-                // Warn if print is called with no arguments
                 if (e->as.func_call.count == 0) {
                     stage_warning(STAGE_ANALYZER, e->loc, "print called with no arguments");
                 }
-
+                e->as.func_call.resolved_sign = NULL;
                 result = VOID_KEYWORD_T;
                 break;
             }
 
-            FuncSign *fsign = lookup_func_name(funcTable, e->as.func_call.name);
-            if (fsign == nullptr) {
-                stage_error(STAGE_ANALYZER, e->loc, "function '%s' is not defined", e->as.func_call.name);
+            // Analyze all arguments first
+            TokenType* argTypes = malloc(sizeof(TokenType) * e->as.func_call.count);
+            for (int i = 0; i < e->as.func_call.count; ++i) {
+                argTypes[i] = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
+            }
+
+            // Find ALL matching overloads by name and arity
+            FuncSign* matches[funcTable->count];
+            int matchCount = 0;
+
+            for (int i = 0; i < funcTable->count; i++) {
+                FuncSign* candidate = &funcTable->signs[i];
+                if (strcmp(candidate->name, e->as.func_call.name) == 0 &&
+                    candidate->paramNum == e->as.func_call.count) {
+                    matches[matchCount++] = candidate;
+                }
+            }
+
+            if (matchCount == 0) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                            "no function '%s' takes %d arguments",
+                            e->as.func_call.name, e->as.func_call.count);
+                free(argTypes);
+                e->as.func_call.resolved_sign = NULL;
                 result = VOID_KEYWORD_T;
                 break;
             }
 
-            if (fsign->paramNum != e->as.func_call.count) {
-                stage_error(STAGE_ANALYZER, e->loc, "function '%s' expects %d arguments, got %d",
-                           e->as.func_call.name, fsign->paramNum, e->as.func_call.count);
+            // Find exact type match
+            FuncSign* match = NULL;
+            for (int i = 0; i < matchCount; i++) {
+                FuncSign* candidate = matches[i];
+                bool typesMatch = true;
+                for (int j = 0; j < candidate->paramNum; j++) {
+                    if (candidate->parameters[j].type != argTypes[j]) {
+                        typesMatch = false;
+                        break;
+                    }
+                }
+                if (typesMatch) {
+                    match = candidate;
+                    break;
+                }
             }
 
-            for (int i = 0; i < fsign->paramNum; ++i) {
-                TokenType exprT = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
+            if (match == NULL) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                            "no matching overload for '%s'", e->as.func_call.name);
 
-                //handle ownership transfer for 'own' parameters
-                if (fsign->parameters[i].ownership == OWNERSHIP_OWN) {
-                    //must be passing a variable (not a literal)
-                    if (e->as.func_call.params[i]->type != VAR_E)
-                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "can only move owned variables to 'own' parameters");
+                // Show argument types as a note
+                char arg_buffer[256];
+                char* ptr = arg_buffer;
+                ptr += sprintf(ptr, "argument types: (");
+                for (int i = 0; i < e->as.func_call.count; i++) {
+                    if (i > 0) ptr += sprintf(ptr, ", ");
+                    ptr += sprintf(ptr, "%s", token_type_name(argTypes[i]));
+                }
+                ptr += sprintf(ptr, ")");
+                stage_note(STAGE_ANALYZER, e->loc, "%s", arg_buffer);
 
-                    //get the variable symbol
-                    Symbol* sym = lookup(scope, e->as.func_call.params[i]->as.var.name);
-                    if (sym == nullptr) break;  // Already reported by analyze_expr
-
-                    //must be an 'own' variable
-                    if (sym->ownership != OWNERSHIP_OWN)
-                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "cannot move non-owned variable to 'own' parameter");
-
-                    //must be alive (not freed or already moved)
-                    if (sym->state != ALIVE)
-                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc, "cannot move '%s', it has been moved or freed", sym->name);
-
-                    //transfer ownership - mark as MOVED
-                    sym->state = MOVED;
+                // Show each candidate as a separate note
+                for (int i = 0; i < matchCount; i++) {
+                    FuncSign* candidate = matches[i];
+                    char cand_buffer[256];
+                    char* cp = cand_buffer;
+                    cp += sprintf(cp, "candidate: %s(", candidate->name);
+                    for (int j = 0; j < candidate->paramNum; j++) {
+                        if (j > 0) cp += sprintf(cp, ", ");
+                        cp += sprintf(cp, "%s", token_type_name(candidate->parameters[j].type));
+                    }
+                    cp += sprintf(cp, ") -> %s", token_type_name(candidate->retType));
+                    stage_note(STAGE_ANALYZER, e->loc, "%s", cand_buffer);
                 }
 
-                //type check
-                if (fsign->parameters[i].type != exprT)
-                    stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
-                               "parameter %d type mismatch: expected %s, got %s",
-                               i + 1, token_type_name(fsign->parameters[i].type), token_type_name(exprT));
+                free(argTypes);
+                e->as.func_call.resolved_sign = NULL;
+                result = VOID_KEYWORD_T;
+                break;
             }
-            result = fsign->retType;
+
+            // Store the resolved signature
+            e->as.func_call.resolved_sign = match;
+
+            // Handle ownership transfer for 'own' parameters
+            for (int i = 0; i < match->paramNum; ++i) {
+                if (match->parameters[i].ownership == OWNERSHIP_OWN) {
+                    if (e->as.func_call.params[i]->type != VAR_E) {
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
+                                    "can only move owned variables to 'own' parameters");
+                        continue;
+                    }
+                    Symbol* sym = lookup(scope, e->as.func_call.params[i]->as.var.name);
+                    if (sym == nullptr) continue;
+                    if (sym->ownership != OWNERSHIP_OWN) {
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
+                                    "cannot move non-owned variable to 'own' parameter");
+                        continue;
+                    }
+                    if (sym->state != ALIVE) {
+                        stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
+                                    "cannot move '%s', it has been moved or freed", sym->name);
+                        continue;
+                    }
+                    sym->state = MOVED;
+                }
+            }
+
+            result = match->retType;
+            free(argTypes);
             break;
         }
 
@@ -414,7 +490,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             Symbol* sym = lookup(scope, s->as.free_stmt.varName);
             if (sym == nullptr) {
                 stage_error(STAGE_ANALYZER, s->loc, "cannot free '%s', variable not declared", s->as.free_stmt.varName);
-                break;  // Can't continue checking without symbol
+                break;
             }
 
             // CHECK: Can only free 'own' variables
@@ -429,21 +505,22 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             if (sym->state == MOVED)
                 stage_error(STAGE_ANALYZER, s->loc, "cannot free '%s', ownership has been moved", s->as.free_stmt.varName);
 
-            // Mark as freed
+            //mark as freed
             sym->state = FREED;
+            mark_dangling_refs(scope, sym->name);
             break;
         }
     }
 }
 
 void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
-    //check if trying to define 'print' as a function
     if(strcmp("print", func->signature->name) == 0) {
         stage_error(STAGE_ANALYZER, NO_LOC, "'print' is a reserved built-in function and cannot be redefined");
     }
 
-    //check for duplicate signature
-    if(lookup_func_sign(table, func->signature)) stage_error(STAGE_ANALYZER, NO_LOC, "Function signature of function %s defined more then once", func->signature->name);
+    if(lookup_func_sign(table, func->signature)) {
+        stage_error(STAGE_ANALYZER, NO_LOC, "Function '%s' with these parameters is already defined", func->signature->name);
+    }
 
     //check main
     if(strcmp("main", func->signature->name) == 0) {
@@ -461,8 +538,8 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
 
 FuncSign* lookup_func_sign(FuncTable* t, FuncSign* s) {
     for (int i = 0; i < t->count; ++i) {
-        if(checkFuncSign(&t->signs[i], s))
-            return s;
+        if(check_func_sign(&t->signs[i], s))
+            return &t->signs[i];
     }
     return nullptr;
 }

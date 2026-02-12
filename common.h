@@ -16,6 +16,7 @@ typedef enum {
     STAGE_LEXER,
     STAGE_PARSER,
     STAGE_ANALYZER,
+    STAGE_OPTIMIZER,
     STAGE_CODEGEN,
     STAGE_INTERNAL
 } ErrorStage;
@@ -25,6 +26,7 @@ static inline const char* stage_name(ErrorStage s) {
         case STAGE_LEXER: return "lexer";
         case STAGE_PARSER: return "parser";
         case STAGE_ANALYZER: return "analyzer";
+        case STAGE_OPTIMIZER: return "optimizer";
         case STAGE_CODEGEN: return "codegen";
         default: return "internal";
     }

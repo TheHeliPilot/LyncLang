@@ -15,4 +15,7 @@ add_executable(lync main.c
         error.c
         error.h
         common.h
+        optimizer.c
+        optimizer.h
+        codegen_asm.c
 )

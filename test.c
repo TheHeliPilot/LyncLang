@@ -5,9 +5,6 @@
 
 int main()
 {
-  printf("%s\n", "Hello, world!");
-  printf("%s %d\n", "Value:", 42);
-  printf("%s\n", "Escape test: \n\t\"quoted\"");
-  return 0;
-;
+  int64_t my_var;
+  my_var = 5;
 }

@@ -217,7 +217,13 @@ Expr* parseFactor(Parser* p) {
             Expr* e = malloc(sizeof(Expr));
             e->type = FUNC_RET_E;
             e->loc = TOK_LOC(retTok);
-            e->as.func_ret_expr = parseExpr(p);
+            if(peek(p, 0)->type == SEMICOLON_T){
+                Expr* ve = malloc(sizeof(Expr));
+                ve->type = VOID_E;
+                ve->loc = TOK_LOC(retTok);
+                e->as.func_ret_expr = ve;
+            } else
+                e->as.func_ret_expr = parseExpr(p);
             return e;
         }
         case ALLOC_T: {
@@ -481,11 +487,28 @@ Stmt* parseBlock(Parser* p) {
 FuncParam* parseFuncParams(Parser* p, int* count) {
     FuncParam* fps = malloc(sizeof(FuncParam));
     int counter = 0;
+
+    // Don't try to parse parameters if we're already at ')'
+    if (peek(p, 0)->type == R_PAREN_T) {
+        *count = 0;
+        return fps;
+    }
+
     while (peek(p, 0)->type != R_PAREN_T) {
+        // Only expect comma BEFORE parameter if this isn't the first parameter
+        if (counter > 0) {
+            expect(p, COMMA_T);
+        }
+
         Token* t = consume(p);
-        if(t->type != VAR_T) stage_fatal(STAGE_PARSER, TOK_LOC(t), "Expected %s in function parameter number %d, but got %s",
-                                         token_type_name(VAR_T), counter, token_type_name(t->type));
+        if(t->type != VAR_T) {
+            stage_fatal(STAGE_PARSER, TOK_LOC(t),
+                        "Expected identifier in function parameter number %d, but got %s",
+                        counter + 1, token_type_name(t->type));
+        }
+
         expect(p, COLON_T);
+
         Ownership o = OWNERSHIP_NONE;
         if(peek(p, 0)->type == OWN_T) {
             consume(p);
@@ -495,11 +518,12 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
             consume(p);
             o = OWNERSHIP_REF;
         }
+
         Token* type = consume(p);
         FuncParam fp = (FuncParam){.type = type->type, .name = t->value, .ownership = o};
-        fps = realloc(fps, sizeof(FuncParam) * ++counter);
-        fps[counter - 1] = fp;
-        if(peek(p, 0)->type != R_PAREN_T) expect(p, COMMA_T);
+        fps = realloc(fps, sizeof(FuncParam) * (counter + 1));
+        fps[counter] = fp;
+        counter++;
     }
 
     *count = counter;
@@ -560,6 +584,7 @@ Expr* makeFuncCall(SourceLocation loc, char* n, Expr** params, int paramC) {
     e->as.func_call.name = n;
     e->as.func_call.params = params;
     e->as.func_call.count = paramC;
+    e->as.func_call.resolved_sign = nullptr;
     return e;
 }
 
@@ -623,7 +648,7 @@ Func* makeFunc(char* name, FuncParam* params, int paramCount, TokenType ret, Stm
     f->signature->retType = ret;
     return f;
 }
-bool checkFuncSign(FuncSign* a, FuncSign* b) {
+bool check_func_sign(FuncSign* a, FuncSign* b) {
     if(a->paramNum != b->paramNum)
         return false;
 
@@ -632,7 +657,18 @@ bool checkFuncSign(FuncSign* a, FuncSign* b) {
             return false;
     }
 
-    return (a->retType == b->retType && a->name == b->name);
+    if (a->retType != b->retType) return false;
+    return (a->retType == b->retType && strcmp(a->name, b->name) == 0);
+}
+
+bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters) {
+    if(a->paramNum != paramNum) { return false; }
+
+    for (int i = 0; i < a->paramNum; ++i) {
+        if(a->parameters[i].type != parameters[i]->analyzedType) { return false; }
+    }
+
+    return strcmp(a->name, name) == 0;
 }
 
 // AST printing functions (only active in trace mode, output to stderr)
@@ -661,7 +697,7 @@ void print_expr(Expr* e, int depth) {
             fprintf(stderr, "BoolLit: %s\n", e->as.bool_val ? "true" : "false");
             break;
         case VAR_E:
-            fprintf(stderr, "Var: %s\n", e->as.var);
+            fprintf(stderr, "Var: %s\n", e->as.var.name);
             break;
         case UN_OP_E:
             fprintf(stderr, "UnaryOp: %s\n", token_type_name(e->as.un_op.op));

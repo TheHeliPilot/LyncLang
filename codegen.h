@@ -8,14 +8,35 @@
 #include "common.h"
 #include "parser.h"
 
-void generate_code(Func** program, int count, FILE* output);
+typedef struct {
+    char* name;
+    int count;
+} FuncNameCounterElement;
+typedef struct {
+    FuncNameCounterElement* elements;
+    int height;
+    int count;
+} FuncNameCounter;
 
-void emit_expr(Expr* e, FILE* out);
-void emit_stmt(Stmt* s, FILE* out, int indent_level);
+typedef struct {
+    FuncSign* sign;
+    char* name;
+} FuncSignToNameElement;
+typedef struct {
+    FuncSignToNameElement* elements;
+    int height;
+    int count;
+} FuncSignToName;
+
+void generate_code(Func** program, int count, FILE* output);
+void generate_assembly(Func** program, int count, FILE* output);
+
+void emit_expr(Expr* e, FILE* out, FuncSignToName*);
+void emit_stmt(Stmt* s, FILE* out, int indent_level, FuncSignToName*);
 void emit_indent(FILE* out, int level);
-void emit_func(Func* f, FILE* out);
-void emit_func_decl(Func* f, FILE* out);
-void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership, FILE* out, int indent);
+void emit_func(Func* f, FILE* out, FuncSignToName*);
+void emit_func_decl(Func* f, FILE* out, FuncNameCounter*, FuncSignToName*);
+void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership, FILE* out, int indent, FuncSignToName*);
 
 char* type_to_c_type(TokenType t);
 

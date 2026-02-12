@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "codegen.h"
 #include "analyzer.h"
+#include "optimizer.h"
 
 #ifdef _WIN32
 #include <process.h>
@@ -76,13 +77,19 @@ void print_usage(const char* program_name) {
     fprintf(stderr, "       %s run [options] [input_file]\n", program_name);
     fprintf(stderr, "\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -o <file>      Output executable name (default: input name without extension)\n");
+    fprintf(stderr, "  -o <file>      Output executable name\n");
+    fprintf(stderr, "  -S             Emit assembly instead of executable\n");
     fprintf(stderr, "  --emit-c       Keep the intermediate .c file\n");
     fprintf(stderr, "  -trace         Enable trace/debug output\n");
     fprintf(stderr, "  -no-color      Disable colored output\n");
+    fprintf(stderr, "  -O0            No optimization (default)\n");
+    fprintf(stderr, "  -O1            Basic optimizations (constant folding)\n");
+    fprintf(stderr, "  -O2            More optimizations (dead code elimination)\n");
+    fprintf(stderr, "  -O3            All optimizations (including inlining)\n");
+    fprintf(stderr, "  -Os            Optimize for size\n");
     fprintf(stderr, "  -h, --help     Show this help message\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "If no input file is specified, defaults to test.lync\n");
+    fprintf(stderr, "If no input file is specified, defaults to ../test.lync\n");
 }
 
 int main(int argc, char** argv) {
@@ -90,9 +97,12 @@ int main(int argc, char** argv) {
     const char* exe_output = nullptr;  // -o flag: executable name
     bool no_color = false;
     bool emit_c = false;
+    bool emit_asm = false;
     bool run_mode = false;
 
-    // Parse command-line arguments
+    int opt_level = 0;
+    bool opt_size = false;
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "run") == 0 && !input_file && !run_mode) {
             run_mode = true;
@@ -102,9 +112,18 @@ int main(int argc, char** argv) {
             no_color = true;
         } else if (strcmp(argv[i], "--emit-c") == 0) {
             emit_c = true;
+        } else if (strcmp(argv[i], "-S") == 0) {
+            emit_asm = true;
         } else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
             exe_output = argv[++i];
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+        }
+            // NEW: Optimization flags
+        else if (strcmp(argv[i], "-O0") == 0) opt_level = 0;
+        else if (strcmp(argv[i], "-O1") == 0) opt_level = 1;
+        else if (strcmp(argv[i], "-O2") == 0) opt_level = 2;
+        else if (strcmp(argv[i], "-O3") == 0) opt_level = 3;
+        else if (strcmp(argv[i], "-Os") == 0) { opt_level = 2; opt_size = true; }
+        else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             print_usage(argv[0]);
             return 0;
         } else if (argv[i][0] != '-') {
@@ -216,6 +235,26 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // --- OPTIMIZER ---
+    if (opt_level > 0) {
+        stage_trace_enter(STAGE_OPTIMIZER, "starting optimizations");
+
+        OptimizationLevel level = OPT_NONE;
+        if (opt_level >= 1) level |= OPT_CONST_FOLD;
+        if (opt_level >= 2) level |= OPT_DEAD_CODE | OPT_PEEPHOLE;
+        if (opt_level >= 3) level |= OPT_INLINE;
+        if (opt_size) {
+            level &= ~OPT_INLINE;  // Inlining increases size
+        }
+
+        optimize_program(program, func_count, level);
+
+        // Re-run analysis after optimizations? Optional
+        // analyze_program(program, func_count);
+
+        stage_trace_exit(STAGE_OPTIMIZER, "optimizations complete");
+    }
+
     // --- CODEGEN ---
     stage_trace_enter(STAGE_CODEGEN, "starting code generation");
     FILE *output = fopen(c_file, "w");
@@ -299,12 +338,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Cleanup
-    for (int i = 0; i < token_count; i++) {
-        if (tokens[i].value != NULL) {
-            free(tokens[i].value);
-        }
-    }
     free(tokens);
     free(code);
     free(c_file);

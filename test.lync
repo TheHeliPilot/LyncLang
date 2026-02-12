@@ -1,7 +1,60 @@
-// Test string literals
+// ============================================
+// LYNC OPTIMIZER VALIDATION SUITE
+// Tests: Constant Folding, DCE, and Peephole
+// ============================================
+
 def main(): int {
-    print("Hello, world!");
-    print("Value:", 42);
-    print("Escape test: \n\t\"quoted\"");
+    // 1. Arithmetic & Boolean Folding
+    // The generated C should ideally show: int64_t a = 11;
+    a: int = (2 + 3) * 2 + (10 / 10);
+    b: bool = (5 > 3) && (10 != 10); // Should fold to 'false'
+
+    // 2. Dead Code Elimination (DCE)
+    // The 'if' block should be removed entirely by the compiler
+    if (false) {
+        print "FAILURE: This code should be eliminated";
+        x: int = 999;
+    }
+
+    // The 'else' should be removed; condition folds to true
+    if (10 == 10) {
+        print "SUCCESS: CF/DCE Logic Path 1";
+    } else {
+        print "FAILURE: Dead else branch";
+    }
+
+    // 3. Peephole Optimizations
+    // Tests: x + 0, x * 1, !!x
+    p1: int = a + 0;      // Should simplify to 'a'
+    p2: int = a * 1;      // Should simplify to 'a'
+    p3: bool = !!true;    // Should simplify to 'true'
+
+    // 4. Simplified Control Flow
+    // Range loops should have their bounds folded
+    print "Looping folded range:";
+    for (i: 0 to 2 + 1) { // Folds to '0 to 3'
+        print i;
+    }
+
+    // 5. Ownership (The "No-Touch" Zone)
+    // The optimizer must NOT eliminate these as they have side effects (malloc/free)
+    ptr: own int = alloc 42;
+
+    // Pattern match folding
+    // This expression should fold to 100 at compile time
+    status: int = match 1 {
+        1: 100;
+        _: 0;
+    };
+
+    print "Status:", status;
+
+    free ptr;
     return 0;
+}
+
+// 6. Post-Return DCE
+def test_post_return(): int {
+    return 1;
+    print "FAILURE: This is unreachable code";
 }

@@ -18,6 +18,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
     int column = 1;
 
     int i = 0;
+
     while (code[i] != '\0') {
         char c = code[i];
         int start_col = column;  // Save column at start of token
@@ -136,11 +137,12 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
         }
 
         // Keywords and identifiers
-        if ((code[i] >= 'a' && code[i] <= 'z') || (code[i] >= 'A' && code[i] <= 'Z')) {
+        if ((code[i] >= 'a' && code[i] <= 'z') || (code[i] >= 'A' && code[i] <= 'Z') || code[i] == '_') {
             int start = i;
             while ((code[i] >= 'a' && code[i] <= 'z') ||
                    (code[i] >= 'A' && code[i] <= 'Z') ||
-                   (code[i] >= '0' && code[i] <= '9')) {
+                   (code[i] >= '0' && code[i] <= '9') ||
+                   code[i] == '_') {
                 i++;
                 column++;
             }
@@ -184,6 +186,11 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 int* val = malloc(sizeof(int));
                 *val = 0;
                 value = val;
+                free_word = true;
+            }
+            if (strcmp(word, "_") == 0) {
+                type = UNDERSCORE_T;
+                value = NULL;
                 free_word = true;
             }
 

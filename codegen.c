@@ -19,10 +19,88 @@ void emit_indent(FILE* out, int level) {
         fprintf(out, "  ");
     }
 }
-void emit_func(Func* f, FILE* out) {
+
+char* get_mangled_name(FuncSign* sign) {
+    static char buffer[512];
+    char* ptr = buffer;
+
+    // Start with base name
+    ptr += sprintf(ptr, "%s", sign->name);
+
+    // Add return type
+    ptr += sprintf(ptr, "_%s", token_type_name(sign->retType));
+
+    // Add parameter types
+    for (int i = 0; i < sign->paramNum; i++) {
+        ptr += sprintf(ptr, "_%s", token_type_name(sign->parameters[i].type));
+        if (sign->parameters[i].ownership != OWNERSHIP_NONE) {
+            ptr += sprintf(ptr, "%s",
+                           sign->parameters[i].ownership == OWNERSHIP_OWN ? "own" : "ref");
+        }
+    }
+
+    return buffer;
+}
+
+// Hash-based version to keep names shorter
+uint32_t hash_signature(FuncSign* sign) {
+    uint32_t hash = 5381;
+
+    // Hash name
+    for (char* s = sign->name; *s; s++) {
+        hash = ((hash << 5) + hash) + *s;
+    }
+
+    // Hash return type
+    hash = ((hash << 5) + hash) + sign->retType;
+
+    // Hash parameters
+    for (int i = 0; i < sign->paramNum; i++) {
+        hash = ((hash << 5) + hash) + sign->parameters[i].type;
+        hash = ((hash << 5) + hash) + sign->parameters[i].ownership;
+    }
+
+    return hash;
+}
+
+char* get_mangled_name_short(FuncSign* sign) {
+    static char buffer[128];
+    snprintf(buffer, sizeof(buffer), "%s_%x", sign->name, hash_signature(sign));
+    return buffer;
+}
+
+char* get_func_name_from_sign(FuncSignToName* fstn, FuncSign* sign) {
+    for (int i = 0; i < fstn->count; ++i) {
+        if(check_func_sign(fstn->elements[i].sign, sign))
+            return fstn->elements[i].name;
+    }
+    return "--NO_GOOD_SIGN--";
+}
+
+char* get_type_signature(FuncSign* sign) {
+    static char buffer[256];
+    char* ptr = buffer;
+
+    //start with return type
+    ptr += sprintf(ptr, "%s_", token_type_name(sign->retType));
+
+    //add parameter types
+    for (int i = 0; i < sign->paramNum; i++) {
+        if (i > 0) ptr += sprintf(ptr, "_");
+        ptr += sprintf(ptr, "%s", token_type_name(sign->parameters[i].type));
+        if (sign->parameters[i].ownership != OWNERSHIP_NONE) {
+            ptr += sprintf(ptr, "%s",
+                           sign->parameters[i].ownership == OWNERSHIP_OWN ? "own" : "ref");
+        }
+    }
+
+    return buffer;
+}
+
+void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
     if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
     else fprintf(out, "%s", type_to_c_type(f->signature->retType));
-    fprintf(out, " %s(", f->signature->name);
+    fprintf(out, " %s(", strcmp(f->signature->name, "main") == 0 ? "main" : get_func_name_from_sign(fstn, f->signature));
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
@@ -31,13 +109,47 @@ void emit_func(Func* f, FILE* out) {
     }
     fprintf(out, ")\n");
 
-    emit_stmt(f->body, out, 0);
+    emit_stmt(f->body, out, 0, fstn);
 }
 
-void emit_func_decl(Func* f, FILE* out) {
+void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fstn) {
     if(strcmp(f->signature->name, "main") == 0) return;
+
+    int funcNum = -1;
+    char* origName = f->signature->name;
+
+    for (int i = 0; i < fnc->count; ++i) {
+        if (strcmp(fnc->elements[i].name, origName) == 0) {
+            funcNum = ++fnc->elements[i].count;
+            if(fnc->count >= fnc->height) {
+                fnc->height *= 2;
+                fnc->elements = realloc(fnc->elements, sizeof(FuncNameCounterElement) * fnc->height);
+            }
+        }
+    }
+    if(funcNum == -1) {
+        fnc->elements[fnc->count++] = (FuncNameCounterElement){.count = 0, .name = origName};
+        if(fnc->count >= fnc->height) {
+            fnc->height *= 2;
+            fnc->elements = realloc(fnc->elements, sizeof(FuncNameCounterElement) * fnc->height);
+        }
+        funcNum = 0;
+    }
+
+    char buf[sizeof(origName)+ 1 + 32 + 1]; // Make sure this is large enough for a 64-bit int + sign
+    snprintf(buf, sizeof(buf), "%s_%s", origName, get_type_signature(f->signature));
+
+    char* bufP = strdup(buf);
+
+    fstn->elements[fstn->count++] = (FuncSignToNameElement){.sign = f->signature, .name = bufP};
+
+    if(fstn->count >= fstn->height) {
+        fstn->height *= 2;
+        fstn->elements = realloc(fstn->elements, sizeof(FuncSignToNameElement) * fstn->height);
+    }
+    
     fprintf(out, "%s", type_to_c_type(f->signature->retType));
-    fprintf(out, " %s(", f->signature->name);
+    fprintf(out, " %s(", buf);
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
@@ -48,7 +160,7 @@ void emit_func_decl(Func* f, FILE* out) {
 }
 
 //emit an expression (no newlines, just the code)
-void emit_expr(Expr* e, FILE* out) {
+void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
     if (e == NULL) return;
 
     switch (e->type) {
@@ -88,7 +200,7 @@ void emit_expr(Expr* e, FILE* out) {
             } else if (e->as.un_op.op == NEGATION_T) {
                 fprintf(out, "!");
             }
-            emit_expr(e->as.un_op.expr, out);
+            emit_expr(e->as.un_op.expr, out, fstn);
             fprintf(out, ")");
             break;
         }
@@ -96,7 +208,7 @@ void emit_expr(Expr* e, FILE* out) {
         case BIN_OP_E: {
             //emit: (left op right)
             fprintf(out, "(");
-            emit_expr(e->as.bin_op.exprL, out);
+            emit_expr(e->as.bin_op.exprL, out, fstn);
 
             switch (e->as.bin_op.op) {
                 case PLUS_T: fprintf(out, " + "); break;
@@ -114,7 +226,7 @@ void emit_expr(Expr* e, FILE* out) {
                 default: fprintf(out, " ??? "); break;
             }
 
-            emit_expr(e->as.bin_op.exprR, out);
+            emit_expr(e->as.bin_op.exprR, out, fstn);
             fprintf(out, ")");
             break;
         }
@@ -148,10 +260,10 @@ void emit_expr(Expr* e, FILE* out) {
 
                     if (p->analyzedType == BOOL_KEYWORD_T) {
                         fprintf(out, "(");
-                        emit_expr(p, out);
+                        emit_expr(p, out, fstn);
                         fprintf(out, " ? \"true\" : \"false\")");
                     } else {
-                        emit_expr(p, out);
+                        emit_expr(p, out, fstn);
                     }
                 }
 
@@ -160,10 +272,16 @@ void emit_expr(Expr* e, FILE* out) {
             }
 
             //regular function call
-            fprintf(out, "%s(", e->as.func_call.name);
+            if (e->as.func_call.resolved_sign == NULL) {
+                fprintf(out, "/* ERROR: unresolved function %s */", e->as.func_call.name);
+                break;
+            }
+
+            char* mangled_name = get_mangled_name(e->as.func_call.resolved_sign);
+            fprintf(out, "%s(", mangled_name);
             for (int i = 0; i < e->as.func_call.count; ++i) {
-                if(i != 0) fprintf(out, ", ");
-                emit_expr(e->as.func_call.params[i], out);
+                if (i != 0) fprintf(out, ", ");
+                emit_expr(e->as.func_call.params[i], out, fstn);
             }
             fprintf(out, ")");
             break;
@@ -177,16 +295,19 @@ void emit_expr(Expr* e, FILE* out) {
                 fprintf(out, "{\n");
                 emit_indent(out, 0 + 1);
                 fprintf(out, "int64_t _ret;\n");
-                emit_assign_expr_to_var(e->as.func_ret_expr, "_ret", OWNERSHIP_NONE, out, 0 + 1);
+                emit_assign_expr_to_var(e->as.func_ret_expr, "_ret", OWNERSHIP_NONE, out, 0 + 1, fstn);
                 emit_indent(out, 0 + 1);
                 fprintf(out, "return _ret;\n");
                 emit_indent(out, 0);
                 fprintf(out, "}\n");
+            } else if (e->as.func_ret_expr->type == VOID_E) {
+                emit_indent(out, 0);
+                fprintf(out, "return");
             } else {
                 emit_indent(out, 0);
                 fprintf(out, "return ");
-                emit_expr(e->as.func_ret_expr, out);
-                fprintf(out, ";\n");
+                emit_expr(e->as.func_ret_expr, out, fstn);
+                fprintf(out, "");
             }
             break;
         }
@@ -197,7 +318,7 @@ void emit_expr(Expr* e, FILE* out) {
     }
 }
 
-void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* out, int indent) {
+void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* out, int indent, FuncSignToName* fstn) {
     if (e->type == MATCH_E) {
         int defaultIdx = -1;
 
@@ -213,13 +334,13 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
             if (i == 0) fprintf(out, "if (");
             else fprintf(out, "else if (");
 
-            emit_expr(e->as.match.var, out);
+            emit_expr(e->as.match.var, out, fstn);
             fprintf(out, " == ");
-            emit_expr(branch.caseExpr, out);
+            emit_expr(branch.caseExpr, out, fstn);
             fprintf(out, ") {\n");
 
             // Recurse: handles nested matches or simple values
-            emit_assign_expr_to_var(branch.caseRet, targetVar, o, out, indent + 1);
+            emit_assign_expr_to_var(branch.caseRet, targetVar, o, out, indent + 1, fstn);
 
             emit_indent(out, indent);
             fprintf(out, "}\n");
@@ -229,7 +350,7 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
         if (defaultIdx != -1) {
             emit_indent(out, indent);
             fprintf(out, "else {\n");
-            emit_assign_expr_to_var(e->as.match.branches[defaultIdx].caseRet, targetVar, o, out, indent + 1);
+            emit_assign_expr_to_var(e->as.match.branches[defaultIdx].caseRet, targetVar, o, out, indent + 1, fstn);
             emit_indent(out, indent);
             fprintf(out, "}\n");
         }
@@ -237,13 +358,13 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
         // Base case: just a normal assignment
         emit_indent(out, indent);
         fprintf(out, "%s%s = ", o != OWNERSHIP_NONE ? "*" : "", targetVar);
-        emit_expr(e, out);
+        emit_expr(e, out, fstn);
         fprintf(out, ";\n");
     }
 }
 
 // Emit a statement (with indentation and newlines)
-void emit_stmt(Stmt* s, FILE* out, int indent) {
+void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
     if (s == NULL) return;
 
     switch (s->type) {
@@ -263,7 +384,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent) {
                                         s->as.var_decl.name,
                                         s->as.var_decl.ownership,
                                         out,
-                                        indent);
+                                        indent, fstn);
             } else {
                 // Normal declaration
                 fprintf(out, ";\n");
@@ -271,26 +392,26 @@ void emit_stmt(Stmt* s, FILE* out, int indent) {
                                         s->as.var_decl.name,
                                         s->as.var_decl.ownership,
                                         out,
-                                        indent);
+                                        indent, fstn);
             }
             break;
 
         case ASSIGN_S:
-            emit_assign_expr_to_var(s->as.var_assign.expr, s->as.var_assign.name, s->as.var_assign.ownership, out, indent);
+            emit_assign_expr_to_var(s->as.var_assign.expr, s->as.var_assign.name, s->as.var_assign.ownership, out, indent, fstn);
             break;
 
         case IF_S:
             emit_indent(out, indent);
             fprintf(out, "if (");
-            emit_expr(s->as.if_stmt.cond, out);
+            emit_expr(s->as.if_stmt.cond, out, fstn);
             fprintf(out, ") ");
 
             //true
             if (s->as.if_stmt.trueStmt->type == BLOCK_S) {
-                emit_stmt(s->as.if_stmt.trueStmt, out, indent);
+                emit_stmt(s->as.if_stmt.trueStmt, out, indent, fstn);
             } else {
                 fprintf(out, "{\n");
-                emit_stmt(s->as.if_stmt.trueStmt, out, indent + 1);
+                emit_stmt(s->as.if_stmt.trueStmt, out, indent + 1, fstn);
                 emit_indent(out, indent);
                 fprintf(out, "}");
             }
@@ -299,10 +420,10 @@ void emit_stmt(Stmt* s, FILE* out, int indent) {
             if (s->as.if_stmt.falseStmt != NULL) {
                 fprintf(out, " else ");
                 if (s->as.if_stmt.falseStmt->type == BLOCK_S) {
-                    emit_stmt(s->as.if_stmt.falseStmt, out, indent);
+                    emit_stmt(s->as.if_stmt.falseStmt, out, indent, fstn);
                 } else {
                     fprintf(out, "{\n");
-                    emit_stmt(s->as.if_stmt.falseStmt, out, indent + 1);
+                    emit_stmt(s->as.if_stmt.falseStmt, out, indent + 1, fstn);
                     emit_indent(out, indent);
                     fprintf(out, "}");
                 }
@@ -313,36 +434,36 @@ void emit_stmt(Stmt* s, FILE* out, int indent) {
         case WHILE_S:
             emit_indent(out, indent);
             fprintf(out, "while (");
-            emit_expr(s->as.while_stmt.cond, out);
+            emit_expr(s->as.while_stmt.cond, out, fstn);
             fprintf(out, ") ");
-            emit_stmt(s->as.while_stmt.body, out, indent);
+            emit_stmt(s->as.while_stmt.body, out, indent, fstn);
             break;
 
         case DO_WHILE_S:
             emit_indent(out, indent);
             fprintf(out, "do ");
-            emit_stmt(s->as.do_while_stmt.body, out, indent);
+            emit_stmt(s->as.do_while_stmt.body, out, indent, fstn);
             emit_indent(out, indent);
             fprintf(out, "while (");
-            emit_expr(s->as.do_while_stmt.cond, out);
+            emit_expr(s->as.do_while_stmt.cond, out, fstn);
             fprintf(out, ");\n");
             break;
 
         case FOR_S:
             emit_indent(out, indent);
             fprintf(out, "for (int %s = ", s->as.for_stmt.varName);
-            emit_expr(s->as.for_stmt.min, out);
+            emit_expr(s->as.for_stmt.min, out, fstn);
             fprintf(out, "; %s <= ", s->as.for_stmt.varName);
-            emit_expr(s->as.for_stmt.max, out);
+            emit_expr(s->as.for_stmt.max, out, fstn);
             fprintf(out, "; %s++) ", s->as.for_stmt.varName);
-            emit_stmt(s->as.for_stmt.body, out, indent);
+            emit_stmt(s->as.for_stmt.body, out, indent, fstn);
             break;
 
         case BLOCK_S:
             emit_indent(out, indent);
             fprintf(out, "{\n");
             for (int i = 0; i < s->as.block_stmt.count; i++) {
-                emit_stmt(s->as.block_stmt.stmts[i], out, indent + 1);
+                emit_stmt(s->as.block_stmt.stmts[i], out, indent + 1, fstn);
             }
             emit_indent(out, indent);
             fprintf(out, "}\n");
@@ -350,7 +471,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent) {
 
         case EXPR_STMT_S:
             emit_indent(out, indent);
-            emit_expr(s->as.expr_stmt, out);
+            emit_expr(s->as.expr_stmt, out, fstn);
             fprintf(out, ";\n");
             break;
 
@@ -360,18 +481,18 @@ void emit_stmt(Stmt* s, FILE* out, int indent) {
 
                 if(i == 0) {
                     fprintf(out, "if (");
-                    emit_expr(b.caseExpr, out);
+                    emit_expr(b.caseExpr, out, fstn);
                     fprintf(out, ") {\n");
                 } else if ( b.caseExpr->type == VOID_E) {
                     fprintf(out, "else {\n");
                 } else {
                     fprintf(out, "else if (");
-                    emit_expr(b.caseExpr, out);
+                    emit_expr(b.caseExpr, out, fstn);
                     fprintf(out, ") {\n");
                 }
 
                 for (int j = 0; j < b.stmtCount; ++j) {
-                    emit_stmt(b.stmts[j], out, indent);
+                    emit_stmt(b.stmts[j], out, indent, fstn);
                 }
 
                 fprintf(out, "}\n");
@@ -395,11 +516,26 @@ void generate_code(Func** program, int count, FILE* output) {
     fprintf(output, "#include <stdint.h>\n");
     fprintf(output, "#include <stdbool.h>\n\n");
 
+    FuncSignToName* fstn = malloc(sizeof(FuncSignToName));
+    fstn->count = 0;
+    fstn->height = 2;
+    fstn->elements = malloc(sizeof(FuncSignToNameElement) * fstn->height);
+
+    FuncNameCounter* fnc = malloc(sizeof(FuncNameCounter));
+    fnc->count = 0;
+    fnc->height = 2;
+    fnc->elements = malloc(sizeof(FuncSignToNameElement) * fnc->height);
+
     for (int i = 0; i < count; ++i) {
-        emit_func_decl(program[i], output);
+        emit_func_decl(program[i], output, fnc, fstn);
     }
 
     for (int i = 0; i < count; ++i) {
-        emit_func(program[i], output);
+        emit_func(program[i], output, fstn);
     }
+
+    free(fstn->elements);
+    free(fstn);
+    free(fnc->elements);
+    free(fnc);
 }

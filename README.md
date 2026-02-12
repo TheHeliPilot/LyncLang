@@ -122,9 +122,9 @@ All types must be explicitly annotated. Variables are mutable by default.
 ### String Literals
 
 ```c
-print "Hello, world!";
-print "Value:", 42;
-print "Escape sequences: \n\t\"quoted\"";
+print("Hello, world!");
+print("Value:", 42);
+print("Escape sequences: \n\t\"quoted\"");
 ```
 
 String literals support escape sequences: `\n` (newline), `\t` (tab), `\r` (carriage return), `\\` (backslash), `\"` (quote). Strings are currently read-only and can only be used with `print`.
