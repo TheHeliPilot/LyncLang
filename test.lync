@@ -1,60 +1,45 @@
-// ============================================
-// LYNC OPTIMIZER VALIDATION SUITE
-// Tests: Constant Folding, DCE, and Peephole
-// ============================================
+// Lync Optimizer Test - Simplified for Function-Style print()
 
 def main(): int {
-    // 1. Arithmetic & Boolean Folding
-    // The generated C should ideally show: int64_t a = 11;
-    a: int = (2 + 3) * 2 + (10 / 10);
-    b: bool = (5 > 3) && (10 != 10); // Should fold to 'false'
+    // 1. Constant Folding & Arithmetic Identity
+    // Expected C: int64_t a = 20;
+    a: int = (10 + 10) * 1 + 0;
 
-    // 2. Dead Code Elimination (DCE)
-    // The 'if' block should be removed entirely by the compiler
+    // 2. Boolean Folding & Peephole (!!x)
+    // Expected C: bool b = true;
+    b: bool = !!(5 > 2) && (true || false);
+
+    // 3. Dead Code Elimination (Branch Removal)
     if (false) {
-        print "FAILURE: This code should be eliminated";
-        x: int = 999;
-    }
-
-    // The 'else' should be removed; condition folds to true
-    if (10 == 10) {
-        print "SUCCESS: CF/DCE Logic Path 1";
+        print("FAIL: DCE failed - unreachable if");
     } else {
-        print "FAILURE: Dead else branch";
+        print("PASS: DCE works on else");
     }
 
-    // 3. Peephole Optimizations
-    // Tests: x + 0, x * 1, !!x
-    p1: int = a + 0;      // Should simplify to 'a'
-    p2: int = a * 1;      // Should simplify to 'a'
-    p3: bool = !!true;    // Should simplify to 'true'
-
-    // 4. Simplified Control Flow
-    // Range loops should have their bounds folded
-    print "Looping folded range:";
-    for (i: 0 to 2 + 1) { // Folds to '0 to 3'
-        print i;
+    // 4. Loop Bound Folding
+    // Expected C: for loop from 0 to 5
+    for (i: 0 to 2 + 3) {
+        print("Looping...");
     }
 
-    // 5. Ownership (The "No-Touch" Zone)
-    // The optimizer must NOT eliminate these as they have side effects (malloc/free)
-    ptr: own int = alloc 42;
-
-    // Pattern match folding
-    // This expression should fold to 100 at compile time
-    status: int = match 1 {
-        1: 100;
+    // 5. Match Expression Folding
+    // Expected C: int64_t val = 1;
+    val: int = match 10 {
+        10: 1;
         _: 0;
     };
 
-    print "Status:", status;
+    // 6. Ownership Consistency
+    // Optimizer must not touch alloc/free due to side effects
+    p: own int = alloc 100;
+    print("Value exists");
+    free p;
 
-    free ptr;
     return 0;
 }
 
-// 6. Post-Return DCE
-def test_post_return(): int {
-    return 1;
-    print "FAILURE: This is unreachable code";
+// 7. Unreachable Code after Return
+def unreachable(): int {
+    return 5;
+    print("FAIL: Code after return was not eliminated");
 }
