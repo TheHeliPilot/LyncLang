@@ -7,6 +7,51 @@
 // Forward declaration
 void check_function_cleanup(Scope* scope);
 
+// Global import registry (will be initialized in analyze_program)
+static ImportRegistry* g_import_registry = nullptr;
+
+ImportRegistry* make_import_registry() {
+    ImportRegistry* reg = malloc(sizeof(ImportRegistry));
+    reg->capacity = 10;
+    reg->imported_functions = malloc(sizeof(char*) * reg->capacity);
+    reg->count = 0;
+    reg->has_wildcard_io = false;
+    return reg;
+}
+
+void register_import(ImportRegistry* reg, UsingStmt* stmt) {
+    if (strcmp(stmt->module_name, "std.io") != 0) {
+        stage_warning(STAGE_ANALYZER, stmt->loc, "unknown module '%s' (only std.io is supported)", stmt->module_name);
+        return;
+    }
+
+    if (stmt->type == IMPORT_ALL) {
+        reg->has_wildcard_io = true;
+        stage_trace(STAGE_ANALYZER, "registered wildcard import: std.io.*");
+    } else {
+        // IMPORT_SPECIFIC
+        if (reg->count >= reg->capacity) {
+            reg->capacity *= 2;
+            reg->imported_functions = realloc(reg->imported_functions, sizeof(char*) * reg->capacity);
+        }
+        reg->imported_functions[reg->count++] = stmt->function_name;
+        stage_trace(STAGE_ANALYZER, "registered import: %s", stmt->function_name);
+    }
+}
+
+bool is_imported(ImportRegistry* reg, const char* func_name) {
+    if (reg->has_wildcard_io) {
+        return true;  // All std.io functions are imported
+    }
+
+    for (int i = 0; i < reg->count; i++) {
+        if (strcmp(reg->imported_functions[i], func_name) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Scope* make_scope(Scope* parent) {
     Scope* scope = malloc(sizeof(Scope));
     scope->capacity = 2;
@@ -209,6 +254,44 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 break;
             }
 
+            // Handle std.io read_* functions
+            if (strcmp(e->as.func_call.name, "read_int") == 0 ||
+                strcmp(e->as.func_call.name, "read_str") == 0 ||
+                strcmp(e->as.func_call.name, "read_bool") == 0 ||
+                strcmp(e->as.func_call.name, "read_char") == 0 ||
+                strcmp(e->as.func_call.name, "read_key") == 0) {
+
+                // Check if function is imported
+                if (!is_imported(g_import_registry, e->as.func_call.name)) {
+                    stage_error(STAGE_ANALYZER, e->loc,
+                        "'%s' is not imported (add 'using std.io.%s;' or 'using std.io.*;')",
+                        e->as.func_call.name, e->as.func_call.name);
+                }
+
+                // These functions take no arguments
+                if (e->as.func_call.count != 0) {
+                    stage_error(STAGE_ANALYZER, e->loc,
+                        "'%s' takes no arguments", e->as.func_call.name);
+                }
+
+                // Determine return type based on function name
+                if (strcmp(e->as.func_call.name, "read_int") == 0) {
+                    result = INT_KEYWORD_T;
+                } else if (strcmp(e->as.func_call.name, "read_str") == 0) {
+                    result = STR_KEYWORD_T;
+                } else if (strcmp(e->as.func_call.name, "read_bool") == 0) {
+                    result = BOOL_KEYWORD_T;
+                } else if (strcmp(e->as.func_call.name, "read_char") == 0 ||
+                           strcmp(e->as.func_call.name, "read_key") == 0) {
+                    result = CHAR_KEYWORD_T;
+                }
+
+                // Mark this expression as nullable
+                e->is_nullable = true;
+                e->as.func_call.resolved_sign = NULL;
+                break;
+            }
+
             // Analyze all arguments first
             TokenType* argTypes = malloc(sizeof(TokenType) * e->as.func_call.count);
             for (int i = 0; i < e->as.func_call.count; ++i) {
@@ -216,7 +299,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             }
 
             // Find ALL matching overloads by name and arity
-            FuncSign* matches[funcTable->count];
+            FuncSign** matches = malloc(sizeof(FuncSign*) * funcTable->count);
             int matchCount = 0;
 
             for (int i = 0; i < funcTable->count; i++) {
@@ -232,6 +315,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                             "no function '%s' takes %d arguments",
                             e->as.func_call.name, e->as.func_call.count);
                 free(argTypes);
+                free(matches);
                 e->as.func_call.resolved_sign = NULL;
                 result = VOID_KEYWORD_T;
                 break;
@@ -284,6 +368,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 }
 
                 free(argTypes);
+                free(matches);
                 e->as.func_call.resolved_sign = NULL;
                 result = VOID_KEYWORD_T;
                 break;
@@ -318,6 +403,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
 
             result = match->retType;
             free(argTypes);
+            free(matches);
             break;
         }
 
@@ -481,8 +567,13 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         case VAR_DECL_S: {
             TokenType t = analyze_expr(scope, funcTable, s->as.var_decl.expr);
 
-            if (s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.expr->type != ALLOC_E && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
-                stage_error(STAGE_ANALYZER, s->loc, "'own' variables must be initialized with 'alloc'");
+            // Allow own variables to be initialized with alloc, null (if nullable), or nullable read_* functions
+            bool valid_own_init = (s->as.var_decl.expr->type == ALLOC_E) ||
+                                  (s->as.var_decl.isNullable && t == NULL_LIT_T) ||
+                                  (s->as.var_decl.isNullable && s->as.var_decl.expr->is_nullable);
+
+            if (s->as.var_decl.ownership == OWNERSHIP_OWN && !valid_own_init)
+                stage_error(STAGE_ANALYZER, s->loc, "'own' variables must be initialized with 'alloc' or a nullable function");
 
             if (s->as.var_decl.expr->type == ALLOC_E && s->as.var_decl.ownership != OWNERSHIP_OWN)
                 stage_error(STAGE_ANALYZER, s->loc, "'alloc' can only be used with 'own' variables");
@@ -730,6 +821,12 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
     if(strcmp("print", func->signature->name) == 0) {
         stage_error(STAGE_ANALYZER, NO_LOC, "'print' is a reserved built-in function and cannot be redefined");
+    } else if(strcmp("read_int", func->signature->name) == 0) {
+        stage_error(STAGE_ANALYZER, NO_LOC, "'print' is a reserved built-in function and cannot be redefined");
+    } else if(strcmp("read_str", func->signature->name) == 0) {
+        stage_error(STAGE_ANALYZER, NO_LOC, "'print' is a reserved built-in function and cannot be redefined");
+    } else if(strcmp("read_bool", func->signature->name) == 0) {
+        stage_error(STAGE_ANALYZER, NO_LOC, "'print' is a reserved built-in function and cannot be redefined");
     }
 
     if(lookup_func_sign(table, func->signature)) {
@@ -742,12 +839,41 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
         if(func->signature->paramNum > 0) stage_error(STAGE_ANALYZER, NO_LOC, "Main function does not take any parameters!");
     }
 
-    //add to table
-    table->signs[table->count++] = *func->signature; //should i make a copy? not sure
-    if(table->count >= table->capacity) {
-        table->capacity *= 2;
-        table->signs = realloc(table->signs, sizeof(FuncSign) * table->capacity);
+    //add to table - need deep copy of FuncSign
+    stage_trace(STAGE_ANALYZER, "defineAndAnalyzeFunc: copying func '%s'", func->signature->name);
+    stage_trace(STAGE_ANALYZER, "  func->signature=%p, name=%p ('%s')",
+        func->signature, func->signature->name, func->signature->name);
+
+    FuncSign copy;
+    copy.name = strdup(func->signature->name);  // Make a real copy of the name string
+    copy.retType = func->signature->retType;
+    copy.paramNum = func->signature->paramNum;
+
+    // Deep copy parameters array
+    if (copy.paramNum > 0) {
+        copy.parameters = malloc(sizeof(FuncParam) * copy.paramNum);
+        for (int i = 0; i < copy.paramNum; i++) {
+            copy.parameters[i] = func->signature->parameters[i];
+            // param names also come from tokens, stay alive
+        }
+    } else {
+        copy.parameters = NULL;
     }
+
+    // Should never exceed capacity since we pre-allocate in analyze_program
+    if(table->count >= table->capacity) {
+        stage_error(STAGE_ANALYZER, NO_LOC, "INTERNAL ERROR: FuncTable capacity exceeded");
+        return;
+    }
+
+    stage_trace(STAGE_ANALYZER, "  storing at table->signs[%d], table=%p, signs=%p",
+        table->count, table, table->signs);
+    stage_trace(STAGE_ANALYZER, "  address of table->signs[%d] = %p",
+        table->count, &table->signs[table->count]);
+    table->signs[table->count] = copy;
+    stage_trace(STAGE_ANALYZER, "  stored, table->signs[%d].name=%p ('%s')",
+        table->count, table->signs[table->count].name, table->signs[table->count].name);
+    table->count++;
 }
 
 FuncSign* lookup_func_sign(FuncTable* t, FuncSign* s) {
@@ -776,7 +902,8 @@ FuncTable* make_funcTable() {
 void check_function_cleanup(Scope* scope) {
     for (int i = 0; i < scope->count; i++) {
         Symbol* sym = &scope->symbols[i];
-        if (sym->ownership == OWNERSHIP_OWN && sym->state == ALIVE) {
+        // Nullable own variables are allowed to go out of scope (they might be null)
+        if (sym->ownership == OWNERSHIP_OWN && sym->state == ALIVE && !sym->is_nullable) {
             stage_error(STAGE_ANALYZER, NO_LOC,
                         "memory leak: 'own' variable '%s' was not freed or moved before function end",
                         sym->name);
@@ -784,9 +911,24 @@ void check_function_cleanup(Scope* scope) {
     }
 }
 
-void analyze_program(Func** fs, int count) {
+void analyze_program(Program* prog) {
     Scope* global = make_scope(nullptr);
     FuncTable* funcTable = make_funcTable();
+
+    // Initialize and process imports
+    g_import_registry = make_import_registry();
+    for (int i = 0; i < prog->imports->import_count; i++) {
+        register_import(g_import_registry, prog->imports->imports[i]);
+    }
+
+    Func** fs = prog->functions;
+    int count = prog->func_count;
+
+    // Pre-allocate enough space for all functions to avoid realloc invalidating pointers
+    if (count > funcTable->capacity) {
+        funcTable->capacity = count;
+        funcTable->signs = realloc(funcTable->signs, sizeof(FuncSign) * funcTable->capacity);
+    }
 
     for (int i = 0; i < count; ++i) {
         defineAndAnalyzeFunc(funcTable, fs[i]);
@@ -806,8 +948,10 @@ void analyze_program(Func** fs, int count) {
         free(funcScope);
     }
 
-    free(funcTable->signs);
-    free(funcTable);
+    // DON'T free funcTable yet - codegen needs the resolved_sign pointers!
+    // TODO: Free after codegen or store FuncTable in Program
+    // free(funcTable->signs);
+    // free(funcTable);
 
     free(global->symbols);
     free(global);

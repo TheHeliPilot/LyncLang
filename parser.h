@@ -18,6 +18,30 @@ typedef enum {
     OWNERSHIP_REF,
 } Ownership;
 
+typedef enum {
+    IMPORT_ALL,      // using std.io.*;
+    IMPORT_SPECIFIC, // using std.io.read_int;
+} ImportType;
+
+typedef struct {
+    char* module_name;    // "std.io"
+    ImportType type;
+    char* function_name;  // NULL for IMPORT_ALL, "read_int" for IMPORT_SPECIFIC
+    SourceLocation loc;
+} UsingStmt;
+
+typedef struct {
+    UsingStmt** imports;
+    int import_count;
+    int import_capacity;
+} ImportList;
+
+typedef struct {
+    ImportList* imports;
+    Func** functions;
+    int func_count;
+} Program;
+
 typedef struct {
     TokenType type;
     char* name;
@@ -94,6 +118,7 @@ struct Expr {
     ExprType type;
     SourceLocation loc;
     TokenType analyzedType;  //filled in by analyzer
+    bool is_nullable;        //filled in by analyzer for nullable return types
 
     union {
         int int_val;
@@ -253,7 +278,7 @@ bool check_func_sign(FuncSign *a, FuncSign *b);
 bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters);
 
 // Parsing
-Func** parseProgram(Parser*, int*);
+Program* parseProgram(Parser*);
 Stmt* parseStatement(Parser*);
 Stmt* parseBlock(Parser*);
 

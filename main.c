@@ -205,10 +205,10 @@ int main(int argc, char** argv) {
             .pos = 0
     };
 
-    int func_count;
-    Func** program = parseProgram(&parser, &func_count);
-    stage_trace_exit(STAGE_PARSER, "parsed %d functions", func_count);
-    print_ast(program, func_count);
+    Program* program = parseProgram(&parser);
+    stage_trace_exit(STAGE_PARSER, "parsed %d functions, %d imports",
+        program->func_count, program->imports->import_count);
+    print_ast(program->functions, program->func_count);
 
     // Check for parser errors
     if (has_errors(g_error_collector)) {
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
 
     // --- ANALYZER ---
     stage_trace_enter(STAGE_ANALYZER, "starting semantic analysis");
-    analyze_program(program, func_count);
+    analyze_program(program);
     stage_trace_exit(STAGE_ANALYZER, "analysis complete");
 
     // Check for analyzer errors
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
             level &= ~OPT_INLINE;  // Inlining increases size
         }
 
-        optimize_program(program, func_count, level);
+        optimize_program(program->functions, program->func_count, level);
 
         // Re-run analysis after optimizations? Optional
         // analyze_program(program, func_count);
@@ -267,7 +267,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    generate_code(program, func_count, output);
+    generate_code(program, output);
     fclose(output);
     stage_trace_exit(STAGE_CODEGEN, "wrote %s", c_file);
 

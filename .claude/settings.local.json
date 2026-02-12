@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --build:*)",
+      "Bash(./lync.exe:*)",
+      "Bash(./test.exe:*)",
+      "Bash(./cmake-build-debug/Debug/lync.exe:*)",
+      "Bash(./test/read_test.exe:*)"
+    ]
+  }
+}

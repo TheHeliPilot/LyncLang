@@ -1,0 +1,137 @@
+// Lync v0.2.0 Feature Demonstration
+// A simpler test that showcases key features
+
+using std.io.read_int;
+
+// Function with parameters and return value
+def add(a: int, b: int): int {
+    return a + b;
+}
+
+// Pattern matching with values
+def check_value(x: int): int {
+    result: int = match x {
+        1: 100;
+        2: 200;
+        _: 0;
+    };
+    return result;
+}
+
+// Ownership and move semantics
+def consume_owned(p: own int): int {
+    val: int = p;
+    free p;
+    return val;
+}
+
+def main(): int {
+    print("======================");
+    print("Lync v0.2.0 Demo");
+    print("======================");
+    print("");
+
+    // Basic types
+    print("=== Basic Types ===");
+    x: int = 42;
+    flag: bool = true;
+    msg: string = "Hello, Lync!";
+    print("int:", x);
+    print("bool:", flag);
+    print("string:", msg);
+    print("");
+
+    // Operators
+    print("=== Operators ===");
+    print("10 + 5 =", 10 + 5);
+    print("10 - 5 =", 10 - 5);
+    print("10 * 5 =", 10 * 5);
+    print("10 / 5 =", 10 / 5);
+    print("10 > 5:", 10 > 5);
+    print("true && false:", true && false);
+    print("");
+
+    // Control flow
+    print("=== Control Flow ===");
+    if (x > 40) {
+        print("x is greater than 40");
+    }
+
+    counter: int = 0;
+    while (counter < 3) {
+        print("counter:", counter);
+        counter = counter + 1;
+    }
+
+    for (i: 0 to 2) {
+        print("loop i:", i);
+    }
+    print("");
+
+    // Functions
+    print("=== Functions ===");
+    sum: int = add(7, 3);
+    print("add(7, 3):", sum);
+    print("");
+
+    // Pattern matching
+    print("=== Pattern Matching ===");
+    val: int = check_value(2);
+    print("check_value(2):", val);
+
+    n: int = 1;
+    match n {
+        1: { print("n is 1"); }
+        _: { print("n is not 1"); }
+    };
+    print("");
+
+    // Ownership
+    print("=== Ownership ===");
+    ptr: own int = alloc 99;
+    print("allocated ptr:", ptr);
+    result: int = consume_owned(ptr);
+    print("consumed value:", result);
+
+    // Reference
+    ptr2: own int = alloc 55;
+    r: ref int = ptr2;
+    print("ref to ptr2:", r);
+    free ptr2;
+    print("");
+
+    // Nullable types
+    print("=== Nullable Types ===");
+    maybe: own? int = alloc 77;
+
+    match maybe {
+        some(v): {
+            print("maybe has value:", v);
+            free v;
+        }
+        null: {
+            print("maybe is null");
+        }
+    };
+
+    // Flow-sensitive unwrapping
+    maybe2: own? int = alloc 88;
+    if (some(maybe2)) {
+        print("maybe2 proven non-null:", maybe2);
+        free maybe2;
+    }
+    print("");
+
+    // Module system (new in 0.2.0)
+    print("=== Module System (std.io) ===");
+    print("read_int is imported from std.io");
+    print("Try running interactively to test:");
+    print("  echo \"42\" | ./feature_demo.exe");
+    print("");
+
+    print("======================");
+    print("Demo completed!");
+    print("======================");
+
+    return 0;
+}

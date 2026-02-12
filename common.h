@@ -12,6 +12,11 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+// For compatibility with MSVC and older C standards
+#ifndef nullptr
+#define nullptr NULL
+#endif
+
 typedef enum {
     STAGE_LEXER,
     STAGE_PARSER,

@@ -1,0 +1,6 @@
+using std.io.read_int;
+
+def main(): int {
+    x: own? int = read_int();
+    return 0;
+}

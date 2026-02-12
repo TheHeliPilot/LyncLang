@@ -28,7 +28,7 @@ typedef struct {
     int count;
 } FuncSignToName;
 
-void generate_code(Func** program, int count, FILE* output);
+void generate_code(Program* program, FILE* output);
 void generate_assembly(Func** program, int count, FILE* output);
 
 void emit_expr(Expr* e, FILE* out, FuncSignToName*);

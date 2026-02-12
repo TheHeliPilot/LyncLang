@@ -41,6 +41,17 @@ struct FuncTable {
     int capacity;
 };
 
+typedef struct {
+    char** imported_functions;  // array of function names that are imported
+    int count;
+    int capacity;
+    bool has_wildcard_io;  // true if "using std.io.*" was used
+} ImportRegistry;
+
+ImportRegistry* make_import_registry();
+void register_import(ImportRegistry* reg, UsingStmt* stmt);
+bool is_imported(ImportRegistry* reg, const char* func_name);
+
 void defineAndAnalyzeFunc(FuncTable* table, Func* func);
 FuncSign* lookup_func_sign(FuncTable *t, FuncSign *s);
 FuncSign* lookup_func_name(FuncTable *t, char *s);
@@ -53,6 +64,6 @@ Symbol* lookup(Scope*, char* name);
 
 TokenType analyze_expr(Scope*, FuncTable*, Expr*);
 void analyze_stmt(Scope*, FuncTable*, Stmt*);
-void analyze_program(Func**, int);
+void analyze_program(Program*);
 
 #endif //LYNC_ANALYZER_H

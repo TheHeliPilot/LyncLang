@@ -1,0 +1,378 @@
+// Comprehensive Lync Language Feature Test
+// Tests all implemented features in version 0.2.0
+
+using std.io.*;
+
+// ============================================================================
+// PART 1: Basic Types and Variables
+// ============================================================================
+
+def test_basic_types(): int {
+    print("=== Testing Basic Types ===");
+
+    // int type
+    x: int = 42;
+    print("int:", x);
+
+    // bool type
+    flag: bool = true;
+    print("bool:", flag);
+
+    // char type (new in 0.2.0) - Note: char literals not yet implemented, using read_char() instead
+    // c: char = 'A';
+    // print("char:", c);
+
+    // string literals
+    msg: string = "Hello, Lync!";
+    print("string:", msg);
+
+    // Escape sequences
+    print("Escapes: \n\t\"quoted\" \\ backslash");
+
+    return 0;
+}
+
+// ============================================================================
+// PART 2: Operators
+// ============================================================================
+
+def test_operators(): int {
+    print("=== Testing Operators ===");
+
+    // Arithmetic
+    a: int = 10;
+    b: int = 3;
+    print("Addition:", a + b);
+    print("Subtraction:", a - b);
+    print("Multiplication:", a * b);
+    print("Division:", a / b);
+
+    // Comparison
+    print("Greater than:", a > b);
+    print("Less than:", a < b);
+    print("Greater or equal:", a >= b);
+    print("Less or equal:", a <= b);
+
+    // Equality
+    print("Equal:", a == b);
+    print("Not equal:", a != b);
+
+    // Logical
+    t: bool = true;
+    f: bool = false;
+    print("AND:", t && f);
+    print("OR:", t || f);
+
+    // Unary
+    print("Negation (int):", -a);
+    print("Negation (bool):", !t);
+
+    return 0;
+}
+
+// ============================================================================
+// PART 3: Control Flow
+// ============================================================================
+
+def test_control_flow(): int {
+    print("=== Testing Control Flow ===");
+
+    // if/else
+    x: int = 15;
+    if (x > 10) {
+        print("x is greater than 10");
+    } else {
+        print("x is not greater than 10");
+    }
+
+    // while loop
+    counter: int = 0;
+    while (counter < 3) {
+        print("while loop:", counter);
+        counter = counter + 1;
+    }
+
+    // do-while loop
+    i: int = 0;
+    do {
+        print("do-while loop:", i);
+        i = i + 1;
+    } while (i < 2)
+
+    // for loop (range)
+    print("for loop (0 to 3):");
+    for (j: 0 to 3) {
+        print("  j =", j);
+    }
+
+    return 0;
+}
+
+// ============================================================================
+// PART 4: Functions and Overloading
+// ============================================================================
+
+// Function with int parameters
+def add(a: int, b: int): int {
+    return a + b;
+}
+
+// Function overloading (different parameter types would go here in future)
+def calculate(x: int, y: int): int {
+    result: int = add(x, y);
+    return result * 2;
+}
+
+def test_functions(): int {
+    print("=== Testing Functions ===");
+
+    sum: int = add(5, 7);
+    print("add(5, 7):", sum);
+
+    calc: int = calculate(3, 4);
+    print("calculate(3, 4):", calc);
+
+    return 0;
+}
+
+// ============================================================================
+// PART 5: Pattern Matching (Values)
+// ============================================================================
+
+def test_match_values(): int {
+    print("=== Testing Match (Values) ===");
+
+    x: int = 2;
+
+    // Match expression
+    result: int = match x {
+        1: 100;
+        2: 200;
+        3: 300;
+        _: 0;
+    };
+    print("Match expression result:", result);
+
+    // Match statement
+    match x {
+        1: {
+            print("x is 1");
+        }
+        2: {
+            print("x is 2");
+        }
+        _: {
+            print("x is something else");
+        }
+    };
+
+    return 0;
+}
+
+// ============================================================================
+// PART 6: Ownership System
+// ============================================================================
+
+def test_ownership(): int {
+    print("=== Testing Ownership ===");
+
+    // Basic own allocation and free
+    ptr1: own int = alloc 42;
+    print("Allocated ptr1:", ptr1);
+    free ptr1;
+    print("Freed ptr1");
+
+    // Reference borrowing
+    ptr2: own int = alloc 100;
+    r: ref int = ptr2;
+    print("Borrowed ref r:", r);
+    free ptr2;
+    print("Freed ptr2 (owner)");
+
+    return 0;
+}
+
+// Move semantics - ownership transfer
+def consume(p: own int): int {
+    val: int = p;
+    free p;
+    return val;
+}
+
+def test_move_semantics(): int {
+    print("=== Testing Move Semantics ===");
+
+    ptr: own int = alloc 77;
+    result: int = consume(ptr);  // ownership moves to consume()
+    print("Value from consumed ptr:", result);
+    // ptr is now MOVED - cannot use it
+
+    return 0;
+}
+
+// ============================================================================
+// PART 7: Nullable Types
+// ============================================================================
+
+def test_nullable_types(): int {
+    print("=== Testing Nullable Types ===");
+
+    // Nullable allocation
+    maybe1: own? int = alloc 55;
+
+    // Match unwrapping (statement)
+    match maybe1 {
+        some(val): {
+            print("maybe1 has value:", val);
+        }
+        null: {
+            print("maybe1 is null");
+        }
+    };
+
+    // Match unwrapping (expression)
+    result: int = match maybe1 {
+        some(val): val * 2;
+        null: 0;
+    };
+    print("Match expression result:", result);
+
+    // Flow-sensitive unwrapping with if(some())
+    if(some(maybe1)) {
+        print("maybe1 proven non-null:", maybe1);
+        free maybe1;
+    }
+
+    // Nullable that is actually null
+    maybe2: own? int = alloc 0;  // In reality would be null from I/O
+    free maybe2;  // Nullable can be freed or not freed
+
+    return 0;
+}
+
+// ============================================================================
+// PART 8: Module System and I/O (New in 0.2.0)
+// ============================================================================
+
+def test_io_functions(): int {
+    print("=== Testing I/O Functions (std.io module) ===");
+
+    // read_int
+    print("Enter an integer:");
+    num: own? int = read_int();
+    match num {
+        some(n): {
+            print("You entered:", n);
+            free n;
+        }
+        null: {
+            print("Invalid integer input");
+        }
+    };
+
+    // read_char
+    print("Enter a character:");
+    ch: own? char = read_char();
+    match ch {
+        some(c): {
+            print("You entered character:", c);
+            free c;
+        }
+        null: {
+            print("Invalid character input");
+        }
+    };
+
+    return 0;
+}
+
+// ============================================================================
+// PART 9: Scoping
+// ============================================================================
+
+def test_scoping(): int {
+    print("=== Testing Scoping ===");
+
+    outer: int = 1;
+    print("Outer variable:", outer);
+
+    // Note: Standalone blocks not yet supported
+    // Scoping demonstrated through function-level scope
+
+    print("Variables scoped to function:", outer);
+
+    return 0;
+}
+
+// ============================================================================
+// PART 10: Comments
+// ============================================================================
+
+def test_comments(): int {
+    print("=== Testing Comments ===");
+
+    // This is a single-line comment
+    print("Single-line comments work");
+
+    /* This is a
+       multi-line comment */
+    print("Multi-line comments work");
+
+    return 0;
+}
+
+// ============================================================================
+// MAIN ENTRY POINT
+// ============================================================================
+
+def main(): int {
+    print("========================================");
+    print("Lync v0.2.0 Comprehensive Feature Test");
+    print("========================================");
+    print("");
+
+    test_basic_types();
+    print("");
+
+    test_operators();
+    print("");
+
+    test_control_flow();
+    print("");
+
+    test_functions();
+    print("");
+
+    test_match_values();
+    print("");
+
+    test_ownership();
+    print("");
+
+    test_move_semantics();
+    print("");
+
+    test_nullable_types();
+    print("");
+
+    test_scoping();
+    print("");
+
+    test_comments();
+    print("");
+
+    print("=== Testing I/O ===");
+    print("Note: The following tests require manual input.");
+    print("Enter values when prompted, or press Ctrl+C to skip.");
+    print("");
+
+    // Uncomment to test I/O functions interactively:
+    // test_io_functions();
+
+    print("");
+    print("========================================");
+    print("All tests completed successfully!");
+    print("========================================");
+
+    return 0;
+}

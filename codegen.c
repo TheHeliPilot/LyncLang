@@ -8,6 +8,7 @@ char* type_to_c_type(TokenType t) {
     switch (t) {
         case INT_KEYWORD_T: return "int64_t";
         case BOOL_KEYWORD_T: return "bool";
+        case CHAR_KEYWORD_T: return "char";
         case VOID_KEYWORD_T: return "void";
         default: return "-???-";
     }
@@ -25,6 +26,7 @@ void emit_type(TokenType type, FILE* out) {
         case INT_KEYWORD_T: fprintf(out, "int64_t"); break;
         case BOOL_KEYWORD_T: fprintf(out, "bool"); break;
         case STR_KEYWORD_T: fprintf(out, "char"); break;
+        case CHAR_KEYWORD_T: fprintf(out, "char"); break;
         case VOID_KEYWORD_T: fprintf(out, "void"); break;
         default: fprintf(out, "void"); break;
     }
@@ -65,14 +67,36 @@ char* get_mangled_name(FuncSign* sign) {
     static char buffer[512];
     char* ptr = buffer;
 
+    stage_trace(STAGE_CODEGEN, "get_mangled_name entry: sign=%p", sign);
+
+    // Defensive check
+    if (sign == NULL) {
+        strcpy(buffer, "NULL_SIGN");
+        return buffer;
+    }
+
+    // Read the name pointer without dereferencing the string yet
+    char* name_ptr = sign->name;
+    stage_trace(STAGE_CODEGEN, "name pointer value: %p", name_ptr);
+    if (name_ptr == NULL) {
+        strcpy(buffer, "NULL_NAME");
+        return buffer;
+    }
+    stage_trace(STAGE_CODEGEN, "about to dereference name");
+    stage_trace(STAGE_CODEGEN, "name is: %s", name_ptr);
+
+    stage_trace(STAGE_CODEGEN, "name is: %s", sign->name);
     // Start with base name
     ptr += sprintf(ptr, "%s", sign->name);
 
+    stage_trace(STAGE_CODEGEN, "adding return type");
     // Add return type
     ptr += sprintf(ptr, "_%s", token_type_name(sign->retType));
 
+    stage_trace(STAGE_CODEGEN, "adding %d parameters", sign->paramNum);
     // Add parameter types
     for (int i = 0; i < sign->paramNum; i++) {
+        stage_trace(STAGE_CODEGEN, "adding param %d", i);
         ptr += sprintf(ptr, "_%s", token_type_name(sign->parameters[i].type));
         if (sign->parameters[i].ownership != OWNERSHIP_NONE) {
             ptr += sprintf(ptr, "%s",
@@ -80,6 +104,7 @@ char* get_mangled_name(FuncSign* sign) {
         }
     }
 
+    stage_trace(STAGE_CODEGEN, "get_mangled_name done: %s", buffer);
     return buffer;
 }
 
@@ -139,6 +164,8 @@ char* get_type_signature(FuncSign* sign) {
 }
 
 void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
+    stage_trace(STAGE_CODEGEN, "emit_func: %s", f->signature->name);
+
     if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
     else fprintf(out, "%s", type_to_c_type(f->signature->retType));
     fprintf(out, " %s(", strcmp(f->signature->name, "main") == 0 ? "main" : get_func_name_from_sign(fstn, f->signature));
@@ -150,7 +177,9 @@ void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
     }
     fprintf(out, ")\n");
 
+    stage_trace(STAGE_CODEGEN, "emit_func: calling emit_stmt for body");
     emit_stmt(f->body, out, 0, fstn);
+    stage_trace(STAGE_CODEGEN, "emit_func: done with %s", f->signature->name);
 }
 
 void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fstn) {
@@ -203,6 +232,8 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
 //emit an expression (no newlines, just the code)
 void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
     if (e == NULL) return;
+
+    stage_trace(STAGE_CODEGEN, "emit_expr: type=%d", e->type);
 
     switch (e->type) {
         case INT_LIT_E:
@@ -278,6 +309,24 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case FUNC_CALL_E: {
+            // Handle std.io read_* functions
+            if (strcmp(e->as.func_call.name, "read_int") == 0) {
+                fprintf(out, "read_int()");
+                break;
+            } else if (strcmp(e->as.func_call.name, "read_str") == 0) {
+                fprintf(out, "read_str()");
+                break;
+            } else if (strcmp(e->as.func_call.name, "read_bool") == 0) {
+                fprintf(out, "read_bool()");
+                break;
+            } else if (strcmp(e->as.func_call.name, "read_char") == 0) {
+                fprintf(out, "read_char()");
+                break;
+            } else if (strcmp(e->as.func_call.name, "read_key") == 0) {
+                fprintf(out, "read_key()");
+                break;
+            }
+
             //built in string
             if(strcmp(e->as.func_call.name, "print") == 0) {
 
@@ -323,13 +372,23 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                 break;
             }
 
-            char* mangled_name = get_mangled_name(e->as.func_call.resolved_sign);
+            stage_trace(STAGE_CODEGEN, "emitting regular function call: %s", e->as.func_call.name);
+
+            // Try to safely access resolved_sign
+            FuncSign* rs = e->as.func_call.resolved_sign;
+            stage_trace(STAGE_CODEGEN, "resolved_sign pointer: %p", rs);
+
+            // Don't try to dereference if it might be bad
+            char* mangled_name = get_mangled_name(rs);
+            stage_trace(STAGE_CODEGEN, "mangled name: %s", mangled_name);
             fprintf(out, "%s(", mangled_name);
             for (int i = 0; i < e->as.func_call.count; ++i) {
+                stage_trace(STAGE_CODEGEN, "emitting parameter %d", i);
                 if (i != 0) fprintf(out, ", ");
                 emit_expr(e->as.func_call.params[i], out, fstn);
             }
             fprintf(out, ")");
+            stage_trace(STAGE_CODEGEN, "done with function call: %s", e->as.func_call.name);
             break;
         }
 
@@ -437,7 +496,12 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
     } else {
         // Base case: just a normal assignment
         emit_indent(out, indent);
-        fprintf(out, "%s%s = ", (o != OWNERSHIP_NONE && e->analyzedType != NULL_LIT_T) ? "*" : "", targetVar);
+        bool add_ampersand = (o != OWNERSHIP_NONE && e->type == VAR_E && e->as.var.ownership != OWNERSHIP_NONE);
+
+        // Don't dereference if expression is nullable (returns a pointer)
+        bool needs_deref = (o != OWNERSHIP_NONE && e->analyzedType != NULL_LIT_T && !e->is_nullable && (e->type == VAR_E ? e->as.var.ownership == OWNERSHIP_NONE : true));
+
+        fprintf(out, "%s%s = %s", needs_deref ? "*" : "", targetVar, add_ampersand ? "&" : "");
         emit_expr(e, out, fstn);
         fprintf(out, ";\n");
     }
@@ -446,6 +510,8 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
 // Emit a statement (with indentation and newlines)
 void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
     if (s == NULL) return;
+
+    stage_trace(STAGE_CODEGEN, "emit_stmt: type=%d, indent=%d", s->type, indent);
 
     switch (s->type) {
         // Inside emit_stmt switch case VAR_DECL_S:
@@ -631,12 +697,56 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
 }
 
 //main codegen entry point
-void generate_code(Func** program, int count, FILE* output) {
+void generate_code(Program* prog, FILE* output) {
+    stage_trace(STAGE_CODEGEN, "generate_code called with prog=%p, output=%p", prog, output);
+
+    if (!prog) {
+        stage_fatal(STAGE_CODEGEN, NO_LOC, "Program pointer is NULL");
+    }
+    if (!output) {
+        stage_fatal(STAGE_CODEGEN, NO_LOC, "Output file pointer is NULL");
+    }
+
+    stage_trace(STAGE_CODEGEN, "prog->func_count=%d", prog->func_count);
+
     //emit C headers
     fprintf(output, "#include <stdio.h>\n");
     fprintf(output, "#include <stdlib.h>\n");
     fprintf(output, "#include <stdint.h>\n");
-    fprintf(output, "#include <stdbool.h>\n\n");
+    fprintf(output, "#include <stdbool.h>\n");
+    fprintf(output, "#include <string.h>\n\n");
+
+    stage_trace(STAGE_CODEGEN, "headers written, checking imports");
+
+    // Generate C helper functions based on imports
+    if (prog->imports && prog->imports->import_count > 0) {
+        fprintf(output, "// std.io helper functions\n");
+
+        // Check which functions are imported and generate them
+        bool need_read_int = false;
+
+        for (int i = 0; i < prog->imports->import_count; i++) {
+            UsingStmt* import = prog->imports->imports[i];
+            if (import->type == IMPORT_ALL && strcmp(import->module_name, "std.io") == 0) {
+                need_read_int = true;
+                break;
+            } else if (import->type == IMPORT_SPECIFIC && strcmp(import->function_name, "read_int") == 0) {
+                need_read_int = true;
+            }
+        }
+
+        if (need_read_int) {
+            fprintf(output, "int64_t* read_int() {\n");
+            fprintf(output, "    char buffer[256];\n");
+            fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
+            fprintf(output, "    int64_t* result = malloc(sizeof(int64_t));\n");
+            fprintf(output, "    *result = atoll(buffer);\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+    }
+
+    stage_trace(STAGE_CODEGEN, "imports processed, allocating FuncSignToName");
 
     FuncSignToName* fstn = malloc(sizeof(FuncSignToName));
     fstn->count = 0;
@@ -648,13 +758,24 @@ void generate_code(Func** program, int count, FILE* output) {
     fnc->height = 2;
     fnc->elements = malloc(sizeof(FuncSignToNameElement) * fnc->height);
 
+    Func** program = prog->functions;
+    int count = prog->func_count;
+
+    stage_trace(STAGE_CODEGEN, "emitting %d function declarations", count);
+
     for (int i = 0; i < count; ++i) {
+        stage_trace(STAGE_CODEGEN, "emitting decl for function %d", i);
         emit_func_decl(program[i], output, fnc, fstn);
     }
 
+    stage_trace(STAGE_CODEGEN, "emitting %d function definitions", count);
+
     for (int i = 0; i < count; ++i) {
+        stage_trace(STAGE_CODEGEN, "emitting function %d", i);
         emit_func(program[i], output, fstn);
     }
+
+    stage_trace(STAGE_CODEGEN, "all functions emitted, cleaning up");
 
     free(fstn->elements);
     free(fstn);

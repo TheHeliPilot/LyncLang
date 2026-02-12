@@ -1,0 +1,5 @@
+using std.io.*;
+
+def main(): int {
+    return 0;
+}

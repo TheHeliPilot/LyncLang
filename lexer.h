@@ -58,12 +58,14 @@ typedef enum {
     INT_KEYWORD_T,
     BOOL_KEYWORD_T,
     STR_KEYWORD_T,
+    CHAR_KEYWORD_T,
     VOID_KEYWORD_T,
     NULL_LIT_T,
 
     // Function stuff
     DEF_KEYWORD_T,
     PRINT_KEYWORD_T,
+    USING_T,
 
     // Mem stuff
     OWN_T,

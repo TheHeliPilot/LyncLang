@@ -1,10 +1,11 @@
 # Lync
 
-**A systems programming language with manual memory management, compile-time ownership tracking, and pattern matching — transpiles to C.**
+**A systems programming language with manual memory management, compile-time ownership tracking, pattern matching, and a module system — transpiles to C.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-orange.svg)
 
 File extension: `.lync`
 
@@ -17,6 +18,7 @@ Lync sits between C and Rust. You get manual memory management like C — you `a
 - **Explicit memory control** — you decide when to allocate and free
 - **Compile-time safety** — memory leaks, double free, and use-after-free are caught before your code runs
 - **Zero-cost** — all ownership checks happen at compile time; the generated C has no overhead
+- **Module system** — selective imports for clean, maintainable code
 - **C-like simplicity** — minimal syntax, no hidden magic
 - **Transpiles to C** — the output is readable C you can inspect, debug, and compile with any C compiler
 
@@ -40,17 +42,28 @@ cmake --build build
 
 ```c
 // example.lync
+using std.io.read_int;
+
 def add(a: int, b: int): int {
-return a + b;
+    return a + b;
 }
 
 def main(): int {
-result: int = add(3, 4);
+    print("Enter a number:");
+    num: own? int = read_int();
 
-ptr: own int = alloc 42;
-free ptr;
+    match num {
+        some(n): {
+            result: int = add(n, 10);
+            print("Result:", result);
+            free n;
+        }
+        null: {
+            print("Invalid input");
+        }
+    };
 
-return 0;
+    return 0;
 }
 ```
 
@@ -69,8 +82,6 @@ return 0;
 
 The compiler transpiles to C, automatically detects your C compiler (gcc, clang, or MSVC), compiles the generated C code, and produces a native executable. The intermediate `.c` file is cleaned up automatically unless you specify `--emit-c`.
 
-> **Note:** `print` is partially implemented (prints int, bool, and string literals). Full implementation with formatting coming in Phase 2.
-
 ---
 
 ## CLI Reference
@@ -84,9 +95,15 @@ lync run [options] [input_file]
 |------|-------------|
 | `run` | Compile and immediately execute (shorthand mode) |
 | `-o <file>` | Output executable name (default: input name without extension) |
+| `-S` | Emit assembly instead of executable |
 | `--emit-c` | Keep the intermediate .c file after compilation |
 | `-trace` | Enable debug trace output (stderr) |
 | `-no-color` | Disable ANSI-colored diagnostics |
+| `-O0` | No optimization (default) |
+| `-O1` | Basic optimizations (constant folding) |
+| `-O2` | More optimizations (dead code elimination) |
+| `-O3` | All optimizations (including inlining) |
+| `-Os` | Optimize for size |
 | `-h`, `--help` | Show help message |
 
 If no input file is specified, defaults to `test.lync`.
@@ -97,6 +114,65 @@ If no input file is specified, defaults to `test.lync`.
 
 ## Language Reference
 
+### Module System (✅ New in 0.2.0)
+
+Lync uses a `using` statement to selectively import functionality from modules, reducing code bloat and improving maintainability.
+
+**Import syntax:**
+```c
+using std.io.*;             // Import all I/O functions
+using std.io.read_int;      // Import only read_int
+using std.io.read_str;      // Import multiple specific functions
+```
+
+**Rules:**
+- `using` statements must appear at the **top of the file** (before any function definitions)
+- You can mix wildcard (`*`) and specific imports
+- Importing from a non-existent module is a compile error
+- Using a function that hasn't been imported is a compile error
+
+**Available modules:**
+
+#### `std.io` — Input/Output Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `read_int()` | `own? int` | Read an integer from stdin (nullable) |
+| `read_str()` | `own? string` | Read a string from stdin (nullable) |
+| `read_bool()` | `own? bool` | Read a boolean from stdin (nullable) |
+| `read_char()` | `own? char` | Read a character from stdin (nullable) |
+| `read_key()` | `own? char` | Read a single keypress without echo (nullable) |
+
+All I/O functions return nullable types because input can fail (EOF, invalid format, etc.). You must unwrap the result using `match` or `if(some())`.
+
+**Example:**
+```c
+using std.io.read_int;
+using std.io.read_str;
+
+def main(): int {
+    print("Enter your age:");
+    age: own? int = read_int();
+
+    match age {
+        some(a): {
+            print("You are", a, "years old");
+            free a;
+        }
+        null: {
+            print("Invalid age");
+        }
+    };
+
+    return 0;
+}
+```
+
+**Code generation:**
+- Only imported functions generate helper C code
+- Unused functions don't add bloat to the output
+- All helper functions are conditionally generated based on imports
+
 ### Types
 
 | Lync Type | Description | C Equivalent |
@@ -104,7 +180,9 @@ If no input file is specified, defaults to `test.lync`.
 | `int` | 64-bit signed integer | `int64_t` |
 | `bool` | Boolean (`true` / `false`) | `bool` |
 | `string` | String literal (read-only) | `const char*` |
+| `char` | Single character | `char` |
 | `void` | No return value (functions only) | `void` |
+
 **Nullable pointers:** Owned and reference types can be made nullable by adding `?`:
 - `own? int` — nullable owned pointer (can be `null` or a valid pointer)
 - `ref? int` — nullable reference pointer
@@ -117,6 +195,7 @@ If no input file is specified, defaults to `test.lync`.
 // Declaration
 x: int = 5;
 alive: bool = true;
+c: char = 'A';
 
 // Assignment
 x = 10;
@@ -151,6 +230,7 @@ def main(): int {
 - `main` must return `int` and take no parameters
 - Recursive calls are supported
 - Forward declarations are generated automatically
+- Function overloading supported (same name, different parameter types)
 
 ### Control Flow
 
@@ -295,7 +375,7 @@ print(true, false);           // Print multiple values (comma-separated)
 print("Result:", x + 5);      // Mix literals and expressions
 ```
 
-The `print` statement is a built-in for output. It accepts `int`, `bool`, and `string` values. Multiple values can be printed with comma separation. `print` is reserved and cannot be used as a variable name.
+The `print` statement is a built-in for output. It accepts `int`, `bool`, `string`, and `char` values. Multiple values can be printed with comma separation. `print` is reserved and cannot be used as a variable name.
 
 ---
 
@@ -405,6 +485,17 @@ def main(): int {
 ```
 The compiler tracks the lifetime of the owner and prevents using a `ref` after its `own` source is freed or out of scope.
 
+**Nullable ownership:**
+```c
+// Nullable own variables are allowed to remain unfreed (they might be null)
+maybe: own? int = read_int();  // OK - can go out of scope without freeing
+
+// But if you know it's non-null, you still must free
+if(some(maybe)) {
+    free maybe;  // Required if unwrapped
+}
+```
+
 ### How It Compiles
 
 All ownership checks are **compile-time only**. The generated C has no safety overhead:
@@ -432,7 +523,7 @@ free(ptr);
 [filename:line:col] stage:severity: message
 ```
 
-Where `stage` is one of: `lexer`, `parser`, `analyzer`, `codegen`.
+Where `stage` is one of: `lexer`, `parser`, `analyzer`, `optimizer`, `codegen`.
 
 ### Severities
 
@@ -470,13 +561,16 @@ Source (.lync)
    Lexer         tokenization
      |
      v
-   Parser        AST construction
+   Parser        AST construction, module import parsing
      |
      v
-  Analyzer       type checking, ownership validation
+  Analyzer       type checking, ownership validation, import verification
      |
      v
-  Codegen        C source generation
+ Optimizer       constant folding, dead code elimination, inlining (optional)
+     |
+     v
+  Codegen        C source generation (conditional based on imports)
      |
      v
 Output (.c)
@@ -487,18 +581,59 @@ Written in **C (C23 standard)** with zero external dependencies.
 | File | Purpose |
 |------|---------|
 | `lexer.c/h` | Tokenization |
-| `parser.c/h` | Recursive descent parser, AST construction |
-| `analyzer.c/h` | Type checking, scope management, ownership tracking |
-| `codegen.c/h` | C code generation |
+| `parser.c/h` | Recursive descent parser, AST construction, import parsing |
+| `analyzer.c/h` | Type checking, scope management, ownership tracking, import validation |
+| `optimizer.c/h` | AST optimization passes |
+| `codegen.c/h` | C code generation with conditional helper emission |
 | `error.c/h` | Error collection and ANSI-colored reporting |
 | `common.h` | Shared types, macros, diagnostic helpers |
 | `main.c` | CLI entry point, pipeline orchestration |
 
 ---
 
-## Implemented Features (Recent Updates)
+## Recent Features
 
-### Nullable Types with Pattern Matching (✅ Implemented — Phase 3 Complete)
+### Module System with `using` Statement (✅ New in v0.2.0)
+
+A Java/C#-style module system for clean, selective imports:
+
+- **Selective imports:** Only generate code for what you use
+- **Namespace organization:** Logical grouping of built-in functions
+- **Wildcard and specific imports:** `using std.io.*;` or `using std.io.read_int;`
+- **Compile-time validation:** Importing from non-existent modules or using unimported functions triggers errors
+- **Zero bloat:** Unused functions generate no C code
+
+```c
+using std.io.read_int;
+using std.io.read_str;
+
+def main(): int {
+    print("Enter number:");
+    num: own? int = read_int();  // OK - imported
+
+    // str: own? string = read_bool();  // ERROR - not imported
+
+    match num {
+        some(n): {
+            print("Got:", n);
+            free n;
+        }
+        null: { print("Invalid"); }
+    };
+
+    return 0;
+}
+```
+
+**Current modules:**
+- `std.io` — Input/output functions (read_int, read_str, read_bool, read_char, read_key)
+
+**Future modules planned:**
+- `std.math` — Mathematical functions (sqrt, pow, abs, etc.)
+- `std.string` — String manipulation
+- `std.file` — File I/O operations
+
+### Nullable Types with Pattern Matching (✅ Implemented — v0.1.0)
 
 Full nullable type support with safe unwrapping:
 - **Nullable syntax:** Any pointer type can be nullable with `?` suffix (`own? int`, `ref? int`)
@@ -508,40 +643,23 @@ Full nullable type support with safe unwrapping:
 - **Binding variables:** `some(val)` creates a non-nullable reference available in the branch
 - **Zero-cost:** All checks are compile-time; generated C uses simple null checks
 
-```c
-maybe: own? int = alloc 42;
-
-// Match unwrapping
-match maybe {
-    some(val): { print(val); }
-    null: { print("null"); }
-};
-
-// Conditional unwrapping
-if(some(maybe)) {
-    x = maybe;  // safe to use
-}
-
-free maybe;
-```
-
-### Reference Ownership Tracking (✅ Implemented)
+### Reference Ownership Tracking (✅ Implemented — v0.1.0)
 
 The compiler now tracks which `own` variable each `ref` borrows from. This enables compile-time detection of:
 - Using a `ref` after its owner has been freed
 - Using a `ref` after its owner goes out of scope
 - Attempting to assign a non-`own` variable to a `ref`
 
-### Print Built-in (✅ Partially Implemented)
+### Print Built-in (✅ Implemented — v0.1.0)
 
 The `print` statement is now available for basic output:
-- Supports `int`, `bool`, and `string` types
+- Supports `int`, `bool`, `string`, and `char` types
 - Multiple values with comma separation: `print("Result:", x, true);`
 - Type-checked at compile time (unsupported types trigger errors)
 - Reserved keyword (cannot be used as a variable name)
 - Warns on empty `print()` calls
 
-### String Literals (✅ Implemented)
+### String Literals (✅ Implemented — v0.1.0)
 
 String literals with escape sequence support:
 - Basic escapes: `\n`, `\t`, `\r`, `\\`, `\"`
@@ -550,20 +668,9 @@ String literals with escape sequence support:
 
 ---
 
-## Planned Features
-
-- **Print formatting** — format specifiers, custom output formatting
-- **Float and char types** — `float` (64-bit) and `char` primitives
-- **String variables** — assignable string variables (beyond literals)
-- **Match expansion** — range patterns, boolean patterns, exhaustiveness checking, unreachable warnings
-- **Structs** — user-defined data types with auto-dereferencing
-- **Arrays** — fixed-size stack arrays
-
----
-
 ## Roadmap
 
-### Phase 1: Ref Expansion (**Completed** ✅)
+### Phase 1: Ref Expansion (**Completed** ✅ — v0.1.0)
 
 ~~Basic ownership tracking is complete~~. All ref tracking features implemented:
 
@@ -572,28 +679,18 @@ String literals with escape sequence support:
 - ~~Prevent using a `ref` after owner goes out of scope~~ ✅
 - ~~Error when trying to use a `ref` after its `own` source is freed or out of scope~~ ✅
 
-**Note:** The compiler does not prevent freeing an `own` while `ref`s to it exist — this is intentional. Using the `ref` after the `own` is freed will trigger a compile error at the usage site.
-
-### Phase 2: Print + Float/Char (**In Progress** ✅)
+### Phase 2: Print + Char Type (**Completed** ✅ — v0.2.0)
 
 Expand output capabilities and the type system.
 
 - ~~Implement basic `print` statement~~ ✅
 - ~~String literal support~~ ✅
+- ~~Add `char` type~~ ✅
 - **TODO:** Print formatting (format specifiers like `%d`, `%s`)
 - **TODO:** String variables (not just literals)
 - **TODO:** Add `float` type (maps to `double` in C)
-- **TODO:** Add `char` type
 
-```c
-// Preview syntax (not yet implemented)
-name: string = "Alice";
-x: float = 3.14;
-c: char = 'A';
-print("Name: %s, Value: %.2f", name, x);
-```
-
-### Phase 3: Nullable Types (**Completed** ✅)
+### Phase 3: Nullable Types (**Completed** ✅ — v0.1.0)
 
 Pointer types can be made nullable with the `?` suffix. Acts like an `Option` type — you must explicitly unwrap before use.
 
@@ -604,37 +701,16 @@ Pointer types can be made nullable with the `?` suffix. Acts like an `Option` ty
 - ~~Pattern matching with binding: `some(val)` creates a non-nullable reference~~ ✅
 - ~~Supported in both statement and expression matches~~ ✅
 
-```c
-// Nullable owned pointer
-maybe_ptr: own? int = alloc 42;
+### Phase 4: Module System (**Completed** ✅ — v0.2.0)
 
-// Statement match with unwrapping
-match maybe_ptr {
-    some(val): {
-        // val is 'own int' (non-nullable), safe to use
-        i = val;
-    }
-    null: {
-        // handle null case
-    }
-};
+- ~~`using` statement for imports~~ ✅
+- ~~Wildcard imports: `using std.io.*;`~~ ✅
+- ~~Specific imports: `using std.io.read_int;`~~ ✅
+- ~~Compile-time import validation~~ ✅
+- ~~Conditional code generation (only emit used functions)~~ ✅
+- ~~Standard library I/O functions (read_int, read_str, read_bool, read_char, read_key)~~ ✅
 
-// Expression match with unwrapping
-result: int = match maybe_ptr {
-    some(val): val;
-    null: 0;
-};
-
-// Flow-sensitive unwrapping with if
-if(some(maybe_ptr)) {
-    // maybe_ptr is known to be non-null here
-    x = maybe_ptr;
-}
-
-free maybe_ptr;
-```
-
-### Phase 4: Match Expansion
+### Phase 5: Match Expansion
 
 Make pattern matching more powerful and safer.
 
@@ -643,12 +719,12 @@ Make pattern matching more powerful and safer.
 - Exhaustiveness checking — warn when not all cases are covered
 - Unreachable branch warnings — warn on patterns after a `_` wildcard
 
-### Phase 5: Structs
+### Phase 6: Structs
 
 User-defined composite types with compile-time field checking.
 
 - Struct definitions: `struct Name { field: type; }`
-- Plain fields only in v1 (`int`, `bool` — no `own`/`ref` fields yet)
+- Plain fields only in v1 (`int`, `bool`, `char` — no `own`/`ref` fields yet)
 - Auto-dereferencing with `.` (no `->` syntax needed)
 - "Did you mean" suggestions for field name typos
 
@@ -664,7 +740,7 @@ e.health = 100;
 free e;
 ```
 
-### Phase 6: Arrays
+### Phase 7: Arrays
 
 Fixed-size stack-allocated arrays integrated with the type system.
 
@@ -685,6 +761,7 @@ Long-term goals beyond the core language:
 - **`str` type** — a string type built as stdlib *in Lync itself* (not a primitive), using `char` + `own` + length tracking
 - **Owned struct fields** — `own` and `ref` qualifiers inside struct definitions
 - **`const` keyword** — immutable variable declarations
+- **User-defined modules** — `.lync` files as importable modules
 - **VS Code integration** — syntax highlighting, inline diagnostics, build tasks
 
 ---

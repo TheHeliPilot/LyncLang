@@ -171,6 +171,7 @@ Expr* parseFactor(Parser* p) {
             Expr* e = malloc(sizeof(Expr));
             e->type = VOID_E;
             e->loc = TOK_LOC(t);
+            e->is_nullable = false;
             return e;
         }
         case MINUS_T: {
@@ -214,6 +215,7 @@ Expr* parseFactor(Parser* p) {
             Expr* e = malloc(sizeof(Expr));
             e->type = MATCH_E;
             e->loc = TOK_LOC(matchTok);
+            e->is_nullable = false;  // will be determined by analyzer
             e->as.match.var = target;
             e->as.match.branches = branches;
             e->as.match.branchCount = count;
@@ -228,6 +230,8 @@ Expr* parseFactor(Parser* p) {
             expect(p, R_PAREN_T);
 
             e->type = SOME_E;
+            e->loc = TOK_LOC(peek(p, -4));  // some token location
+            e->is_nullable = false;
             e->as.match.var = v;
             return e;
         }
@@ -236,10 +240,12 @@ Expr* parseFactor(Parser* p) {
             Expr* e = malloc(sizeof(Expr));
             e->type = FUNC_RET_E;
             e->loc = TOK_LOC(retTok);
+            e->is_nullable = false;
             if(peek(p, 0)->type == SEMICOLON_T){
                 Expr* ve = malloc(sizeof(Expr));
                 ve->type = VOID_E;
                 ve->loc = TOK_LOC(retTok);
+                ve->is_nullable = false;
                 e->as.func_ret_expr = ve;
             } else
                 e->as.func_ret_expr = parseExpr(p);
@@ -251,6 +257,7 @@ Expr* parseFactor(Parser* p) {
             Expr* al = malloc(sizeof(Expr));
             al->type = ALLOC_E;
             al->loc = TOK_LOC(allocTok);
+            al->is_nullable = false;  // alloc always returns a pointer
             al->as.alloc.initialValue = e;
             return al;
         }
@@ -261,22 +268,106 @@ Expr* parseFactor(Parser* p) {
     }
 }
 
-Func** parseProgram(Parser* p, int* length) {
+UsingStmt* parseUsingStmt(Parser* p) {
+    UsingStmt* stmt = malloc(sizeof(UsingStmt));
+    Token* usingTok = expect(p, USING_T);
+    stmt->loc = TOK_LOC(usingTok);
+
+    // Parse: std.io.* or std.io.read_int
+    // Module is everything before the last dot, last part is * or function name
+
+    char** parts = malloc(sizeof(char*) * 10);
+    int part_count = 0;
+    int part_capacity = 10;
+
+    // Collect all identifiers
+    parts[part_count++] = expect(p, VAR_T)->value;
+
+    while (peek(p, 0)->type == DOT_T) {
+        consume(p);  // consume '.'
+
+        if (peek(p, 0)->type == STAR_T) {
+            // Wildcard: everything so far is the module
+            consume(p);
+
+            // Build module name from all parts
+            char* module = parts[0];
+            for (int i = 1; i < part_count; i++) {
+                char* new_module = malloc(strlen(module) + strlen(parts[i]) + 2);
+                sprintf(new_module, "%s.%s", module, parts[i]);
+                module = new_module;
+            }
+
+            stmt->module_name = module;
+            stmt->type = IMPORT_ALL;
+            stmt->function_name = NULL;
+            free(parts);
+            expect(p, SEMICOLON_T);
+            return stmt;
+        } else if (peek(p, 0)->type == VAR_T) {
+            if (part_count >= part_capacity) {
+                part_capacity *= 2;
+                parts = realloc(parts, sizeof(char*) * part_capacity);
+            }
+            parts[part_count++] = consume(p)->value;
+        } else {
+            stage_fatal(STAGE_PARSER, stmt->loc, "expected identifier or '*' after '.'");
+        }
+    }
+
+    // Specific import: last part is function, rest is module
+    if (part_count < 2) {
+        stage_fatal(STAGE_PARSER, stmt->loc,
+            "invalid import: expected module.function or module.* (e.g., 'std.io.read_int')");
+    }
+
+    // Build module from all but last part
+    char* module = parts[0];
+    for (int i = 1; i < part_count - 1; i++) {
+        char* new_module = malloc(strlen(module) + strlen(parts[i]) + 2);
+        sprintf(new_module, "%s.%s", module, parts[i]);
+        module = new_module;
+    }
+
+    stmt->module_name = module;
+    stmt->type = IMPORT_SPECIFIC;
+    stmt->function_name = parts[part_count - 1];
+
+    free(parts);
+    expect(p, SEMICOLON_T);
+    return stmt;
+}
+
+Program* parseProgram(Parser* p) {
     stage_trace(STAGE_PARSER, "parse program begin");
 
-    int* funcCount = malloc(sizeof(int));
-    *funcCount = 0;
-    Func** funcs = parseFunctions(p, funcCount);
+    Program* prog = malloc(sizeof(Program));
+    prog->imports = malloc(sizeof(ImportList));
+    prog->imports->import_capacity = 10;
+    prog->imports->imports = malloc(sizeof(UsingStmt*) * prog->imports->import_capacity);
+    prog->imports->import_count = 0;
+
+    // Parse all using statements
+    while (peek(p, 0)->type == USING_T) {
+        if (prog->imports->import_count >= prog->imports->import_capacity) {
+            prog->imports->import_capacity *= 2;
+            prog->imports->imports = realloc(prog->imports->imports,
+                sizeof(UsingStmt*) * prog->imports->import_capacity);
+        }
+        prog->imports->imports[prog->imports->import_count++] = parseUsingStmt(p);
+    }
+
+    // Parse functions (existing code)
+    int funcCount = 0;
+    prog->functions = parseFunctions(p, &funcCount);
+    prog->func_count = funcCount;
 
     //end of file
     expect(p, EOF_T);
 
-    *length = *funcCount;
-    free(funcCount);
-
     stage_trace(STAGE_PARSER, "parse program end");
 
-    return funcs;
+    return prog;
 }
 
 Pattern* parsePattern(Parser* p) {
@@ -595,6 +686,7 @@ Expr* makeIntLit(SourceLocation loc, int val) {
     Expr* e = malloc(sizeof(Expr));
     e->type = INT_LIT_E;
     e->loc = loc;
+    e->is_nullable = false;
     e->as.int_val = val;
     return e;
 }
@@ -602,6 +694,7 @@ Expr* makeBoolLit(SourceLocation loc, bool val) {
     Expr* e = malloc(sizeof(Expr));
     e->type = BOOL_LIT_E;
     e->loc = loc;
+    e->is_nullable = false;
     e->as.bool_val = val;
     return e;
 }
@@ -609,6 +702,7 @@ Expr* makeStrLit(SourceLocation loc, char* val) {
     Expr* e = malloc(sizeof(Expr));
     e->type = STR_LIT_E;
     e->loc = loc;
+    e->is_nullable = false;
     e->as.str_val = val;
     return e;
 }
@@ -616,12 +710,14 @@ Expr* makeNullLit(SourceLocation loc) {
     Expr* e = malloc(sizeof(Expr));
     e->type = NULL_LIT_E;
     e->loc = loc;
+    e->is_nullable = true;  // null is always nullable
     return e;
 }
 Expr* makeVar(SourceLocation loc, char* name) {
     Expr* e = malloc(sizeof(Expr));
     e->type = VAR_E;
     e->loc = loc;
+    e->is_nullable = false;  // will be determined by analyzer
     e->as.var.name = name;
     e->as.var.ownership = OWNERSHIP_NONE;
     return e;
@@ -630,6 +726,7 @@ Expr* makeUnOp(SourceLocation loc, TokenType t, Expr* expr) {
     Expr* e = malloc(sizeof(Expr));
     e->type = UN_OP_E;
     e->loc = loc;
+    e->is_nullable = false;
     e->as.un_op.expr = expr;
     e->as.un_op.op = t;
     return e;
@@ -638,6 +735,7 @@ Expr* makeBinOp(SourceLocation loc, Expr* el, TokenType t, Expr* er) {
     Expr* e = malloc(sizeof(Expr));
     e->type = BIN_OP_E;
     e->loc = loc;
+    e->is_nullable = false;
     e->as.bin_op.op = t;
     e->as.bin_op.exprL = el;
     e->as.bin_op.exprR = er;
@@ -647,6 +745,7 @@ Expr* makeFuncCall(SourceLocation loc, char* n, Expr** params, int paramC) {
     Expr* e = malloc(sizeof(Expr));
     e->type = FUNC_CALL_E;
     e->loc = loc;
+    e->is_nullable = false;  // will be determined by analyzer for read_* functions
     e->as.func_call.name = n;
     e->as.func_call.params = params;
     e->as.func_call.count = paramC;
