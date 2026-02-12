@@ -186,9 +186,8 @@ while (x > 0) {
 ```c
 do {
     x = x - 1;
-} (x > 0);
+} while (x > 0);
 ```
-> Note: Lync uses `do { } (cond);` — there is no `while` keyword in the do-while syntax.
 
 **for (range)**
 ```c

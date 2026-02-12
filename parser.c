@@ -416,6 +416,7 @@ Stmt* parseStatement(Parser* p) {
             Stmt* s = malloc(sizeof(Stmt));
             Token* doTok = consume(p);
             Stmt* b = parseBlock(p);
+            expect(p, WHILE_T);
             expect(p, L_PAREN_T);
             Expr* c = parseExpr(p);
             expect(p, R_PAREN_T);
