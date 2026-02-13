@@ -4,15 +4,13 @@
 
 #include "parser.h"
 
-// Helper to extract SourceLocation from Token
 #define TOK_LOC(tok) ((SourceLocation){.line = (tok)->line, .column = (tok)->column, .filename = (tok)->filename})
 
-// Forward declaration
 Pattern* parsePattern(Parser* p);
 
 Token* peek(Parser* parser, int offset) {
     if (parser->pos + offset >= parser->count) {
-        // Use last token's location if available
+        //use last tokens location if available
         Token* lastTok = parser->pos > 0 ? &parser->tokens[parser->pos - 1] : &parser->tokens[0];
         stage_fatal(STAGE_PARSER, TOK_LOC(lastTok),
                     "peek beyond token stream (pos=%d)", parser->pos);
@@ -46,20 +44,18 @@ Func** parseFunctions(Parser* p, int* num) {
     int size = 2;
     int count = 0;
 
-    // Use the parser's internal position, not a local loop index
     while (p->pos < p->count && peek(p, 0)->type == DEF_KEYWORD_T) {
         consume(p); // consume 'def'
         Token* name = expect(p, VAR_T);
         expect(p, L_PAREN_T);
 
         int pCount = 0;
-        // Pass p, let it handle its own pos
         FuncParam* params = parseFuncParams(p, &pCount);
 
         expect(p, R_PAREN_T);
         expect(p, COLON_T);
 
-        Token* ret = consume(p); // The return type keyword
+        Token* ret = consume(p);
         Stmt* body = parseBlock(p);
 
         functions[count++] = makeFunc(name->value, params, pCount, ret->type, body);
@@ -210,12 +206,11 @@ Expr* parseFactor(Parser* p) {
             }
 
             expect(p, R_BRACE_T);
-            // no semicolon here — caller handles it
 
             Expr* e = malloc(sizeof(Expr));
             e->type = MATCH_E;
             e->loc = TOK_LOC(matchTok);
-            e->is_nullable = false;  // will be determined by analyzer
+            e->is_nullable = false;  //will be determined by analyzer
             e->as.match.var = target;
             e->as.match.branches = branches;
             e->as.match.branchCount = count;
@@ -230,7 +225,7 @@ Expr* parseFactor(Parser* p) {
             expect(p, R_PAREN_T);
 
             e->type = SOME_E;
-            e->loc = TOK_LOC(peek(p, -4));  // some token location
+            e->loc = TOK_LOC(peek(p, -4));  //some token location
             e->is_nullable = false;
             e->as.match.var = v;
             return e;
@@ -257,14 +252,13 @@ Expr* parseFactor(Parser* p) {
             Expr* al = malloc(sizeof(Expr));
             al->type = ALLOC_E;
             al->loc = TOK_LOC(allocTok);
-            al->is_nullable = false;  // alloc always returns a pointer
+            al->is_nullable = false;  //alloc always returns a pointer
             al->as.alloc.initialValue = e;
             return al;
         }
 
         default:
             stage_fatal(STAGE_PARSER, TOK_LOC(tok), "Unexpected token %s in expression", token_type_name(tok->type));
-            return nullptr;
     }
 }
 
@@ -273,8 +267,8 @@ IncludeStmt* parseIncludeStmt(Parser* p) {
     Token* usingTok = expect(p, INCLUDE_T);
     stmt->loc = TOK_LOC(usingTok);
 
-    // Parse: std.io.* or std.io.read_int
-    // Module is everything before the last dot, last part is * or function name
+    //parse: std.io.* or std.io.read_int
+    //module is everything before the last dot, last part is * or function name
 
     char** parts = malloc(sizeof(char*) * 10);
     int part_count = 0;
@@ -284,10 +278,10 @@ IncludeStmt* parseIncludeStmt(Parser* p) {
     parts[part_count++] = expect(p, VAR_T)->value;
 
     while (peek(p, 0)->type == DOT_T) {
-        consume(p);  // consume '.'
+        consume(p);  // consume .
 
         if (peek(p, 0)->type == STAR_T) {
-            // Wildcard: everything so far is the module
+            //wildcard: everything so far is the module
             consume(p);
 
             // Build module name from all parts
@@ -315,13 +309,13 @@ IncludeStmt* parseIncludeStmt(Parser* p) {
         }
     }
 
-    // Specific import: last part is function, rest is module
+    //specific import: last part is function, rest is module
     if (part_count < 2) {
         stage_fatal(STAGE_PARSER, stmt->loc,
-            "invalid import: expected module.function or module.* (e.g., 'std.io.read_int')");
+            "invalid import: expected 'module.function' or 'module.*' (e.g., 'std.io.read_int')");
     }
 
-    // Build module from all but last part
+    //build module from all but last part
     char* module = parts[0];
     for (int i = 1; i < part_count - 1; i++) {
         char* new_module = malloc(strlen(module) + strlen(parts[i]) + 2);
@@ -347,7 +341,6 @@ Program* parseProgram(Parser* p) {
     prog->imports->imports = malloc(sizeof(IncludeStmt*) * prog->imports->import_capacity);
     prog->imports->import_count = 0;
 
-    // Parse all using statements
     while (peek(p, 0)->type == INCLUDE_T) {
         if (prog->imports->import_count >= prog->imports->import_capacity) {
             prog->imports->import_capacity *= 2;
@@ -357,7 +350,6 @@ Program* parseProgram(Parser* p) {
         prog->imports->imports[prog->imports->import_count++] = parseIncludeStmt(p);
     }
 
-    // Parse functions (existing code)
     int funcCount = 0;
     prog->functions = parseFunctions(p, &funcCount);
     prog->func_count = funcCount;
@@ -608,7 +600,6 @@ Stmt* parseStatement(Parser* p) {
         }
         default:
             stage_fatal(STAGE_PARSER, TOK_LOC(t), "Unexpected token %s at start of statement", token_type_name(t->type));
-            return nullptr;
     }
 }
 Stmt* parseBlock(Parser* p) {
@@ -633,14 +624,12 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
     FuncParam* fps = malloc(sizeof(FuncParam));
     int counter = 0;
 
-    // Don't try to parse parameters if we're already at ')'
     if (peek(p, 0)->type == R_PAREN_T) {
         *count = 0;
         return fps;
     }
 
     while (peek(p, 0)->type != R_PAREN_T) {
-        // Only expect comma BEFORE parameter if this isn't the first parameter
         if (counter > 0) {
             expect(p, COMMA_T);
         }
@@ -681,7 +670,7 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
     return fps;
 }
 
-// construction helpers
+//construction helpers
 Expr* makeIntLit(SourceLocation loc, int val) {
     Expr* e = malloc(sizeof(Expr));
     e->type = INT_LIT_E;
@@ -836,7 +825,7 @@ bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** par
     return strcmp(a->name, name) == 0;
 }
 
-// AST printing functions (only active in trace mode, output to stderr)
+//AST printing functions (only active in trace mode, output to stderr)
 void print_indent(int depth) {
     for (int i = 0; i < depth; i++) {
         fprintf(stderr, "  ");

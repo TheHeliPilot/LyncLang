@@ -35,7 +35,7 @@ void generate_assembly(Func** program, int count, FILE* out) {
         // TODO: Actually generate code for the function body
         //haha dont think i will soon
 
-        // Default implementation - just return 0 for main
+        //default implementation - just return 0 for main
         if (strcmp(f->signature->name, "main") == 0) {
             fprintf(out, "\tmovl $0, %%eax\n");
         }

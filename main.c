@@ -16,7 +16,7 @@
 #define EXE_EXT ""
 #endif
 
-// Global state definitions
+//global state definitions
 ErrorCollector* g_error_collector = nullptr;
 bool g_trace_mode = false;
 int g_trace_depth = 0;
@@ -43,10 +43,6 @@ static const char* find_c_compiler(void) {
     return nullptr;
 }
 
-// --- Path utilities ---
-
-// Replace .lync extension with a new extension, or append if no .lync found.
-// Returns a malloc'd string — caller must free.
 static char* replace_extension(const char* path, const char* new_ext) {
     size_t len = strlen(path);
     const char* dot = nullptr;
@@ -69,8 +65,6 @@ static char* replace_extension(const char* path, const char* new_ext) {
     result[base_len + ext_len] = '\0';
     return result;
 }
-
-// --- Help ---
 
 void print_usage(const char* program_name) {
     fprintf(stderr, "Usage: %s [options] [input_file]\n", program_name);
@@ -117,12 +111,13 @@ int main(int argc, char** argv) {
         } else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
             exe_output = argv[++i];
         }
-            // NEW: Optimization flags
+
         else if (strcmp(argv[i], "-O0") == 0) opt_level = 0;
         else if (strcmp(argv[i], "-O1") == 0) opt_level = 1;
         else if (strcmp(argv[i], "-O2") == 0) opt_level = 2;
         else if (strcmp(argv[i], "-O3") == 0) opt_level = 3;
         else if (strcmp(argv[i], "-Os") == 0) { opt_level = 2; opt_size = true; }
+
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -135,10 +130,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Set defaults
     if (!input_file) input_file = "../test.lync";
 
-    // Compute output paths
+    //compute output paths
     char* c_file = replace_extension(input_file, ".c");
     char* exe_file;
     if (exe_output) {
@@ -147,7 +141,7 @@ int main(int argc, char** argv) {
         exe_file = replace_extension(input_file, EXE_EXT);
     }
 
-    // Find a C compiler
+    //find a C compiler
     const char* compiler = find_c_compiler();
     if (!compiler) {
         fprintf(stderr, "Error: no C compiler found. Install gcc, clang, or MSVC and ensure it's on your PATH.\n");
@@ -157,11 +151,11 @@ int main(int argc, char** argv) {
     }
     stage_trace(STAGE_CODEGEN, "using C compiler: %s", compiler);
 
-    // Initialize error collector
+    //initialize error collector
     g_error_collector = init_error_collector();
     if (no_color) g_error_collector->use_color = false;
 
-    // Read input file
+    //read input file
     FILE* file = fopen(input_file, "r");
     if (file == NULL) {
         fprintf(stderr, "Error: Could not open '%s'\n", input_file);
@@ -186,7 +180,7 @@ int main(int argc, char** argv) {
     stage_trace_exit(STAGE_LEXER, "completed, %d tokens", token_count);
     print_tokens(tokens, token_count);
 
-    // Check for lexer errors (already collected, just check)
+    //check for lexer errors
     if (has_errors(g_error_collector)) {
         print_messages(g_error_collector);
         free_error_collector(g_error_collector);
@@ -210,7 +204,7 @@ int main(int argc, char** argv) {
         program->func_count, program->imports->import_count);
     print_ast(program->functions, program->func_count);
 
-    // Check for parser errors
+    //check for parser errors
     if (has_errors(g_error_collector)) {
         print_messages(g_error_collector);
         free_error_collector(g_error_collector);
@@ -225,7 +219,7 @@ int main(int argc, char** argv) {
     analyze_program(program);
     stage_trace_exit(STAGE_ANALYZER, "analysis complete");
 
-    // Check for analyzer errors
+    //check for analyzer errors
     if (has_errors(g_error_collector)) {
         print_messages(g_error_collector);
         free_error_collector(g_error_collector);
@@ -249,8 +243,8 @@ int main(int argc, char** argv) {
 
         optimize_program(program->functions, program->func_count, level);
 
-        // Re-run analysis after optimizations? Optional
-        // analyze_program(program, func_count);
+        //re-run analysis after optimizations? Not sure if needed?
+        //analyze_program(program, func_count);
 
         stage_trace_exit(STAGE_OPTIMIZER, "optimizations complete");
     }
@@ -271,10 +265,9 @@ int main(int argc, char** argv) {
     fclose(output);
     stage_trace_exit(STAGE_CODEGEN, "wrote %s", c_file);
 
-    // Print any warnings
+    //print any warnings
     print_messages(g_error_collector);
 
-    // --- BACKEND: invoke C compiler ---
     stage_trace_enter(STAGE_CODEGEN, "invoking C backend");
     char cmd[2048];
     snprintf(cmd, sizeof(cmd), "%s \"%s\" -o \"%s\"", compiler, c_file, exe_file);
@@ -286,7 +279,7 @@ int main(int argc, char** argv) {
     if (cc_result != 0) {
         fprintf(stderr, "\nError: C compiler failed (exit code %d)\n", cc_result);
         fprintf(stderr, "Intermediate file kept: %s\n", c_file);
-        // Don't delete .c file on failure — user needs it to debug
+        //dont delete .c file on failure
         free_error_collector(g_error_collector);
         free(code);
         free(c_file);
@@ -294,7 +287,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Clean up intermediate .c file (unless --emit-c)
+    //clean up intermediate .c file (unless --emit-c)
     if (!emit_c) {
         remove(c_file);
     }
@@ -303,7 +296,7 @@ int main(int argc, char** argv) {
     int exit_code = 0;
 
     if (run_mode) {
-        // Run the compiled executable
+        //run the compiled executable
         char run_cmd[2048];
 #ifdef _WIN32
         snprintf(run_cmd, sizeof(run_cmd), "\"%s\"", exe_file);
@@ -324,7 +317,6 @@ int main(int argc, char** argv) {
         exit_code = WIFEXITED(run_result) ? WEXITSTATUS(run_result) : run_result;
 #endif
     } else {
-        // Print success message
         if (has_warnings(g_error_collector)) {
             printf("\nCompiled %s -> %s (%d warning%s)\n",
                    input_file, exe_file,

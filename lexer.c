@@ -13,7 +13,6 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
     int count = 0;
     Token* tokens = malloc(capacity * sizeof(Token));
 
-    // Position tracking
     int line = 1;
     int column = 1;
 
@@ -21,9 +20,8 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
 
     while (code[i] != '\0') {
         char c = code[i];
-        int start_col = column;  // Save column at start of token
+        int start_col = column;  //save column at start of token
 
-        // Track newlines for line/column
         if (c == '\n') {
             line++;
             column = 1;
@@ -31,14 +29,13 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             continue;
         }
 
-        // Skip whitespace
         if (c == ' ' || c == '\t' || c == '\r') {
             column++;
             i++;
             continue;
         }
 
-        // Number literals
+        //number literals
         if (code[i] >= '0' && code[i] <= '9') {
             int num = 0;
             while (code[i] >= '0' && code[i] <= '9') {
@@ -64,17 +61,16 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             continue;
         }
 
-        // String literals
+        //string literals
         if (c == '"') {
             i++;  // skip opening quote
             column++;
             int str_start = i;
             int str_len = 0;
 
-            // Find closing quote and calculate length
+            //find closing quote and calculate length
             while (code[i] != '"' && code[i] != '\0' && code[i] != '\n') {
                 if (code[i] == '\\' && code[i + 1] != '\0') {
-                    // Handle escape sequences
                     i++;
                     column++;
                     str_len++;
@@ -84,21 +80,18 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 str_len++;
             }
 
-            // Check for unterminated string
             if (code[i] != '"') {
                 SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
                 add_error(g_error_collector, STAGE_LEXER, loc, "unterminated string literal");
                 continue;
             }
 
-            // Allocate and copy string
             char* str = malloc(str_len + 1);
             int str_i = 0;
             int j = str_start;
 
             while (j < i) {
                 if (code[j] == '\\' && j + 1 < i) {
-                    // Handle escape sequences
                     j++;
                     switch (code[j]) {
                         case 'n': str[str_i++] = '\n'; break;
@@ -107,7 +100,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                         case '\\': str[str_i++] = '\\'; break;
                         case '"': str[str_i++] = '"'; break;
                         default:
-                            // Unknown escape sequence - just include the character
+                            //unknown escape sequence - just include the character
                             str[str_i++] = code[j];
                             break;
                     }
@@ -118,7 +111,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             }
             str[str_i] = '\0';
 
-            i++;  // skip closing quote
+            i++;
             column++;
 
             tokens[count++] = (Token){
@@ -136,7 +129,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             continue;
         }
 
-        // Keywords and identifiers
+        //keywords and identifiers
         if ((code[i] >= 'a' && code[i] <= 'z') || (code[i] >= 'A' && code[i] <= 'Z') || code[i] == '_') {
             int start = i;
             while ((code[i] >= 'a' && code[i] <= 'z') ||
@@ -156,7 +149,6 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             void* value = word;
             bool free_word = false;
 
-            // Check keywords
             if (strcmp(word, "if") == 0) { type = IF_T; value = NULL; free_word = true; }
             else if (strcmp(word, "else") == 0) { type = ELSE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "int") == 0) { type = INT_KEYWORD_T; value = NULL; free_word = true; }
@@ -215,10 +207,9 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             continue;
         }
 
-        // Comments
+        //comments
         if (c == '/') {
             if (code[i + 1] == '/') {
-                // Single-line comment
                 i += 2;
                 column += 2;
                 while (code[i] != '\n' && code[i] != '\0') {
@@ -228,7 +219,6 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 continue;
             }
             else if (code[i + 1] == '*') {
-                // Multi-line comment
                 i += 2;
                 column += 2;
                 while (code[i] != '\0' && !(code[i] == '*' && code[i + 1] == '/')) {
@@ -260,7 +250,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             }
         }
 
-        // Two-character operators
+        //two-character operators
         if (c == '=') {
             if (code[i + 1] == '=') {
                 tokens[count++] = (Token){ .type = DOUBLE_EQUALS_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
@@ -345,7 +335,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             }
         }
 
-        // Single-character tokens
+        //single-character tokens
         TokenType single_char_type;
         bool found = true;
 
@@ -379,7 +369,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             goto resize_check;
         }
 
-        // Unknown character - error with recovery
+        //unknown character
         SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
         add_error(g_error_collector, STAGE_LEXER, loc,
                   "unexpected character '%c' (ASCII %d)", c, c);
@@ -394,7 +384,7 @@ resize_check:
         }
     }
 
-    // Add EOF token
+    //add EOF token
     if (count >= capacity) {
         capacity *= 2;
         tokens = realloc(tokens, capacity * sizeof(Token));

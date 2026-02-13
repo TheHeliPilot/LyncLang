@@ -58,14 +58,13 @@ int eval_constant_expr(Expr* e) {
     }
 }
 
-// Returns true if expression was modified
+//returns true if expression was modified
 bool fold_expression(Expr** e_ptr) {
     if (!e_ptr || !*e_ptr) return false;
 
     Expr* e = *e_ptr;
     bool modified = false;
 
-    // Fold children first
     if (e->type == UN_OP_E) {
         modified |= fold_expression(&e->as.un_op.expr);
     } else if (e->type == BIN_OP_E) {
@@ -73,11 +72,9 @@ bool fold_expression(Expr** e_ptr) {
         modified |= fold_expression(&e->as.bin_op.exprR);
     }
 
-    // Fold if constant
     if (is_constant_expr(e) && e->analyzedType != STR_KEYWORD_T) {
         int value = eval_constant_expr(e);
 
-        // Only replace if it's not already a literal of the same value
         if (e->analyzedType == INT_KEYWORD_T) {
             if (e->type != INT_LIT_E || e->as.int_val != value) {
                 e->type = INT_LIT_E;
@@ -96,7 +93,7 @@ bool fold_expression(Expr** e_ptr) {
     return modified;
 }
 
-// Returns true if statement was modified
+//returns true if statement was modified
 bool constant_folding_stmt(Stmt* s) {
     if (!s) return false;
 
@@ -177,7 +174,7 @@ bool is_constant_false(Expr* e) {
     return e && e->type == BOOL_LIT_E && e->as.bool_val == 0;
 }
 
-// Returns true if statement was modified
+//returns true if statement was modified
 bool dead_code_elimination_stmt(Stmt** s_ptr) {
     if (!s_ptr || !*s_ptr) return false;
 
@@ -186,48 +183,41 @@ bool dead_code_elimination_stmt(Stmt** s_ptr) {
 
     switch (s->type) {
         case IF_S: {
-            // First optimize the condition
             modified |= fold_expression(&s->as.if_stmt.cond);
 
-            // Eliminate constant conditions
             if (is_constant_true(s->as.if_stmt.cond)) {
-                // Always true - replace with then block
                 Stmt* result = s->as.if_stmt.trueStmt;
-                s->as.if_stmt.trueStmt = NULL;  // Prevent double free
+                s->as.if_stmt.trueStmt = NULL;  //prevent double free
                 free(s);
                 *s_ptr = result;
-                return true;  // Definitely modified
+                return true;  //definitely modified
             } else if (is_constant_false(s->as.if_stmt.cond)) {
-                // Always false - replace with else block (if exists)
                 Stmt* result = s->as.if_stmt.falseStmt;
                 s->as.if_stmt.falseStmt = NULL;
                 free(s);
                 *s_ptr = result;
-                return true;  // Definitely modified
+                return true;  //definitely modified
             }
 
-            // Recursively process branches
             modified |= dead_code_elimination_stmt(&s->as.if_stmt.trueStmt);
             modified |= dead_code_elimination_stmt(&s->as.if_stmt.falseStmt);
             break;
         }
 
         case WHILE_S: {
-            // Optimize condition
             modified |= fold_expression(&s->as.while_stmt.cond);
 
-            // Eliminate while(false)
             if (is_constant_false(s->as.while_stmt.cond)) {
                 free(s);
                 *s_ptr = NULL;
-                return true;  // Definitely modified
+                return true;
             }
             modified |= dead_code_elimination_stmt(&s->as.while_stmt.body);
             break;
         }
 
         case BLOCK_S: {
-            // Filter out NULL statements
+            //filter out NULL statements
             int new_count = 0;
             for (int i = 0; i < s->as.block_stmt.count; i++) {
                 modified |= dead_code_elimination_stmt(&s->as.block_stmt.stmts[i]);
@@ -254,7 +244,6 @@ bool dead_code_elimination_stmt(Stmt** s_ptr) {
             break;
 
         default:
-            // For other statement types, nothing to eliminate
             break;
     }
 
@@ -275,14 +264,13 @@ bool dead_code_elimination(Func** program, int count) {
 
 // ============ PEEPHOLE OPTIMIZATIONS ============
 
-// Returns true if expression was modified
+//returns true if expression was modified
 bool peephole_optimize_expr(Expr** e_ptr) {
     if (!e_ptr || !*e_ptr) return false;
 
     Expr* e = *e_ptr;
     bool modified = false;
 
-    // Recursively optimize children first
     if (e->type == UN_OP_E) {
         modified |= peephole_optimize_expr(&e->as.un_op.expr);
     } else if (e->type == BIN_OP_E) {
@@ -343,14 +331,12 @@ bool peephole_optimize_expr(Expr** e_ptr) {
 
         // x - x -> 0
         if (e->as.bin_op.op == MINUS_T) {
-            // This is a simplification - would need full expression equality check
-            // For now, just handle same variable
+            //for now, just handle same variable
             if (e->as.bin_op.exprL->type == VAR_E && e->as.bin_op.exprR->type == VAR_E &&
                 strcmp(e->as.bin_op.exprL->as.var.name, e->as.bin_op.exprR->as.var.name) == 0) {
                 e->type = INT_LIT_E;
                 e->as.int_val = 0;
                 e->analyzedType = INT_KEYWORD_T;
-                // Clean up children
                 free(e->as.bin_op.exprL);
                 free(e->as.bin_op.exprR);
                 return true;
@@ -358,7 +344,7 @@ bool peephole_optimize_expr(Expr** e_ptr) {
         }
     }
 
-    // Double negation: !!x -> x
+    //double negation: !!x -> x
     if (e->type == UN_OP_E && e->as.un_op.op == NEGATION_T) {
         if (e->as.un_op.expr->type == UN_OP_E && e->as.un_op.expr->as.un_op.op == NEGATION_T) {
             *e_ptr = e->as.un_op.expr->as.un_op.expr;
@@ -392,7 +378,6 @@ bool peephole_optimize_expr(Expr** e_ptr) {
                 e->as.bin_op.exprL = inner->as.bin_op.exprL;
                 e->as.bin_op.exprR = inner->as.bin_op.exprR;
                 e->analyzedType = BOOL_KEYWORD_T;
-                // Clean up the inner expression
                 inner->as.bin_op.exprL = NULL;
                 inner->as.bin_op.exprR = NULL;
                 free(inner);
@@ -446,7 +431,7 @@ bool peephole_optimizations_stmt(Stmt* s) {
             modified |= peephole_optimize_expr(&s->as.match_stmt.var);
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
                 MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
-                // For VALUE_PATTERN, optimize the expression
+                //for VALUE_PATTERN, optimize the expression
                 if (branch->pattern->type == VALUE_PATTERN) {
                     modified |= peephole_optimize_expr(&branch->pattern->as.value_expr);
                 }
@@ -477,19 +462,19 @@ bool peephole_optimizations(Func** program, int count) {
 // ============ INLINING ============
 
 bool is_small_function(Func* f) {
-    // Count statements roughly
+    //count statements roughly
     int count = 0;
     Stmt* body = f->body;
     if (body->type == BLOCK_S) {
         count = body->as.block_stmt.count;
     }
-    return count <= 5;  // Arbitrary threshold
+    return count <= 5;
 }
 
 bool inline_functions(Func** program, int count) {
     stage_trace(STAGE_OPTIMIZER, "Running function inlining...");
     // TODO: Implement function inlining
-    return false;  // No changes yet
+    return false;  //no changes yet
 }
 
 // ============ MAIN OPTIMIZATION DRIVER ============
@@ -499,7 +484,7 @@ void optimize_program(Func** program, int count, OptimizationLevel level) {
 
     stage_trace(STAGE_OPTIMIZER, "Optimizing with level %d", level);
 
-    // Run multiple passes until no changes
+    //run multiple passes until no changes
     bool changed;
     int pass = 0;
     do {

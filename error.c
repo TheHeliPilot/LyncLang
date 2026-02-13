@@ -17,7 +17,7 @@
 #include <unistd.h>
 #endif
 
-// ANSI color codes
+//ANSI color codes
 #define ANSI_RED     "\033[1;31m"
 #define ANSI_YELLOW  "\033[1;33m"
 #define ANSI_CYAN    "\033[1;36m"
@@ -27,7 +27,7 @@
 static bool detect_color_support(void) {
     if (!isatty(fileno(stderr))) return false;
 #ifdef _WIN32
-    // Enable ANSI escape processing on Windows 10+
+    //enable ANSI escape processing on Windows 10+
     HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
     if (hErr != INVALID_HANDLE_VALUE) {
         DWORD mode = 0;
@@ -66,24 +66,21 @@ static void add_message(ErrorCollector* ec, MessageSeverity severity, ErrorStage
                        SourceLocation loc, const char* fmt, va_list args) {
     if (ec == NULL) return;
 
-    // Resize if needed
+    //resize if needed
     if (ec->count >= ec->capacity) {
         ec->capacity *= 2;
         ec->messages = realloc(ec->messages, sizeof(CompilerMessage) * ec->capacity);
     }
 
-    // Format message
     char buffer[2048];
     vsnprintf(buffer, sizeof(buffer), fmt, args);
 
-    // Create message
     CompilerMessage* msg = &ec->messages[ec->count++];
     msg->severity = severity;
     msg->stage = stage;
     msg->loc = loc;
     msg->message = strdup(buffer);
 
-    // Update counters
     if (severity == MSG_ERROR) {
         ec->error_count++;
     } else if (severity == MSG_WARNING) {
@@ -133,7 +130,6 @@ void print_messages(ErrorCollector* ec) {
     for (int i = 0; i < ec->count; i++) {
         CompilerMessage* msg = &ec->messages[i];
 
-        // Apply error limit (still print all warnings and notes)
         if (msg->severity == MSG_ERROR) {
             if (ec->max_errors > 0 && errors_printed >= ec->max_errors) {
                 continue;
@@ -155,7 +151,7 @@ void print_messages(ErrorCollector* ec) {
         }
 
         if (msg->loc.line > 0) {
-            // Format: [file:line:col] stage:severity: message
+            //format: [file:line:col] stage:severity: message
             fprintf(stderr, "%s[%s:%d:%d]%s %s:%s%s%s: %s\n",
                     bold,
                     msg->loc.filename ? msg->loc.filename : "unknown",
@@ -166,7 +162,7 @@ void print_messages(ErrorCollector* ec) {
                     sev_color, sev_label, reset,
                     msg->message);
         } else {
-            // No location — omit the prefix
+            //no location — omit the prefix
             fprintf(stderr, "%s:%s%s%s: %s\n",
                     stage_name(msg->stage),
                     sev_color, sev_label, reset,
@@ -174,14 +170,14 @@ void print_messages(ErrorCollector* ec) {
         }
     }
 
-    // Show truncation message if errors were suppressed
+    //show truncation message if errors were suppressed
     if (ec->max_errors > 0 && ec->error_count > ec->max_errors) {
         int remaining = ec->error_count - ec->max_errors;
         fprintf(stderr, "...and %d more error%s.\n",
                 remaining, remaining == 1 ? "" : "s");
     }
 
-    // Summary
+    //summary
     if (ec->error_count > 0 || ec->warning_count > 0) {
         fprintf(stderr, "\n");
         if (ec->error_count > 0) {

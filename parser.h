@@ -19,14 +19,14 @@ typedef enum {
 } Ownership;
 
 typedef enum {
-    IMPORT_ALL,      // using std.io.*;
-    IMPORT_SPECIFIC, // using std.io.read_int;
+    IMPORT_ALL,
+    IMPORT_SPECIFIC,
 } ImportType;
 
 typedef struct {
-    char* module_name;    // "std.io"
+    char* module_name;
     ImportType type;
-    char* function_name;  // NULL for IMPORT_ALL, "read_int" for IMPORT_SPECIFIC
+    char* function_name;
     SourceLocation loc;
 } IncludeStmt;
 
@@ -78,16 +78,16 @@ typedef struct Pattern {
 } Pattern;
 
 typedef struct {
-    Pattern* pattern;       // CHANGED: was Expr* caseExpr
+    Pattern* pattern;
     Expr* caseRet;
-    TokenType analyzed_type; // for codegen (filled by analyzer)
+    TokenType analyzed_type; //filled by analyzer
 } MatchBranchExpr;
 
 typedef struct {
-    Pattern* pattern;           // CHANGED: was Expr* caseExpr
+    Pattern* pattern;
     Stmt** stmts;
     int stmtCount;
-    TokenType analyzed_type;    // for codegen (filled by analyzer)
+    TokenType analyzed_type;    //filled by analyzer
 } MatchBranchStmt;
 
 typedef enum {
@@ -179,7 +179,7 @@ typedef enum {
     BLOCK_S,            // { stmt; stmt; stmt; }
     MATCH_S,
     FREE_S,
-    EXPR_STMT_S,        // expression as statement (for function calls later)
+    EXPR_STMT_S,        // expression as statement
 } StmtType;
 
 struct Stmt {
@@ -255,7 +255,6 @@ Token* peek(Parser*, int);
 Token* consume(Parser*);
 Token* expect(Parser*, TokenType);
 
-// Expr constructors
 Expr* makeIntLit(SourceLocation, int);
 Expr* makeBoolLit(SourceLocation, bool);
 Expr* makeStrLit(SourceLocation, char*);
@@ -265,7 +264,6 @@ Expr* makeFuncCall(SourceLocation, char*, Expr**, int);
 Expr* makeUnOp(SourceLocation, TokenType, Expr*);
 Expr* makeBinOp(SourceLocation, Expr*, TokenType, Expr*);
 
-// Statement constructors
 Stmt* makeVarDecl(SourceLocation, char*, TokenType, Expr*);
 Stmt* makeAssign(SourceLocation, char*, Expr*);
 Stmt* makeIf(SourceLocation, Expr*, Stmt*, Stmt*);
@@ -277,7 +275,6 @@ Func* makeFunc(char*, FuncParam*, int, TokenType, Stmt*);
 bool check_func_sign(FuncSign *a, FuncSign *b);
 bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters);
 
-// Parsing
 Program* parseProgram(Parser*);
 Stmt* parseStatement(Parser*);
 Stmt* parseBlock(Parser*);

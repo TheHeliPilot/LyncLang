@@ -35,7 +35,7 @@ void emit_type(TokenType type, FILE* out) {
 bool emit_pattern_condition(Pattern* pattern, Expr* matchVar, FILE* out, FuncSignToName* fstn) {
     switch (pattern->type) {
         case NULL_PATTERN:
-            // For nullable pointers, check the pointer itself, not dereferenced value
+            //for nullable pointers, check the pointer itself, not dereferenced value
             if (matchVar->type == VAR_E) {
                 fprintf(out, "%s", matchVar->as.var.name);
             } else {
@@ -44,7 +44,7 @@ bool emit_pattern_condition(Pattern* pattern, Expr* matchVar, FILE* out, FuncSig
             fprintf(out, " == NULL");
             return false;
         case SOME_PATTERN:
-            // For nullable pointers, check the pointer itself, not dereferenced value
+            //for nullable pointers, check the pointer itself, not dereferenced value
             if (matchVar->type == VAR_E) {
                 fprintf(out, "%s", matchVar->as.var.name);
             } else {
@@ -58,7 +58,7 @@ bool emit_pattern_condition(Pattern* pattern, Expr* matchVar, FILE* out, FuncSig
             emit_expr(pattern->as.value_expr, out, fstn);
             return false;
         case WILDCARD_PATTERN:
-            return true;  // signals to use 'else'
+            return true;
     }
     return false;
 }
@@ -69,13 +69,12 @@ char* get_mangled_name(FuncSign* sign) {
 
     stage_trace(STAGE_CODEGEN, "get_mangled_name entry: sign=%p", sign);
 
-    // Defensive check
     if (sign == NULL) {
         strcpy(buffer, "NULL_SIGN");
         return buffer;
     }
 
-    // Read the name pointer without dereferencing the string yet
+    //read the name pointer without dereferencing the string yet
     char* name_ptr = sign->name;
     stage_trace(STAGE_CODEGEN, "name pointer value: %p", name_ptr);
     if (name_ptr == NULL) {
@@ -86,15 +85,12 @@ char* get_mangled_name(FuncSign* sign) {
     stage_trace(STAGE_CODEGEN, "name is: %s", name_ptr);
 
     stage_trace(STAGE_CODEGEN, "name is: %s", sign->name);
-    // Start with base name
     ptr += sprintf(ptr, "%s", sign->name);
 
     stage_trace(STAGE_CODEGEN, "adding return type");
-    // Add return type
     ptr += sprintf(ptr, "_%s", token_type_name(sign->retType));
 
     stage_trace(STAGE_CODEGEN, "adding %d parameters", sign->paramNum);
-    // Add parameter types
     for (int i = 0; i < sign->paramNum; i++) {
         stage_trace(STAGE_CODEGEN, "adding param %d", i);
         ptr += sprintf(ptr, "_%s", token_type_name(sign->parameters[i].type));
@@ -108,19 +104,19 @@ char* get_mangled_name(FuncSign* sign) {
     return buffer;
 }
 
-// Hash-based version to keep names shorter
+//hash-based version to keep names shorter
 uint32_t hash_signature(FuncSign* sign) {
     uint32_t hash = 5381;
 
-    // Hash name
+    //hash name
     for (char* s = sign->name; *s; s++) {
         hash = ((hash << 5) + hash) + *s;
     }
 
-    // Hash return type
+    //hash return type
     hash = ((hash << 5) + hash) + sign->retType;
 
-    // Hash parameters
+    //hash parameters
     for (int i = 0; i < sign->paramNum; i++) {
         hash = ((hash << 5) + hash) + sign->parameters[i].type;
         hash = ((hash << 5) + hash) + sign->parameters[i].ownership;
@@ -147,10 +143,8 @@ char* get_type_signature(FuncSign* sign) {
     static char buffer[256];
     char* ptr = buffer;
 
-    //start with return type
     ptr += sprintf(ptr, "%s_", token_type_name(sign->retType));
 
-    //add parameter types
     for (int i = 0; i < sign->paramNum; i++) {
         if (i > 0) ptr += sprintf(ptr, "_");
         ptr += sprintf(ptr, "%s", token_type_name(sign->parameters[i].type));
@@ -206,7 +200,6 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
         funcNum = 0;
     }
 
-    // Use get_mangled_name for consistency with function calls
     char* mangled = get_mangled_name(f->signature);
     char* bufP = strdup(mangled);
 
@@ -228,7 +221,6 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
     fprintf(out, ");\n");
 }
 
-//emit an expression (no newlines, just the code)
 void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
     if (e == NULL) return;
 
@@ -244,7 +236,6 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             break;
 
         case STR_LIT_E: {
-            // Re-escape the string for C output
             fprintf(out, "\"");
             for (char* s = e->as.str_val; *s != '\0'; s++) {
                 switch (*s) {
@@ -308,7 +299,7 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case FUNC_CALL_E: {
-            // Handle std.io read_* functions
+            //handle std.io read_* functions
             if (strcmp(e->as.func_call.name, "read_int") == 0) {
                 fprintf(out, "read_int()");
                 break;
@@ -326,7 +317,6 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                 break;
             }
 
-            //built in string
             if(strcmp(e->as.func_call.name, "print") == 0) {
 
                 fprintf(out, "printf(\"");
@@ -373,11 +363,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
 
             stage_trace(STAGE_CODEGEN, "emitting regular function call: %s", e->as.func_call.name);
 
-            // Try to safely access resolved_sign
+            //try to safely access resolved_sign
             FuncSign* rs = e->as.func_call.resolved_sign;
             stage_trace(STAGE_CODEGEN, "resolved_sign pointer: %p", rs);
 
-            // Don't try to dereference if it might be bad
+            //dont try to dereference if it might be bad
             char* mangled_name = get_mangled_name(rs);
             stage_trace(STAGE_CODEGEN, "mangled name: %s", mangled_name);
             fprintf(out, "%s(", mangled_name);
@@ -392,8 +382,8 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case FUNC_RET_E: {
-            // If it's a simple return, keep it on one line.
-            // If it's a match, use the temporary variable block.
+            //if its a simple return, keep it on one line.
+            //if its a match, use the temporary variable block.
             if (e->as.func_ret_expr->type == MATCH_E) {
                 emit_indent(out, 0);
                 fprintf(out, "{\n");
@@ -417,7 +407,7 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case SOME_E: {
-            // For nullable pointers, don't dereference - check the pointer itself
+            //for nullable pointers, dont dereference - check the pointer itself
             if (e->as.some.var->type == VAR_E) {
                 fprintf(out, "%s != NULL", e->as.some.var->as.var.name);
             } else {
@@ -439,7 +429,7 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
         int defaultIdx = -1;
         bool firstCondition = true;
 
-        // Find wildcard
+        //find wildcard
         for (int i = 0; i < e->as.match.branchCount; i++) {
             if (e->as.match.branches[i].pattern->type == WILDCARD_PATTERN) {
                 defaultIdx = i;
@@ -463,12 +453,12 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
             emit_pattern_condition(branch->pattern, e->as.match.var, out, fstn);
             fprintf(out, ") {\n");
 
-            // If SOME_PATTERN, declare binding variable
+            //if SOME_PATTERN, declare binding variable
             if (branch->pattern->type == SOME_PATTERN) {
                 emit_indent(out, indent + 1);
                 emit_type(branch->analyzed_type, out);
                 fprintf(out, "* %s = ", branch->pattern->as.binding_name);
-                // Emit just the variable name, not dereferenced
+                //emit just the variable name, not dereferenced
                 if (e->as.match.var->type == VAR_E) {
                     fprintf(out, "%s", e->as.match.var->as.var.name);
                 } else {
@@ -477,14 +467,13 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
                 fprintf(out, ";\n");
             }
 
-            // Recurse: handles nested matches or simple values
+            //handles nested matches or simple values
             emit_assign_expr_to_var(branch->caseRet, targetVar, o, out, indent + 1, fstn);
 
             emit_indent(out, indent);
             fprintf(out, "}\n");
         }
 
-        // Output the wildcard as a final 'else'
         if (defaultIdx != -1) {
             emit_indent(out, indent);
             fprintf(out, "else {\n");
@@ -493,11 +482,11 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
             fprintf(out, "}\n");
         }
     } else {
-        // Base case: just a normal assignment
+        //base case: just a normal assignment
         emit_indent(out, indent);
         bool add_ampersand = (o != OWNERSHIP_NONE && e->type == VAR_E && e->as.var.ownership != OWNERSHIP_NONE);
 
-        // Don't dereference if expression is nullable (returns a pointer)
+        //dont dereference if expression is nullable (returns a pointer)
         bool needs_deref = (o != OWNERSHIP_NONE && e->analyzedType != NULL_LIT_T && !e->is_nullable && (e->type == VAR_E ? e->as.var.ownership == OWNERSHIP_NONE : true));
 
         fprintf(out, "%s%s = %s", needs_deref ? "*" : "", targetVar, add_ampersand ? "&" : "");
@@ -506,32 +495,32 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
     }
 }
 
-// Emit a statement (with indentation and newlines)
+//emit a statement (with indentation and newlines)
 void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
     if (s == NULL) return;
 
     stage_trace(STAGE_CODEGEN, "emit_stmt: type=%d, indent=%d", s->type, indent);
 
     switch (s->type) {
-        // Inside emit_stmt switch case VAR_DECL_S:
+        //inside emit_stmt switch case VAR_DECL_S:
         case VAR_DECL_S:
             emit_indent(out, indent);
             fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
             fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
 
-            // Check if it's an allocation
+            //check if its an allocation
             if (s->as.var_decl.expr->type == ALLOC_E) {
-                // Emit: int64_t *x = malloc(sizeof(int64_t));
+                //emit: int64_t *x = malloc(sizeof(int64_t));
                 fprintf(out, " = malloc(sizeof(%s));\n", type_to_c_type(s->as.var_decl.varType));
 
-                // Now assign the initial value: *x = initialValue;
+                //now assign the initial value: *x = initialValue;
                 emit_assign_expr_to_var(s->as.var_decl.expr->as.alloc.initialValue,
                                         s->as.var_decl.name,
                                         s->as.var_decl.ownership,
                                         out,
                                         indent, fstn);
             } else {
-                // Normal declaration
+                //normal declaration
                 fprintf(out, ";\n");
                 emit_assign_expr_to_var(s->as.var_decl.expr,
                                         s->as.var_decl.name,
@@ -623,7 +612,6 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
         case MATCH_S: {
             int wildcardIdx = -1;
 
-            // Find wildcard branch
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
                 if (s->as.match_stmt.branches[i].pattern->type == WILDCARD_PATTERN) {
                     wildcardIdx = i;
@@ -631,7 +619,6 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 }
             }
 
-            // Emit if-else chain
             bool firstCondition = true;
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
                 if (i == wildcardIdx) continue;  // handle wildcard at end
@@ -649,7 +636,6 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_pattern_condition(branch->pattern, s->as.match_stmt.var, out, fstn);
                 fprintf(out, ") {\n");
 
-                // If SOME_PATTERN, declare binding variable
                 if (branch->pattern->type == SOME_PATTERN) {
                     emit_indent(out, indent + 1);
                     emit_type(branch->analyzed_type, out);
@@ -663,7 +649,6 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                     fprintf(out, ";\n");
                 }
 
-                // Emit branch statements
                 for (int j = 0; j < branch->stmtCount; j++) {
                     emit_stmt(branch->stmts[j], out, indent + 1, fstn);
                 }
@@ -672,7 +657,6 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 fprintf(out, "}\n");
             }
 
-            // Emit wildcard as final 'else'
             if (wildcardIdx != -1) {
                 emit_indent(out, indent);
                 fprintf(out, "else {\n");
@@ -715,7 +699,7 @@ void generate_code(Program* prog, FILE* output) {
     fprintf(output, "#include <stdbool.h>\n");
     fprintf(output, "#include <string.h>\n");
 
-    // Add platform-specific headers for read_key if needed
+    //add platform-specific headers for read_key if needed
     if (prog->imports && prog->imports->import_count > 0) {
         bool need_read_key = false;
         for (int i = 0; i < prog->imports->import_count; i++) {
@@ -742,11 +726,11 @@ void generate_code(Program* prog, FILE* output) {
 
     stage_trace(STAGE_CODEGEN, "headers written, checking imports");
 
-    // Generate C helper functions based on imports
+    //generate C helper functions based on imports
     if (prog->imports && prog->imports->import_count > 0) {
         fprintf(output, "// std.io helper functions\n");
 
-        // Check which functions are imported
+        //check which functions are imported
         bool has_wildcard = false;
         bool need_read_int = false;
         bool need_read_str = false;
@@ -768,7 +752,7 @@ void generate_code(Program* prog, FILE* output) {
             }
         }
 
-        // Generate read_int
+        //generate read_int
         if (has_wildcard || need_read_int) {
             fprintf(output, "int64_t* read_int() {\n");
             fprintf(output, "    char buffer[256];\n");
@@ -779,12 +763,12 @@ void generate_code(Program* prog, FILE* output) {
             fprintf(output, "}\n\n");
         }
 
-        // Generate read_str
+        //generate read_str
         if (has_wildcard || need_read_str) {
             fprintf(output, "char** read_str() {\n");
             fprintf(output, "    char buffer[1024];\n");
             fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
-            fprintf(output, "    // Remove trailing newline\n");
+            fprintf(output, "    //remove trailing newline\n");
             fprintf(output, "    size_t len = strlen(buffer);\n");
             fprintf(output, "    if (len > 0 && buffer[len-1] == '\\n') buffer[len-1] = '\\0';\n");
             fprintf(output, "    char** result = malloc(sizeof(char*));\n");
@@ -797,7 +781,7 @@ void generate_code(Program* prog, FILE* output) {
             fprintf(output, "}\n\n");
         }
 
-        // Generate read_bool
+        //generate read_bool
         if (has_wildcard || need_read_bool) {
             fprintf(output, "bool* read_bool() {\n");
             fprintf(output, "    char buffer[256];\n");
@@ -815,7 +799,7 @@ void generate_code(Program* prog, FILE* output) {
             fprintf(output, "}\n\n");
         }
 
-        // Generate read_char
+        //generate read_char
         if (has_wildcard || need_read_char) {
             fprintf(output, "char* read_char() {\n");
             fprintf(output, "    char buffer[256];\n");
@@ -827,7 +811,7 @@ void generate_code(Program* prog, FILE* output) {
             fprintf(output, "}\n\n");
         }
 
-        // Generate read_key (platform-specific)
+        //generate read_key (tbh no idea how this works but oh well, not all code needs to be mine :D)
         if (has_wildcard || need_read_key) {
             fprintf(output, "char* read_key() {\n");
             fprintf(output, "    char* result = malloc(sizeof(char));\n");

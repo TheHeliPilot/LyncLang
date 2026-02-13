@@ -18,16 +18,13 @@ typedef enum {
     OPT_ALL = 0xFF
 } OptimizationLevel;
 
-// Main entry point
 void optimize_program(Func** program, int count, OptimizationLevel level);
 
-// Individual optimization passes - now return bool to indicate if changes were made
 bool constant_folding(Func** program, int count);
 bool dead_code_elimination(Func** program, int count);
 bool peephole_optimizations(Func** program, int count);
 bool inline_functions(Func** program, int count);
 
-// Helper functions (only needed internally, but if used elsewhere, declare them)
 bool is_constant_expr(Expr* e);
 int eval_constant_expr(Expr* e);
 bool is_constant_true(Expr* e);
