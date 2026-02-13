@@ -96,13 +96,13 @@ typedef enum {
     INT_LIT_E, BOOL_LIT_E, STR_LIT_E, NULL_LIT_E,
 
     //vars
-    VAR_E,
+    VAR_E, ARRAY_ACCESS_E,
 
     //funcs
     FUNC_CALL_E, FUNC_RET_E,
 
     //other
-    MATCH_E, VOID_E,
+    MATCH_E, VOID_E, ARRAY_DECL_E,
 
     //mem
     ALLOC_E,
@@ -135,6 +135,11 @@ struct Expr {
         } var;
 
         struct {
+            char* arrayName;
+            Expr* index;
+        } array_access;
+
+        struct {
             TokenType op;
             struct Expr* expr;
         } un_op;
@@ -151,6 +156,12 @@ struct Expr {
             int count;
             FuncSign* resolved_sign;
         } func_call;
+
+        struct {
+            Expr** values;
+            int count;
+            TokenType resolvedType;
+        } arr_decl;
 
         Expr* func_ret_expr;
 
@@ -174,6 +185,7 @@ struct Expr {
 typedef enum {
     VAR_DECL_S,         // x: int = 5;
     ASSIGN_S,           // x = 5;
+    ARRAY_ELEM_ASSIGN_S, // arr[i] = value;
     IF_S,               // if cond { } else { }
     WHILE_S,            // while cond { }
     DO_WHILE_S,         // do { } while cond
@@ -192,16 +204,20 @@ struct Stmt {
         struct {
             char* name;
             TokenType varType;
-            Expr* expr;
             Ownership ownership;
             bool isNullable;
             bool isConst;
+            bool isArray;
+            int arraySize;
+            Expr* expr;
         } var_decl;
 
         struct {
             char* name;
             Expr* expr;
             Ownership ownership;
+            bool isArray;
+            int arraySize;
         } var_assign;
 
         struct {
@@ -242,6 +258,12 @@ struct Stmt {
             char* varName;
         } free_stmt;
 
+        struct {
+            char* arrayName;
+            Expr* index;
+            Expr* value;
+        } array_elem_assign;
+
         Expr* expr_stmt;
 
     } as;
@@ -263,7 +285,9 @@ Expr* makeBoolLit(SourceLocation, bool);
 Expr* makeStrLit(SourceLocation, char*);
 Expr* makeNullLit(SourceLocation);
 Expr* makeVar(SourceLocation, char*);
+Expr* makeArrAccess(SourceLocation, char*, Expr*);
 Expr* makeFuncCall(SourceLocation, char*, Expr**, int);
+Expr* makeArrDecl(SourceLocation, Expr**, int);
 Expr* makeUnOp(SourceLocation, TokenType, Expr*);
 Expr* makeBinOp(SourceLocation, Expr*, TokenType, Expr*);
 

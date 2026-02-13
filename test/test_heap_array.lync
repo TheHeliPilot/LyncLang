@@ -1,0 +1,7 @@
+def main(): int {
+    arr3: own int[2] = alloc 1;
+    arr3[0] = 5;
+    print("heap:", arr3[0]);
+    free arr3;
+    return 0;
+}

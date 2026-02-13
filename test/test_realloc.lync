@@ -1,0 +1,8 @@
+def main(): int {
+    i: own int = alloc 2;
+    free i;
+    i = alloc 5;
+    print("i after realloc:", i);
+    free i;
+    return 0;
+}

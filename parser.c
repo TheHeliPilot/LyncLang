@@ -159,6 +159,11 @@ Expr* parseFactor(Parser* p) {
                 }
                 expect(p, R_PAREN_T);
                 return makeFuncCall(TOK_LOC(t), t->value, args, count);
+            } else if (peek(p, 0)->type == L_BRACKET_T) {
+                consume(p);
+                Expr* e = parseExpr(p);
+                expect(p, R_BRACKET_T);
+                return makeArrAccess(TOK_LOC(t), t->value, e);
             }
             return makeVar(TOK_LOC(t), (char*)t->value);
         }
@@ -183,6 +188,25 @@ Expr* parseFactor(Parser* p) {
             Expr* expr = parseExpr(p);
             expect(p, R_PAREN_T);  // eat ')'
             return expr;
+        }
+        case L_BRACE_T: {
+            Token* t = consume(p);
+            Expr** exprs = malloc(sizeof(Expr*) * 2);
+            int count = 0;
+            int height = 2;
+            while (peek(p, 0)->type != R_BRACE_T) {
+                Expr* e = parseExpr(p);
+                exprs[count++] = e;
+                if(peek(p, 0)->type == COMMA_T)
+                    consume(p);
+
+                if(count >= height){
+                    height *= 2;
+                    exprs = realloc(exprs, sizeof(Expr*) * height);
+                }
+            }
+            consume(p);
+            return makeArrDecl(TOK_LOC(t), exprs, count);
         }
         case MATCH_T: {
             Token* matchTok = consume(p);
@@ -434,6 +458,16 @@ Stmt* parseStatement(Parser* p) {
 
                 TokenType varType = consume(p)->type;
 
+                bool isArray = false;
+                int arrSize = 0;
+                if(peek(p, 0)->type == L_BRACKET_T){
+                    isArray = true;
+                    consume(p);
+                    int size = *(int*)expect(p, INT_LIT_T)->value;
+                    arrSize = size;
+                    expect(p, R_BRACKET_T);
+                }
+
                 expect(p, EQUALS_T);
                 Expr *e = parseExpr(p);
                 expect(p, SEMICOLON_T);
@@ -446,6 +480,24 @@ Stmt* parseStatement(Parser* p) {
                 s->as.var_decl.ownership = o;
                 s->as.var_decl.isNullable = isNullable;
                 s->as.var_decl.isConst = isConst;
+                s->as.var_decl.isArray = isArray;
+                s->as.var_decl.arraySize = arrSize;
+            } else if (peek(p, 1)->type == L_BRACKET_T) {
+                // Array element assignment: arr[i] = value
+                Token* arrayTok = consume(p);
+                char* arrayName = arrayTok->value;
+                consume(p);
+                Expr* index = parseExpr(p);
+                expect(p, R_BRACKET_T);
+                expect(p, EQUALS_T);
+                Expr* value = parseExpr(p);
+                expect(p, SEMICOLON_T);
+
+                s->type = ARRAY_ELEM_ASSIGN_S;
+                s->loc = TOK_LOC(arrayTok);
+                s->as.array_elem_assign.arrayName = arrayName;
+                s->as.array_elem_assign.index = index;
+                s->as.array_elem_assign.value = value;
             } else if (peek(p, 1)->type == EQUALS_T) {
                 Token* varTok = consume(p);
                 char *name = varTok->value;
@@ -724,6 +776,24 @@ Expr* makeVar(SourceLocation loc, char* name) {
     e->as.var.isConst = false;
     return e;
 }
+Expr* makeArrAccess(SourceLocation loc, char* name, Expr* index) {
+    Expr* e = malloc(sizeof(Expr));
+    e->type = ARRAY_ACCESS_E;
+    e->loc = loc;
+    e->is_nullable = false;
+    e->as.array_access.arrayName = name;
+    e->as.array_access.index = index;
+    return e;
+}
+Expr* makeArrDecl(SourceLocation loc, Expr** exprs, int count) {
+    Expr* e = malloc(sizeof(Expr));
+    e->type = ARRAY_DECL_E;
+    e->loc = loc;
+    e->is_nullable = false;
+    e->as.arr_decl.values = exprs;
+    e->as.arr_decl.count = count;
+    return e;
+}
 Expr* makeUnOp(SourceLocation loc, TokenType t, Expr* expr) {
     Expr* e = malloc(sizeof(Expr));
     e->type = UN_OP_E;
@@ -878,6 +948,19 @@ void print_expr(Expr* e, int depth) {
             print_indent(depth);
             fprintf(stderr, "Right:\n");
             print_expr(e->as.bin_op.exprR, depth + 1);
+            break;
+        case ALLOC_E:
+            fprintf(stderr, "Alloc:\n");
+            print_expr(e->as.alloc.initialValue, depth + 1);
+            break;
+        case ARRAY_DECL_E:
+            fprintf(stderr, "ArrayDecl: [%d elements]\n", e->as.arr_decl.count);
+            break;
+        case ARRAY_ACCESS_E:
+            fprintf(stderr, "ArrayAccess: %s[...]\n", e->as.array_access.arrayName);
+            break;
+        default:
+            fprintf(stderr, "Expr (type=%d)\n", e->type);
             break;
     }
 }

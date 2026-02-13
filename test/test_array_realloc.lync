@@ -1,0 +1,15 @@
+def main(): int {
+    arr: own int[2] = alloc 1;
+    arr[0] = 10;
+    arr[1] = 20;
+    print("first alloc:", arr[0], arr[1]);
+    free arr;
+
+    arr = alloc 99;
+    arr[0] = 100;
+    arr[1] = 200;
+    print("after realloc:", arr[0], arr[1]);
+    free arr;
+
+    return 0;
+}

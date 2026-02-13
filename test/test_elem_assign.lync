@@ -1,0 +1,6 @@
+def main(): int {
+    arr1: int[3] = {10, 20, 30};
+    arr1[1] = 99;
+    print("modified:", arr1[1]);
+    return 0;
+}

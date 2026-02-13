@@ -41,6 +41,7 @@ typedef enum {
     // Braces & parentheses
     L_PAREN_T, R_PAREN_T,
     L_BRACE_T, R_BRACE_T,
+    L_BRACKET_T, R_BRACKET_T,
 
     // Control flow keywords
     IF_T,

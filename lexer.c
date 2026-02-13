@@ -345,6 +345,8 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             case '}': single_char_type = R_BRACE_T; break;
             case '(': single_char_type = L_PAREN_T; break;
             case ')': single_char_type = R_PAREN_T; break;
+            case '[': single_char_type = L_BRACKET_T; break;
+            case ']': single_char_type = R_BRACKET_T; break;
             case '+': single_char_type = PLUS_T; break;
             case '-': single_char_type = MINUS_T; break;
             case '*': single_char_type = STAR_T; break;

@@ -421,6 +421,23 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         case ALLOC_E: {
             break;
         }
+
+        case ARRAY_DECL_E: {
+            fprintf(out, "{");
+            for (int i = 0; i < e->as.arr_decl.count; i++) {
+                if (i > 0) fprintf(out, ", ");
+                emit_expr(e->as.arr_decl.values[i], out, fstn);
+            }
+            fprintf(out, "}");
+            break;
+        }
+
+        case ARRAY_ACCESS_E: {
+            fprintf(out, "%s[", e->as.array_access.arrayName);
+            emit_expr(e->as.array_access.index, out, fstn);
+            fprintf(out, "]");
+            break;
+        }
     }
 }
 
@@ -481,6 +498,14 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
             emit_indent(out, indent);
             fprintf(out, "}\n");
         }
+    } else if (e->type == ALLOC_E) {
+        // Reassignment with alloc
+        emit_indent(out, indent);
+        fprintf(out, "%s = malloc(sizeof(%s));\n", targetVar, type_to_c_type(e->as.alloc.type));
+        emit_indent(out, indent);
+        fprintf(out, "*%s = ", targetVar);
+        emit_expr(e->as.alloc.initialValue, out, fstn);
+        fprintf(out, ";\n");
     } else {
         //base case: just a normal assignment
         emit_indent(out, indent);
@@ -504,23 +529,42 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
     switch (s->type) {
         //inside emit_stmt switch case VAR_DECL_S:
         case VAR_DECL_S:
-            emit_indent(out, indent);
-            fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
-            fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
+            if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
+                // Stack array
+                emit_indent(out, indent);
+                fprintf(out, "%s %s[%d] = ",
+                        type_to_c_type(s->as.var_decl.varType),
+                        s->as.var_decl.name,
+                        s->as.var_decl.arraySize);
+                emit_expr(s->as.var_decl.expr, out, fstn);
+                fprintf(out, ";\n");
+            } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN) {
+                // Heap array
+                emit_indent(out, indent);
+                fprintf(out, "%s* %s = malloc(sizeof(%s) * %d);\n",
+                        type_to_c_type(s->as.var_decl.varType),
+                        s->as.var_decl.name,
+                        type_to_c_type(s->as.var_decl.varType),
+                        s->as.var_decl.arraySize);
 
-            //check if its an allocation
-            if (s->as.var_decl.expr->type == ALLOC_E) {
-                //emit: int64_t *x = malloc(sizeof(int64_t));
+                // TODO: Handle array initialization in alloc (Phase 6)
+            } else if (s->as.var_decl.expr->type == ALLOC_E) {
+                // Regular alloc (non-array)
+                emit_indent(out, indent);
+                fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
+                fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
                 fprintf(out, " = malloc(sizeof(%s));\n", type_to_c_type(s->as.var_decl.varType));
 
-                //now assign the initial value: *x = initialValue;
                 emit_assign_expr_to_var(s->as.var_decl.expr->as.alloc.initialValue,
                                         s->as.var_decl.name,
                                         s->as.var_decl.ownership,
                                         out,
                                         indent, fstn);
             } else {
-                //normal declaration
+                // Normal variable
+                emit_indent(out, indent);
+                fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
+                fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
                 fprintf(out, ";\n");
                 emit_assign_expr_to_var(s->as.var_decl.expr,
                                         s->as.var_decl.name,
@@ -531,7 +575,25 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             break;
 
         case ASSIGN_S:
-            emit_assign_expr_to_var(s->as.var_assign.expr, s->as.var_assign.name, s->as.var_assign.ownership, out, indent, fstn);
+            if (s->as.var_assign.isArray && s->as.var_assign.expr->type == ALLOC_E) {
+                // Array reallocation
+                emit_indent(out, indent);
+                fprintf(out, "%s = malloc(sizeof(%s) * %d);\n",
+                        s->as.var_assign.name,
+                        type_to_c_type(s->as.var_assign.expr->as.alloc.type),
+                        s->as.var_assign.arraySize);
+            } else {
+                emit_assign_expr_to_var(s->as.var_assign.expr, s->as.var_assign.name, s->as.var_assign.ownership, out, indent, fstn);
+            }
+            break;
+
+        case ARRAY_ELEM_ASSIGN_S:
+            emit_indent(out, indent);
+            fprintf(out, "%s[", s->as.array_elem_assign.arrayName);
+            emit_expr(s->as.array_elem_assign.index, out, fstn);
+            fprintf(out, "] = ");
+            emit_expr(s->as.array_elem_assign.value, out, fstn);
+            fprintf(out, ";\n");
             break;
 
         case IF_S:

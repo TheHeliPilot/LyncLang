@@ -5,7 +5,8 @@
       "Bash(./lync.exe:*)",
       "Bash(./test.exe:*)",
       "Bash(./cmake-build-debug/Debug/lync.exe:*)",
-      "Bash(./test/read_test.exe:*)"
+      "Bash(./test/read_test.exe:*)",
+      "Bash(./cmake-build-debug/lync.exe:*)"
     ]
   }
 }

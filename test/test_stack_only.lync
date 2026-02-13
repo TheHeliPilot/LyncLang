@@ -1,0 +1,4 @@
+def main(): int {
+    arr1: int[2] = {1, 2};
+    return 0;
+}

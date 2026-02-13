@@ -1,0 +1,5 @@
+def main(): int {
+    x: own int = alloc 5;
+    free x;
+    return 0;
+}

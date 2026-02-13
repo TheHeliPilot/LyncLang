@@ -5,7 +5,7 @@ A systems programming language with manual memory management, compile-time owner
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
-![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-orange.svg)
+![Version: 0.2.2](https://img.shields.io/badge/Version-0.2.2-orange.svg)
 
 File extension: `.lync`
 
@@ -382,6 +382,39 @@ print("Result:", x + 5);         // Mix literals and expressions
 
 Supports `int`, `bool`, `string`, and `char` types. Type-checked at compile time.
 
+### Arrays
+
+**Stack Arrays:**
+```c
+arr: int[3] = {10, 20, 30};
+arr[1] = 99;
+print("Element:", arr[1]);
+```
+
+**Heap Arrays:**
+```c
+arr: own int[2] = alloc 1;
+arr[0] = 5;
+arr[1] = 10;
+free arr;
+```
+
+**Length Function:**
+```c
+arr: int[5] = {1, 2, 3, 4, 5};
+len: int = length(arr);  // Compile-time constant: 5
+```
+
+**Features:**
+- Fixed-size arrays with compile-time size tracking
+- Stack arrays (`int[5]`) require array literal initialization
+- Heap arrays (`own int[5]`) allocated with `alloc`
+- Element access: `arr[index]`
+- Element assignment: `arr[index] = value`
+- `length(arr)` built-in for stack arrays (compile-time constant)
+- Direct array assignment blocked (prevents accidental copies)
+- Reallocation after free allowed: `free arr; arr = alloc 99;`
+
 ### String Literals
 
 ```c
@@ -457,6 +490,16 @@ ptr: own int = alloc 10;
 free ptr;
 x: int = ptr;  // Error: use after free
 ```
+
+**Reallocation After Free:**
+```c
+ptr: own int = alloc 10;
+free ptr;
+ptr = alloc 20;  // OK - new allocation resurrects the variable
+free ptr;
+```
+
+Freed variables can be reassigned with `alloc`, transitioning state from `FREED` back to `ALIVE`. This works for both scalars and arrays.
 
 **Ref Cannot Be Freed:**
 ```c
@@ -657,6 +700,28 @@ Written in C (C23 standard) with zero external dependencies.
 
 ### Changelog
 
+#### [0.2.2] - 2026-02-13
+
+**Added:**
+- Array support with stack and heap allocation
+  - Stack arrays: `arr: int[5] = {1, 2, 3, 4, 5};`
+  - Heap arrays: `arr: own int[5] = alloc 1;`
+  - Element access: `arr[index]`
+  - Element assignment: `arr[index] = value;`
+  - `length(arr)` built-in for stack arrays (compile-time constant)
+  - Direct array assignment blocked to prevent accidental copies
+- Reallocation after free for `own` variables and arrays
+  - Freed variables can be reassigned with `alloc`
+  - State transitions from `FREED` → `ALIVE` automatically
+  - Example: `free ptr; ptr = alloc 20;`
+
+**Fixed:**
+- Critical buffer overflow in `declare()` (scope reallocation happened after write)
+- Format string crashes (using %s with enum integers)
+- NULL pointer dereference in ref variable handling
+- Missing ALLOC_E codegen case
+- Missing expression cases in AST printer
+
 #### [0.2.1] - 2026-02-13
 
 **Added:**
@@ -724,6 +789,8 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 - Flow-sensitive nullable unwrapping
 - Function overloading by parameter types
 - Cross-platform support (Windows, macOS, Linux)
+- Fixed-size arrays (stack and heap allocated)
+- Reallocation after free for owned variables
 
 #### Planned Features
 
@@ -758,20 +825,6 @@ Features:
 - "Did you mean" suggestions for field name typos
 - Compile-time field access validation
 
-**Phase 7: Arrays**
-
-Fixed-size stack-allocated arrays.
-
-```c
-arr: int[5] = {1, 2, 3, 4, 5};
-arr[0] = 10;
-print(arr[2]);
-```
-
-Features:
-- Array declaration and initialization
-- Compile-time bounds checking where possible
-- Size as part of type (int[5] != int[10])
 
 **Future Goals**
 
