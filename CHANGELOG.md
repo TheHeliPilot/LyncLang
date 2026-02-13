@@ -68,6 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Symbols contained garbage memory in these fields, causing crashes when accessed
   - Solution: Initialize all Symbol fields explicitly: `owner = nullptr`, `is_dangling = false`
   - Added ref variable owner tracking during VAR_DECL_S to properly set owner field
+- **Critical: Function name mangling mismatch**
+  - Root cause: Function declarations used `get_type_signature()` which added trailing underscore, but function calls used `get_mangled_name()` which didn't
+  - For `add(): int`, declaration was `add_int_()` but calls were `add_int()`, causing "undeclared function" errors
+  - Solution: Use `get_mangled_name()` consistently for both declarations and calls
 - **Parser:** DOT_T token now properly recognized for module path parsing (`std.io.read_int`)
 - **Deep copy of FuncSign:** Parameters array now properly deep-copied when storing function signatures
   - Prevents issues with pointer invalidation during array reallocation
