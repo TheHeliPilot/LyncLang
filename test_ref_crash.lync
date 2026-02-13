@@ -1,0 +1,17 @@
+def main(): int {
+    x: own bool = alloc true;
+    r: ref bool = x;
+    print("Bool je: ", r);
+    free x;
+    print(add());
+    return 0;
+}
+
+def add(): int {
+    for (i: 0 to 25) {
+        if (i > 0) {
+            return i;
+        }
+        return 420;
+    }
+}

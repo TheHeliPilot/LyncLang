@@ -1,4 +1,4 @@
-using std.io.*;
+include std.io.*;
 
 def main(): int {
     return 0;

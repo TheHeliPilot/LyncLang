@@ -1,4 +1,4 @@
-using std.io.read_int;
+include std.io.read_int;
 
 def main(): int {
     return 0;

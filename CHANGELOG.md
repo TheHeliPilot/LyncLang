@@ -11,10 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### Module System with `using` Statement
-- **Import syntax:** Java/C#-style `using` statements for selective imports
-  - Wildcard imports: `using std.io.*;` imports all functions from a module
-  - Specific imports: `using std.io.read_int;` imports only named functions
+#### Module System with `include` Statement
+- **Import syntax:** Java/C#-style `include` statements for selective imports
+  - Wildcard imports: `include std.io.*;` imports all functions from a module
+  - Specific imports: `include std.io.read_int;` imports only named functions
   - Multiple imports supported per file
 - **Import validation:** Compile-time errors for:
   - Importing from non-existent modules
@@ -63,6 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - When codegen tried to access `resolved_sign->name`, it crashed with segmentation fault
   - Debug output showed freed memory marked with `0xDDDDDDDD` (MSVC debug heap marker)
   - Solution: Commented out FuncTable cleanup until after codegen completes
+- **Critical: Uninitialized Symbol fields causing crashes**
+  - Root cause: `declare()` function was not initializing `owner` and `is_dangling` fields in Symbol struct
+  - Symbols contained garbage memory in these fields, causing crashes when accessed
+  - Solution: Initialize all Symbol fields explicitly: `owner = nullptr`, `is_dangling = false`
+  - Added ref variable owner tracking during VAR_DECL_S to properly set owner field
 - **Parser:** DOT_T token now properly recognized for module path parsing (`std.io.read_int`)
 - **Deep copy of FuncSign:** Parameters array now properly deep-copied when storing function signatures
   - Prevents issues with pointer invalidation during array reallocation

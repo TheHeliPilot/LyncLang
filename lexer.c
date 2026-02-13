@@ -166,7 +166,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "bool") == 0) { type = BOOL_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "string") == 0) { type = STR_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "def") == 0) { type = DEF_KEYWORD_T; value = NULL; free_word = true; }
-            else if (strcmp(word, "using") == 0) { type = USING_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "include") == 0) { type = INCLUDE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "while") == 0) { type = WHILE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "do") == 0) { type = DO_T; value = NULL; free_word = true; }
             else if (strcmp(word, "for") == 0) { type = FOR_T; value = NULL; free_word = true; }
@@ -472,7 +472,7 @@ const char* token_type_name(TokenType type) {
         case STR_KEYWORD_T: return "str";
         case CHAR_KEYWORD_T: return "char";
         case DEF_KEYWORD_T: return "def";
-        case USING_T: return "using";
+        case INCLUDE_T: return "include";
         case EOF_T: return "EOF";
         case COMMA_T: return ",";
         case DOT_T: return ".";

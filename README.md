@@ -42,7 +42,7 @@ cmake --build build
 
 ```c
 // example.lync
-using std.io.read_int;
+include std.io.read_int;
 
 def add(a: int, b: int): int {
     return a + b;
@@ -116,17 +116,17 @@ If no input file is specified, defaults to `test.lync`.
 
 ### Module System (✅ New in 0.2.0)
 
-Lync uses a `using` statement to selectively import functionality from modules, reducing code bloat and improving maintainability.
+Lync uses a `include` statement to selectively import functionality from modules, reducing code bloat and improving maintainability.
 
 **Import syntax:**
 ```c
-using std.io.*;             // Import all I/O functions
-using std.io.read_int;      // Import only read_int
-using std.io.read_str;      // Import multiple specific functions
+include std.io.*;             // Import all I/O functions
+include std.io.read_int;      // Import only read_int
+include std.io.read_str;      // Import multiple specific functions
 ```
 
 **Rules:**
-- `using` statements must appear at the **top of the file** (before any function definitions)
+- `include` statements must appear at the **top of the file** (before any function definitions)
 - You can mix wildcard (`*`) and specific imports
 - Importing from a non-existent module is a compile error
 - Using a function that hasn't been imported is a compile error
@@ -147,8 +147,8 @@ All I/O functions return nullable types because input can fail (EOF, invalid for
 
 **Example:**
 ```c
-using std.io.read_int;
-using std.io.read_str;
+include std.io.read_int;
+include std.io.read_str;
 
 def main(): int {
     print("Enter your age:");
@@ -599,13 +599,13 @@ A Java/C#-style module system for clean, selective imports:
 
 - **Selective imports:** Only generate code for what you use
 - **Namespace organization:** Logical grouping of built-in functions
-- **Wildcard and specific imports:** `using std.io.*;` or `using std.io.read_int;`
+- **Wildcard and specific imports:** `include std.io.*;` or `include std.io.read_int;`
 - **Compile-time validation:** Importing from non-existent modules or using unimported functions triggers errors
 - **Zero bloat:** Unused functions generate no C code
 
 ```c
-using std.io.read_int;
-using std.io.read_str;
+include std.io.read_int;
+include std.io.read_str;
 
 def main(): int {
     print("Enter number:");
@@ -703,9 +703,9 @@ Pointer types can be made nullable with the `?` suffix. Acts like an `Option` ty
 
 ### Phase 4: Module System (**Completed** ✅ — v0.2.0)
 
-- ~~`using` statement for imports~~ ✅
-- ~~Wildcard imports: `using std.io.*;`~~ ✅
-- ~~Specific imports: `using std.io.read_int;`~~ ✅
+- ~~`include` statement for imports~~ ✅
+- ~~Wildcard imports: `include std.io.*;`~~ ✅
+- ~~Specific imports: `include std.io.read_int;`~~ ✅
 - ~~Compile-time import validation~~ ✅
 - ~~Conditional code generation (only emit used functions)~~ ✅
 - ~~Standard library I/O functions (read_int, read_str, read_bool, read_char, read_key)~~ ✅

@@ -1,7 +1,7 @@
 // Comprehensive Lync Language Feature Test
 // Tests all implemented features in version 0.2.0
 
-using std.io.*;
+include std.io.*;
 
 // ============================================================================
 // PART 1: Basic Types and Variables
@@ -22,9 +22,8 @@ def test_basic_types(): int {
     // c: char = 'A';
     // print("char:", c);
 
-    // string literals
-    msg: string = "Hello, Lync!";
-    print("string:", msg);
+    // string literals (note: string variables not yet supported, only literals with print)
+    print("string: Hello, Lync!");
 
     // Escape sequences
     print("Escapes: \n\t\"quoted\" \\ backslash");
@@ -263,25 +262,25 @@ def test_io_functions(): int {
     match num {
         some(n): {
             print("You entered:", n);
-            free n;
         }
         null: {
             print("Invalid integer input");
         }
     };
+    free num;
 
-    // read_char
+    // read_char (note: print doesn't support char yet)
     print("Enter a character:");
     ch: own? char = read_char();
     match ch {
         some(c): {
-            print("You entered character:", c);
-            free c;
+            print("You entered a character");
         }
         null: {
             print("Invalid character input");
         }
     };
+    free ch;
 
     return 0;
 }

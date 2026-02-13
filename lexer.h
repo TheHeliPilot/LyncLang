@@ -65,7 +65,7 @@ typedef enum {
     // Function stuff
     DEF_KEYWORD_T,
     PRINT_KEYWORD_T,
-    USING_T,
+    INCLUDE_T,
 
     // Mem stuff
     OWN_T,

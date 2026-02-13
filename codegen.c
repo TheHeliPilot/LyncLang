@@ -206,10 +206,9 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
         funcNum = 0;
     }
 
-    char buf[sizeof(origName)+ 1 + 32 + 1]; // Make sure this is large enough for a 64-bit int + sign
-    snprintf(buf, sizeof(buf), "%s_%s", origName, get_type_signature(f->signature));
-
-    char* bufP = strdup(buf);
+    // Use get_mangled_name for consistency with function calls
+    char* mangled = get_mangled_name(f->signature);
+    char* bufP = strdup(mangled);
 
     fstn->elements[fstn->count++] = (FuncSignToNameElement){.sign = f->signature, .name = bufP};
 
@@ -219,7 +218,7 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
     }
     
     fprintf(out, "%s", type_to_c_type(f->signature->retType));
-    fprintf(out, " %s(", buf);
+    fprintf(out, " %s(", mangled);
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
@@ -726,7 +725,7 @@ void generate_code(Program* prog, FILE* output) {
         bool need_read_int = false;
 
         for (int i = 0; i < prog->imports->import_count; i++) {
-            UsingStmt* import = prog->imports->imports[i];
+            IncludeStmt* import = prog->imports->imports[i];
             if (import->type == IMPORT_ALL && strcmp(import->module_name, "std.io") == 0) {
                 need_read_int = true;
                 break;

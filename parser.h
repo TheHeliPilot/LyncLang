@@ -28,10 +28,10 @@ typedef struct {
     ImportType type;
     char* function_name;  // NULL for IMPORT_ALL, "read_int" for IMPORT_SPECIFIC
     SourceLocation loc;
-} UsingStmt;
+} IncludeStmt;
 
 typedef struct {
-    UsingStmt** imports;
+    IncludeStmt** imports;
     int import_count;
     int import_capacity;
 } ImportList;

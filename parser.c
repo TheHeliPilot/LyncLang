@@ -268,9 +268,9 @@ Expr* parseFactor(Parser* p) {
     }
 }
 
-UsingStmt* parseUsingStmt(Parser* p) {
-    UsingStmt* stmt = malloc(sizeof(UsingStmt));
-    Token* usingTok = expect(p, USING_T);
+IncludeStmt* parseIncludeStmt(Parser* p) {
+    IncludeStmt* stmt = malloc(sizeof(IncludeStmt));
+    Token* usingTok = expect(p, INCLUDE_T);
     stmt->loc = TOK_LOC(usingTok);
 
     // Parse: std.io.* or std.io.read_int
@@ -344,17 +344,17 @@ Program* parseProgram(Parser* p) {
     Program* prog = malloc(sizeof(Program));
     prog->imports = malloc(sizeof(ImportList));
     prog->imports->import_capacity = 10;
-    prog->imports->imports = malloc(sizeof(UsingStmt*) * prog->imports->import_capacity);
+    prog->imports->imports = malloc(sizeof(IncludeStmt*) * prog->imports->import_capacity);
     prog->imports->import_count = 0;
 
     // Parse all using statements
-    while (peek(p, 0)->type == USING_T) {
+    while (peek(p, 0)->type == INCLUDE_T) {
         if (prog->imports->import_count >= prog->imports->import_capacity) {
             prog->imports->import_capacity *= 2;
             prog->imports->imports = realloc(prog->imports->imports,
-                sizeof(UsingStmt*) * prog->imports->import_capacity);
+                sizeof(IncludeStmt*) * prog->imports->import_capacity);
         }
-        prog->imports->imports[prog->imports->import_count++] = parseUsingStmt(p);
+        prog->imports->imports[prog->imports->import_count++] = parseIncludeStmt(p);
     }
 
     // Parse functions (existing code)

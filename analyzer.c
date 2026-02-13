@@ -19,7 +19,7 @@ ImportRegistry* make_import_registry() {
     return reg;
 }
 
-void register_import(ImportRegistry* reg, UsingStmt* stmt) {
+void register_import(ImportRegistry* reg, IncludeStmt* stmt) {
     if (strcmp(stmt->module_name, "std.io") != 0) {
         stage_warning(STAGE_ANALYZER, stmt->loc, "unknown module '%s' (only std.io is supported)", stmt->module_name);
         return;
@@ -81,7 +81,16 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool
                 name, isNullable ? "nullable " : "", token_type_name(type));
 
     scope->symbols[scope->count++] =
-            (Symbol){.type = type, .name = name, .ownership = ownership, .is_nullable = isNullable, .state = ALIVE, .is_unwrapped = false};
+            (Symbol){
+                .type = type,
+                .name = name,
+                .ownership = ownership,
+                .is_nullable = isNullable,
+                .state = ALIVE,
+                .owner = nullptr,           // Initialize to NULL
+                .is_dangling = false,       // Initialize to false
+                .is_unwrapped = false
+            };
 
     if (scope->capacity == scope->count) {
         scope->capacity *= 2;
@@ -581,7 +590,20 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             if (t != s->as.var_decl.varType && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
                 stage_error(STAGE_ANALYZER, s->loc, "variable '%s' declared as %s but initialized with %s",
                       s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
+
             declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable);
+
+            // For ref variables, set the owner to the variable being borrowed
+            if (s->as.var_decl.ownership == OWNERSHIP_REF) {
+                if (s->as.var_decl.expr->type == VAR_E) {
+                    Symbol* refSym = lookup(scope, s->as.var_decl.name);
+                    if (refSym && s->as.var_decl.expr->as.var.ownership == OWNERSHIP_OWN) {
+                        refSym->owner = s->as.var_decl.expr->as.var.name;
+                    } else if (refSym && s->as.var_decl.expr->as.var.ownership != OWNERSHIP_OWN) {
+                        stage_error(STAGE_ANALYZER, s->loc, "ref variable '%s' can only borrow from 'own' variables", s->as.var_decl.name);
+                    }
+                }
+            }
             break;
         }
 

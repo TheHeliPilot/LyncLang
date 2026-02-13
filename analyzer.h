@@ -49,7 +49,7 @@ typedef struct {
 } ImportRegistry;
 
 ImportRegistry* make_import_registry();
-void register_import(ImportRegistry* reg, UsingStmt* stmt);
+void register_import(ImportRegistry* reg, IncludeStmt* stmt);
 bool is_imported(ImportRegistry* reg, const char* func_name);
 
 void defineAndAnalyzeFunc(FuncTable* table, Func* func);
