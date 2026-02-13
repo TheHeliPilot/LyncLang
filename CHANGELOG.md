@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2026-02-13
+
+### Added
+
+#### Immutability with `const` Keyword
+- **Const variables:** `const x: int = 10;` declares immutable variables
+  - Assignment to const variables triggers compile error: "cannot assign to 'x', variable is immutable"
+  - Added `CONST_T` token type and keyword recognition
+  - Syntax: `const name: type = value;` (falls through to variable declaration in parser)
+- **Const function parameters:** `def foo(const x: int): void`
+  - Parameters can be marked as immutable
+  - Attempting to assign to const parameters triggers compile error
+  - Stored in `FuncParam.isConst` field
+- **Automatic const propagation for references:**
+  - References automatically inherit const-ness from their owner
+  - Prevents modifying const data through borrowed references
+  - Example:
+    ```c
+    const x: own int = alloc 5;
+    r: ref int = x;  // r is implicitly const
+    r = 10;          // Error: r is immutable
+    ```
+  - Implemented in analyzer: `refSym->is_const = s->as.var_decl.expr->as.var.isConst;`
+- **Const tracking in AST:**
+  - Added `bool isConst` field to `var_decl` structure (parser.h)
+  - Added `bool isConst` field to `Symbol` structure (analyzer.h)
+  - Added `bool isConst` field to `Expr.var` union for expression tracking
+- **Compile-time enforcement:**
+  - Analyzer checks const violation in `ASSIGN_S` case
+  - No runtime overhead (pure compile-time feature)
+
+### Fixed
+- **Parser:** Fixed function parameter validation logic
+  - Root cause: Used `||` (OR) instead of `&&` (AND) in parameter type check
+  - Old: `if (t->type != VAR_T || t->type != CONST_T)` was always true
+  - Fixed: `if (t->type != VAR_T && t->type != CONST_T)` correctly validates parameter tokens
+  - This check now properly accepts both `VAR_T` and `CONST_T` tokens for parameters
+
+### Internal Changes
+- Updated `declare()` function signature to accept `isConst` parameter
+- Parser falls through from `CONST_T` case to `VAR_T` case with `isConst = true` flag
+
+---
+
 ## [0.2.0] - 2026-02-13
 
 ### Added

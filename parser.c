@@ -401,7 +401,13 @@ Stmt* parseStatement(Parser* p) {
                 "parse statement starting with %s",
                 token_type_name(t->type));
 
+    bool isConst = false;
     switch (t->type) {
+        case CONST_T: {
+            consume(p);
+            isConst = true;
+            //continues to var as it will be var
+        }
         case VAR_T: {
             Stmt *s = malloc(sizeof(Stmt));
             if (peek(p, 1)->type == COLON_T) {
@@ -439,6 +445,7 @@ Stmt* parseStatement(Parser* p) {
                 s->as.var_decl.name = name;
                 s->as.var_decl.ownership = o;
                 s->as.var_decl.isNullable = isNullable;
+                s->as.var_decl.isConst = isConst;
             } else if (peek(p, 1)->type == EQUALS_T) {
                 Token* varTok = consume(p);
                 char *name = varTok->value;
@@ -635,6 +642,11 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
         }
 
         Token* t = consume(p);
+        bool isConst = false;
+        if(t->type == CONST_T)
+            isConst = true;
+        t = consume(p);
+
         if(t->type != VAR_T) {
             stage_fatal(STAGE_PARSER, TOK_LOC(t),
                         "Expected identifier in function parameter number %d, but got %s",
@@ -660,7 +672,7 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
         }
 
         Token* type = consume(p);
-        FuncParam fp = (FuncParam){.type = type->type, .name = t->value, .ownership = o, .isNullable = isNullable};
+        FuncParam fp = (FuncParam){.type = type->type, .name = t->value, .ownership = o, .isNullable = isNullable, .isConst = isConst};
         fps = realloc(fps, sizeof(FuncParam) * (counter + 1));
         fps[counter] = fp;
         counter++;
@@ -709,6 +721,7 @@ Expr* makeVar(SourceLocation loc, char* name) {
     e->is_nullable = false;  // will be determined by analyzer
     e->as.var.name = name;
     e->as.var.ownership = OWNERSHIP_NONE;
+    e->as.var.isConst = false;
     return e;
 }
 Expr* makeUnOp(SourceLocation loc, TokenType t, Expr* expr) {

@@ -74,6 +74,7 @@ typedef enum {
     FREE_T,
 
     // Other
+    CONST_T,
     DOUBLE_SLASH_T,
     COMMENT_L_T,
     COMMENT_R_T,

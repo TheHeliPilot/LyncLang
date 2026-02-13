@@ -64,7 +64,7 @@ Scope* make_scope(Scope* parent) {
     return scope;
 }
 
-void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool isNullable) {
+void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool isNullable, bool isConst) {
     // Check if trying to declare 'print' as a variable
     if (strcmp(name, "print") == 0) {
         stage_error(STAGE_ANALYZER, NO_LOC,
@@ -86,6 +86,7 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool
                 .name = name,
                 .ownership = ownership,
                 .is_nullable = isNullable,
+                .is_const = isConst,
                 .state = ALIVE,
                 .owner = nullptr,           // Initialize to NULL
                 .is_dangling = false,       // Initialize to false
@@ -181,6 +182,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             }
 
             e->as.var.ownership = sym->ownership;
+            e->as.var.isConst = sym->is_const;
             result = sym->type;
             break;
         }
@@ -485,7 +487,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                            branch->pattern->as.binding_name,
                            matchedSym->type,
                            bindingOwnership,
-                           false);  // binding is NOT nullable
+                           false, matchedSym->is_const);  // binding is NOT nullable
 
                     // Set owner for ref tracking
                     if (bindingOwnership == OWNERSHIP_REF) {
@@ -591,7 +593,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                 stage_error(STAGE_ANALYZER, s->loc, "variable '%s' declared as %s but initialized with %s",
                       s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
 
-            declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable);
+            declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable, s->as.var_decl.isConst);
 
             // For ref variables, set the owner to the variable being borrowed
             if (s->as.var_decl.ownership == OWNERSHIP_REF) {
@@ -599,9 +601,10 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                     Symbol* refSym = lookup(scope, s->as.var_decl.name);
                     if (refSym && s->as.var_decl.expr->as.var.ownership == OWNERSHIP_OWN) {
                         refSym->owner = s->as.var_decl.expr->as.var.name;
-                    } else if (refSym && s->as.var_decl.expr->as.var.ownership != OWNERSHIP_OWN) {
+                    } else if (refSym) {
                         stage_error(STAGE_ANALYZER, s->loc, "ref variable '%s' can only borrow from 'own' variables", s->as.var_decl.name);
                     }
+                    refSym->is_const = s->as.var_decl.expr->as.var.isConst;
                 }
             }
             break;
@@ -611,6 +614,10 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             Symbol* sym = lookup(scope, s->as.var_assign.name);
             if (sym == nullptr) {
                 stage_error(STAGE_ANALYZER, s->loc, "cannot assign to '%s', variable not declared", s->as.var_assign.name);
+                break;  // Can't continue checking without symbol
+            }
+            if (sym->is_const) {
+                stage_error(STAGE_ANALYZER, s->loc, "cannot assign to '%s', variable is immutable", s->as.var_assign.name);
                 break;  // Can't continue checking without symbol
             }
             s->as.var_assign.ownership = sym->ownership;
@@ -634,7 +641,6 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             if (c != BOOL_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "if condition must be bool, got %s", token_type_name(c));
 
-            // Check if condition is some(variable) to mark it as unwrapped in true branch
             bool isSomeCheck = false;
             char* unwrappedVarName = nullptr;
             if (s->as.if_stmt.cond->type == SOME_E &&
@@ -644,7 +650,6 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             }
 
             Scope* tScope = make_scope(scope);
-            // Mark variable as unwrapped in the true branch (where we know it's non-null)
             if (isSomeCheck) {
                 Symbol* sym = lookup(tScope, unwrappedVarName);
                 if (sym) {
@@ -684,7 +689,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 
         case FOR_S: {
             Scope* body = make_scope(scope);
-            declare(body, s->as.for_stmt.varName, INT_KEYWORD_T, OWNERSHIP_NONE, false);
+            declare(body, s->as.for_stmt.varName, INT_KEYWORD_T, OWNERSHIP_NONE, false, true);
             if (analyze_expr(body, funcTable, s->as.for_stmt.min) != INT_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "for loop min must be int");
             if (analyze_expr(body, funcTable, s->as.for_stmt.max) != INT_KEYWORD_T)
@@ -775,7 +780,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                            branch->pattern->as.binding_name,
                            matchedSym->type,
                            bindingOwnership,
-                           false);  // binding is NOT nullable
+                           false, matchedSym->is_const);  // binding is NOT nullable
 
                     // Set owner for ref tracking (if it's a ref)
                     if (bindingOwnership == OWNERSHIP_REF) {
@@ -959,7 +964,7 @@ void analyze_program(Program* prog) {
         Scope* funcScope = make_scope(global);
 
         for (int j = 0; j < fs[i]->signature->paramNum; ++j) {
-            declare(funcScope, fs[i]->signature->parameters[j].name, fs[i]->signature->parameters[j].type, fs[i]->signature->parameters[j].ownership, fs[i]->signature->parameters[j].isNullable);
+            declare(funcScope, fs[i]->signature->parameters[j].name, fs[i]->signature->parameters[j].type, fs[i]->signature->parameters[j].ownership, fs[i]->signature->parameters[j].isNullable, fs[i]->signature->parameters[j].isConst);
         }
 
         analyze_stmt(funcScope, funcTable, fs[i]->body);

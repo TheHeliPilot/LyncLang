@@ -47,6 +47,7 @@ typedef struct {
     char* name;
     Ownership ownership;
     bool isNullable;
+    bool isConst;
 } FuncParam;
 
 typedef struct {
@@ -130,6 +131,7 @@ struct Expr {
         struct {
             char* name;
             Ownership ownership;
+            bool isConst;
         } var;
 
         struct {
@@ -193,6 +195,7 @@ struct Stmt {
             Expr* expr;
             Ownership ownership;
             bool isNullable;
+            bool isConst;
         } var_decl;
 
         struct {

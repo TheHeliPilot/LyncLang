@@ -170,6 +170,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "some") == 0) { type = SOME_T; value = NULL; free_word = true; }
             else if (strcmp(word, "own") == 0) { type = OWN_T; value = NULL; free_word = true; }
             else if (strcmp(word, "ref") == 0) { type = REF_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "const") == 0) { type = CONST_T; value = NULL; free_word = true; }
             else if (strcmp(word, "true") == 0) {
                 type = BOOL_LIT_T;
                 int* val = malloc(sizeof(int));
