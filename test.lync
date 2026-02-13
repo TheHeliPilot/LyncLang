@@ -1,13 +1,12 @@
+include std.io.*;
+
 def main(): int {
-    x: int = 10;
-    y: int = 20;
+    i: own? int = read_int();
 
-    print("Sum:", x + y);
-    print(add(x, y));
-    return 0;
-}
+    if(some(i)) {
+        print(i);
+    }
 
-def add(a: int, b: int): int {
-    print("Tego");
-    return a * b;
+    c: own? char = read_key();
+    return 0;   
 }

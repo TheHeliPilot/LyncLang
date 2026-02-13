@@ -713,7 +713,32 @@ void generate_code(Program* prog, FILE* output) {
     fprintf(output, "#include <stdlib.h>\n");
     fprintf(output, "#include <stdint.h>\n");
     fprintf(output, "#include <stdbool.h>\n");
-    fprintf(output, "#include <string.h>\n\n");
+    fprintf(output, "#include <string.h>\n");
+
+    // Add platform-specific headers for read_key if needed
+    if (prog->imports && prog->imports->import_count > 0) {
+        bool need_read_key = false;
+        for (int i = 0; i < prog->imports->import_count; i++) {
+            IncludeStmt* import = prog->imports->imports[i];
+            if (import->type == IMPORT_ALL && strcmp(import->module_name, "std.io") == 0) {
+                need_read_key = true;
+                break;
+            } else if (import->type == IMPORT_SPECIFIC && strcmp(import->function_name, "read_key") == 0) {
+                need_read_key = true;
+                break;
+            }
+        }
+        if (need_read_key) {
+            fprintf(output, "#ifdef _WIN32\n");
+            fprintf(output, "#include <conio.h>\n");
+            fprintf(output, "#else\n");
+            fprintf(output, "#include <termios.h>\n");
+            fprintf(output, "#include <unistd.h>\n");
+            fprintf(output, "#endif\n");
+        }
+    }
+
+    fprintf(output, "\n");
 
     stage_trace(STAGE_CODEGEN, "headers written, checking imports");
 
@@ -721,25 +746,102 @@ void generate_code(Program* prog, FILE* output) {
     if (prog->imports && prog->imports->import_count > 0) {
         fprintf(output, "// std.io helper functions\n");
 
-        // Check which functions are imported and generate them
+        // Check which functions are imported
+        bool has_wildcard = false;
         bool need_read_int = false;
+        bool need_read_str = false;
+        bool need_read_bool = false;
+        bool need_read_char = false;
+        bool need_read_key = false;
 
         for (int i = 0; i < prog->imports->import_count; i++) {
             IncludeStmt* import = prog->imports->imports[i];
             if (import->type == IMPORT_ALL && strcmp(import->module_name, "std.io") == 0) {
-                need_read_int = true;
+                has_wildcard = true;
                 break;
-            } else if (import->type == IMPORT_SPECIFIC && strcmp(import->function_name, "read_int") == 0) {
-                need_read_int = true;
+            } else if (import->type == IMPORT_SPECIFIC) {
+                if (strcmp(import->function_name, "read_int") == 0) need_read_int = true;
+                else if (strcmp(import->function_name, "read_str") == 0) need_read_str = true;
+                else if (strcmp(import->function_name, "read_bool") == 0) need_read_bool = true;
+                else if (strcmp(import->function_name, "read_char") == 0) need_read_char = true;
+                else if (strcmp(import->function_name, "read_key") == 0) need_read_key = true;
             }
         }
 
-        if (need_read_int) {
+        // Generate read_int
+        if (has_wildcard || need_read_int) {
             fprintf(output, "int64_t* read_int() {\n");
             fprintf(output, "    char buffer[256];\n");
             fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
             fprintf(output, "    int64_t* result = malloc(sizeof(int64_t));\n");
             fprintf(output, "    *result = atoll(buffer);\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+
+        // Generate read_str
+        if (has_wildcard || need_read_str) {
+            fprintf(output, "char** read_str() {\n");
+            fprintf(output, "    char buffer[1024];\n");
+            fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
+            fprintf(output, "    // Remove trailing newline\n");
+            fprintf(output, "    size_t len = strlen(buffer);\n");
+            fprintf(output, "    if (len > 0 && buffer[len-1] == '\\n') buffer[len-1] = '\\0';\n");
+            fprintf(output, "    char** result = malloc(sizeof(char*));\n");
+            fprintf(output, "#ifdef _WIN32\n");
+            fprintf(output, "    *result = _strdup(buffer);\n");
+            fprintf(output, "#else\n");
+            fprintf(output, "    *result = strdup(buffer);\n");
+            fprintf(output, "#endif\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+
+        // Generate read_bool
+        if (has_wildcard || need_read_bool) {
+            fprintf(output, "bool* read_bool() {\n");
+            fprintf(output, "    char buffer[256];\n");
+            fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
+            fprintf(output, "    bool* result = malloc(sizeof(bool));\n");
+            fprintf(output, "    if (strncmp(buffer, \"true\", 4) == 0 || strncmp(buffer, \"1\", 1) == 0) {\n");
+            fprintf(output, "        *result = true;\n");
+            fprintf(output, "    } else if (strncmp(buffer, \"false\", 5) == 0 || strncmp(buffer, \"0\", 1) == 0) {\n");
+            fprintf(output, "        *result = false;\n");
+            fprintf(output, "    } else {\n");
+            fprintf(output, "        free(result);\n");
+            fprintf(output, "        return NULL;\n");
+            fprintf(output, "    }\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+
+        // Generate read_char
+        if (has_wildcard || need_read_char) {
+            fprintf(output, "char* read_char() {\n");
+            fprintf(output, "    char buffer[256];\n");
+            fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
+            fprintf(output, "    if (buffer[0] == '\\0' || buffer[0] == '\\n') return NULL;\n");
+            fprintf(output, "    char* result = malloc(sizeof(char));\n");
+            fprintf(output, "    *result = buffer[0];\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+
+        // Generate read_key (platform-specific)
+        if (has_wildcard || need_read_key) {
+            fprintf(output, "char* read_key() {\n");
+            fprintf(output, "    char* result = malloc(sizeof(char));\n");
+            fprintf(output, "#ifdef _WIN32\n");
+            fprintf(output, "    *result = _getch();\n");
+            fprintf(output, "#else\n");
+            fprintf(output, "    struct termios oldt, newt;\n");
+            fprintf(output, "    tcgetattr(STDIN_FILENO, &oldt);\n");
+            fprintf(output, "    newt = oldt;\n");
+            fprintf(output, "    newt.c_lflag &= ~(ICANON | ECHO);\n");
+            fprintf(output, "    tcsetattr(STDIN_FILENO, TCSANOW, &newt);\n");
+            fprintf(output, "    *result = getchar();\n");
+            fprintf(output, "    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);\n");
+            fprintf(output, "#endif\n");
             fprintf(output, "    return result;\n");
             fprintf(output, "}\n\n");
         }

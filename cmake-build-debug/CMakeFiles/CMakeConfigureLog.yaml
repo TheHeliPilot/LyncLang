@@ -4,1507 +4,206 @@ events:
   -
     kind: "message-v1"
     backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineSystem.cmake:205 (message)"
       - "CMakeLists.txt:2 (project)"
     message: |
       The system is: Windows - 10.0.22631 - AMD64
   -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "file"
-    variable: "src_in"
-    description: "Path to a file."
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: true
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "CMakeCCompilerId.c.in"
-    candidate_directories:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/"
-    found: "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeCCompilerId.c.in"
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-  -
     kind: "message-v1"
     backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
       - "CMakeLists.txt:2 (project)"
     message: |
       Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
-      Compiler:  
+      Compiler: C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/gcc.exe 
       Build flags: 
       Id flags:  
       
       The output was:
       0
-      MSBuild version 17.12.12+1cce77968 for .NET Framework
-      Build started 2/13/2026 12:20:29 AM.
-      
-      Project "C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\4.1.2\\CompilerIdC\\CompilerIdC.vcxproj" on node 1 (default targets).
-      PrepareForBuild:
-        Creating directory "Debug\\".
-        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
-        Creating directory "Debug\\CompilerIdC.tlog\\".
-      InitializeBuildStatus:
-        Creating "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
-        Touching "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
-      ClCompile:
-        C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.42.34433\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
-        CMakeCCompilerId.c
-      Link:
-        C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.42.34433\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdC.lib" /MACHINE:X64 Debug\\CMakeCCompilerId.obj
-        CompilerIdC.vcxproj -> C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\4.1.2\\CompilerIdC\\CompilerIdC.exe
-      PostBuildEvent:
-        for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
-        :VCEnd
-        CMAKE_C_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.42.34433\\bin\\Hostx64\\x64\\cl.exe
-      FinalizeBuildStatus:
-        Deleting file "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
-        Touching "Debug\\CompilerIdC.tlog\\CompilerIdC.lastbuildstate".
-      Done Building Project "C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\4.1.2\\CompilerIdC\\CompilerIdC.vcxproj" (default targets).
-      
-      Build succeeded.
-          0 Warning(s)
-          0 Error(s)
-      
-      Time Elapsed 00:00:00.57
       
       
-      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.exe"
       
-      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+      The C compiler identification is GNU, found in:
+        C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/3.29.6/CompilerIdC/a.exe
       
-      The C compiler identification is MSVC, found in:
-        C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/4.1.2/CompilerIdC/CompilerIdC.exe
-      
-  -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "program"
-    variable: "_CMAKE_TOOL_WITH_PATH"
-    description: "Path to a program."
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: false
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "link"
-    candidate_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/"
-      - "C:/Users/bucka/bin/"
-      - "C:/Program Files/Git/mingw64/bin/"
-      - "C:/Program Files/Git/usr/local/bin/"
-      - "C:/Program Files/Git/usr/bin/"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/"
-      - "C:/Program Files/PlasticSCM5/server/"
-      - "C:/Program Files/PlasticSCM5/client/"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/"
-      - "C:/Windows/System32/"
-      - "C:/Windows/"
-      - "C:/Windows/System32/wbem/"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
-      - "C:/Windows/System32/OpenSSH/"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
-      - "C:/Program Files/dotnet/"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
-      - "C:/Butler/"
-      - "C:/Program Files/Git/cmd/"
-      - "C:/Program Files/nodejs/"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/"
-      - "C:/Program Files/PuTTY/"
-      - "C:/Program Files (x86)/ZeroTier/One/"
-      - "C:/Program Files/VisualSVN Server/bin/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/Perforce/"
-      - "C:/Program Files (x86)/eID_klient/"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/"
-      - "C:/Users/bucka/.cargo/bin/"
-      - "C:/Users/bucka/scoop/shims/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/"
-      - "C:/Users/bucka/.dotnet/tools/"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/"
-      - "C:/Program Files (x86)/Nmap/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/"
-      - "C:/Users/bucka/AppData/Roaming/npm/"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/"
-      - "C:/Program Files/Git/usr/bin/core_perl/"
-    searched_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/link.com"
-    found: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/link.exe"
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "program"
-    variable: "_CMAKE_TOOL_WITH_PATH"
-    description: "Path to a program."
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: false
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "lld-link"
-    candidate_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/"
-      - "C:/Users/bucka/bin/"
-      - "C:/Program Files/Git/mingw64/bin/"
-      - "C:/Program Files/Git/usr/local/bin/"
-      - "C:/Program Files/Git/usr/bin/"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/"
-      - "C:/Program Files/PlasticSCM5/server/"
-      - "C:/Program Files/PlasticSCM5/client/"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/"
-      - "C:/Windows/System32/"
-      - "C:/Windows/"
-      - "C:/Windows/System32/wbem/"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
-      - "C:/Windows/System32/OpenSSH/"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
-      - "C:/Program Files/dotnet/"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
-      - "C:/Butler/"
-      - "C:/Program Files/Git/cmd/"
-      - "C:/Program Files/nodejs/"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/"
-      - "C:/Program Files/PuTTY/"
-      - "C:/Program Files (x86)/ZeroTier/One/"
-      - "C:/Program Files/VisualSVN Server/bin/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/Perforce/"
-      - "C:/Program Files (x86)/eID_klient/"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/"
-      - "C:/Users/bucka/.cargo/bin/"
-      - "C:/Users/bucka/scoop/shims/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/"
-      - "C:/Users/bucka/.dotnet/tools/"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/"
-      - "C:/Program Files (x86)/Nmap/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/"
-      - "C:/Users/bucka/AppData/Roaming/npm/"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/"
-      - "C:/Program Files/Git/usr/bin/core_perl/"
-    searched_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/lld-link.com"
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/lld-link.exe"
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/lld-link"
-      - "C:/Users/bucka/bin/lld-link.com"
-      - "C:/Users/bucka/bin/lld-link.exe"
-      - "C:/Users/bucka/bin/lld-link"
-      - "C:/Program Files/Git/mingw64/bin/lld-link.com"
-      - "C:/Program Files/Git/mingw64/bin/lld-link.exe"
-      - "C:/Program Files/Git/mingw64/bin/lld-link"
-      - "C:/Program Files/Git/usr/local/bin/lld-link.com"
-      - "C:/Program Files/Git/usr/local/bin/lld-link.exe"
-      - "C:/Program Files/Git/usr/local/bin/lld-link"
-      - "C:/Program Files/Git/usr/bin/lld-link.com"
-      - "C:/Program Files/Git/usr/bin/lld-link.exe"
-      - "C:/Program Files/Git/usr/bin/lld-link"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/lld-link.com"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/lld-link.exe"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/lld-link"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lld-link.com"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lld-link.exe"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/lld-link"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/lld-link.com"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/lld-link.exe"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/lld-link"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/lld-link.com"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/lld-link.exe"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/lld-link"
-      - "C:/Program Files/PlasticSCM5/server/lld-link.com"
-      - "C:/Program Files/PlasticSCM5/server/lld-link.exe"
-      - "C:/Program Files/PlasticSCM5/server/lld-link"
-      - "C:/Program Files/PlasticSCM5/client/lld-link.com"
-      - "C:/Program Files/PlasticSCM5/client/lld-link.exe"
-      - "C:/Program Files/PlasticSCM5/client/lld-link"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/lld-link.com"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/lld-link.exe"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/lld-link"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/lld-link.com"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/lld-link.exe"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/lld-link"
-      - "C:/Windows/System32/lld-link.com"
-      - "C:/Windows/System32/lld-link.exe"
-      - "C:/Windows/System32/lld-link"
-      - "C:/Windows/lld-link.com"
-      - "C:/Windows/lld-link.exe"
-      - "C:/Windows/lld-link"
-      - "C:/Windows/System32/wbem/lld-link.com"
-      - "C:/Windows/System32/wbem/lld-link.exe"
-      - "C:/Windows/System32/wbem/lld-link"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
-      - "C:/Windows/System32/OpenSSH/lld-link.com"
-      - "C:/Windows/System32/OpenSSH/lld-link.exe"
-      - "C:/Windows/System32/OpenSSH/lld-link"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.com"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link.exe"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/lld-link"
-      - "C:/Program Files/dotnet/lld-link.com"
-      - "C:/Program Files/dotnet/lld-link.exe"
-      - "C:/Program Files/dotnet/lld-link"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/lld-link.com"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/lld-link.exe"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/lld-link"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
-      - "C:/Butler/lld-link.com"
-      - "C:/Butler/lld-link.exe"
-      - "C:/Butler/lld-link"
-      - "C:/Program Files/Git/cmd/lld-link.com"
-      - "C:/Program Files/Git/cmd/lld-link.exe"
-      - "C:/Program Files/Git/cmd/lld-link"
-      - "C:/Program Files/nodejs/lld-link.com"
-      - "C:/Program Files/nodejs/lld-link.exe"
-      - "C:/Program Files/nodejs/lld-link"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/lld-link.com"
-    found: "C:/Program Files/AMD/ROCm/6.1/bin/lld-link.exe"
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "program"
-    variable: "CMAKE_LINKER"
-    description: "Path to a program."
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: false
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "link"
-    candidate_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/"
-      - "C:/Users/bucka/bin/"
-      - "C:/Program Files/Git/mingw64/bin/"
-      - "C:/Program Files/Git/usr/local/bin/"
-      - "C:/Program Files/Git/usr/bin/"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/"
-      - "C:/Program Files/PlasticSCM5/server/"
-      - "C:/Program Files/PlasticSCM5/client/"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/"
-      - "C:/Windows/System32/"
-      - "C:/Windows/"
-      - "C:/Windows/System32/wbem/"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
-      - "C:/Windows/System32/OpenSSH/"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
-      - "C:/Program Files/dotnet/"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
-      - "C:/Butler/"
-      - "C:/Program Files/Git/cmd/"
-      - "C:/Program Files/nodejs/"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/"
-      - "C:/Program Files/PuTTY/"
-      - "C:/Program Files (x86)/ZeroTier/One/"
-      - "C:/Program Files/VisualSVN Server/bin/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/Perforce/"
-      - "C:/Program Files (x86)/eID_klient/"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/"
-      - "C:/Users/bucka/.cargo/bin/"
-      - "C:/Users/bucka/scoop/shims/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/"
-      - "C:/Users/bucka/.dotnet/tools/"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/"
-      - "C:/Program Files (x86)/Nmap/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/"
-      - "C:/Users/bucka/AppData/Roaming/npm/"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/"
-      - "C:/Program Files/Git/usr/bin/core_perl/"
-    searched_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/link.com"
-    found: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/link.exe"
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "program"
-    variable: "CMAKE_MT"
-    description: "Path to a program."
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: false
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "mt"
-    candidate_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/"
-      - "C:/Users/bucka/bin/"
-      - "C:/Program Files/Git/mingw64/bin/"
-      - "C:/Program Files/Git/usr/local/bin/"
-      - "C:/Program Files/Git/usr/bin/"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/"
-      - "C:/Program Files/PlasticSCM5/server/"
-      - "C:/Program Files/PlasticSCM5/client/"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/"
-      - "C:/Windows/System32/"
-      - "C:/Windows/"
-      - "C:/Windows/System32/wbem/"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
-      - "C:/Windows/System32/OpenSSH/"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
-      - "C:/Program Files/dotnet/"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
-      - "C:/Butler/"
-      - "C:/Program Files/Git/cmd/"
-      - "C:/Program Files/nodejs/"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/"
-      - "C:/Program Files/PuTTY/"
-      - "C:/Program Files (x86)/ZeroTier/One/"
-      - "C:/Program Files/VisualSVN Server/bin/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/Perforce/"
-      - "C:/Program Files (x86)/eID_klient/"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/"
-      - "C:/Users/bucka/.cargo/bin/"
-      - "C:/Users/bucka/scoop/shims/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/"
-      - "C:/Users/bucka/.dotnet/tools/"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/"
-      - "C:/Program Files (x86)/Nmap/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/"
-      - "C:/Users/bucka/AppData/Roaming/npm/"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/"
-      - "C:/Program Files/Git/usr/bin/core_perl/"
-    searched_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/mt.com"
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/mt.exe"
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/mt"
-      - "C:/Users/bucka/bin/mt.com"
-      - "C:/Users/bucka/bin/mt.exe"
-      - "C:/Users/bucka/bin/mt"
-      - "C:/Program Files/Git/mingw64/bin/mt.com"
-      - "C:/Program Files/Git/mingw64/bin/mt.exe"
-      - "C:/Program Files/Git/mingw64/bin/mt"
-      - "C:/Program Files/Git/usr/local/bin/mt.com"
-      - "C:/Program Files/Git/usr/local/bin/mt.exe"
-      - "C:/Program Files/Git/usr/local/bin/mt"
-      - "C:/Program Files/Git/usr/bin/mt.com"
-      - "C:/Program Files/Git/usr/bin/mt.exe"
-      - "C:/Program Files/Git/usr/bin/mt"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/mt.com"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/mt.exe"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/mt"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/mt.com"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/mt.exe"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/mt"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/mt.com"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/mt.exe"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/mt"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/mt.com"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/mt.exe"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/mt"
-      - "C:/Program Files/PlasticSCM5/server/mt.com"
-      - "C:/Program Files/PlasticSCM5/server/mt.exe"
-      - "C:/Program Files/PlasticSCM5/server/mt"
-      - "C:/Program Files/PlasticSCM5/client/mt.com"
-      - "C:/Program Files/PlasticSCM5/client/mt.exe"
-      - "C:/Program Files/PlasticSCM5/client/mt"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/mt.com"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/mt.exe"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/mt"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/mt.com"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/mt.exe"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/mt"
-      - "C:/Windows/System32/mt.com"
-      - "C:/Windows/System32/mt.exe"
-      - "C:/Windows/System32/mt"
-      - "C:/Windows/mt.com"
-      - "C:/Windows/mt.exe"
-      - "C:/Windows/mt"
-      - "C:/Windows/System32/wbem/mt.com"
-      - "C:/Windows/System32/wbem/mt.exe"
-      - "C:/Windows/System32/wbem/mt"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.com"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.exe"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt"
-      - "C:/Windows/System32/OpenSSH/mt.com"
-      - "C:/Windows/System32/OpenSSH/mt.exe"
-      - "C:/Windows/System32/OpenSSH/mt"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt.com"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt.exe"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/mt"
-      - "C:/Program Files/dotnet/mt.com"
-      - "C:/Program Files/dotnet/mt.exe"
-      - "C:/Program Files/dotnet/mt"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/mt.com"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/mt.exe"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/mt"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.com"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.exe"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt"
-      - "C:/Butler/mt.com"
-      - "C:/Butler/mt.exe"
-      - "C:/Butler/mt"
-      - "C:/Program Files/Git/cmd/mt.com"
-      - "C:/Program Files/Git/cmd/mt.exe"
-      - "C:/Program Files/Git/cmd/mt"
-      - "C:/Program Files/nodejs/mt.com"
-      - "C:/Program Files/nodejs/mt.exe"
-      - "C:/Program Files/nodejs/mt"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.com"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.exe"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/mt.com"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/mt.exe"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/mt"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/mt.com"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/mt.exe"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/mt"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/mt.com"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/mt.exe"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/mt"
-      - "C:/Program Files/PuTTY/mt.com"
-      - "C:/Program Files/PuTTY/mt.exe"
-      - "C:/Program Files/PuTTY/mt"
-      - "C:/Program Files (x86)/ZeroTier/One/mt.com"
-      - "C:/Program Files (x86)/ZeroTier/One/mt.exe"
-      - "C:/Program Files (x86)/ZeroTier/One/mt"
-      - "C:/Program Files/VisualSVN Server/bin/mt.com"
-      - "C:/Program Files/VisualSVN Server/bin/mt.exe"
-      - "C:/Program Files/VisualSVN Server/bin/mt"
-      - "C:/Program Files/CMake/bin/mt.com"
-      - "C:/Program Files/CMake/bin/mt.exe"
-      - "C:/Program Files/CMake/bin/mt"
-      - "C:/Program Files/Perforce/mt.com"
-      - "C:/Program Files/Perforce/mt.exe"
-      - "C:/Program Files/Perforce/mt"
-      - "C:/Program Files (x86)/eID_klient/mt.com"
-      - "C:/Program Files (x86)/eID_klient/mt.exe"
-      - "C:/Program Files (x86)/eID_klient/mt"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/mt.com"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/mt.exe"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/mt"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/mt.com"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/mt.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/mt"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/mt.com"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/mt.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/mt"
-      - "C:/Users/bucka/.cargo/bin/mt.com"
-      - "C:/Users/bucka/.cargo/bin/mt.exe"
-      - "C:/Users/bucka/.cargo/bin/mt"
-      - "C:/Users/bucka/scoop/shims/mt.com"
-      - "C:/Users/bucka/scoop/shims/mt.exe"
-      - "C:/Users/bucka/scoop/shims/mt"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/mt.com"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/mt.exe"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/mt"
-      - "C:/Users/bucka/.dotnet/tools/mt.com"
-      - "C:/Users/bucka/.dotnet/tools/mt.exe"
-      - "C:/Users/bucka/.dotnet/tools/mt"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/mt.com"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/mt.exe"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/mt"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/mt.com"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/mt.exe"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/mt"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/mt.com"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/mt.exe"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/mt"
-      - "C:/Program Files (x86)/Nmap/mt.com"
-      - "C:/Program Files (x86)/Nmap/mt.exe"
-      - "C:/Program Files (x86)/Nmap/mt"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/mt.com"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/mt.exe"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/mt"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/mt.com"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/mt.exe"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/mt"
-      - "C:/Users/bucka/AppData/Roaming/npm/mt.com"
-      - "C:/Users/bucka/AppData/Roaming/npm/mt.exe"
-      - "C:/Users/bucka/AppData/Roaming/npm/mt"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/mt.com"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/mt.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/mt"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/mt.com"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/mt.exe"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/mt"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/mt.com"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/mt.exe"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/mt"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/mt.com"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/mt.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/mt"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/mt.com"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/mt.exe"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/mt"
-      - "C:/Program Files/Git/usr/bin/core_perl/mt.com"
-      - "C:/Program Files/Git/usr/bin/core_perl/mt.exe"
-      - "C:/Program Files/Git/usr/bin/core_perl/mt"
-    found: false
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "program"
-    variable: "CMAKE_AR"
-    description: "Path to a program."
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: false
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "lib"
-    candidate_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/"
-      - "C:/Users/bucka/bin/"
-      - "C:/Program Files/Git/mingw64/bin/"
-      - "C:/Program Files/Git/usr/local/bin/"
-      - "C:/Program Files/Git/usr/bin/"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/"
-      - "C:/Program Files/PlasticSCM5/server/"
-      - "C:/Program Files/PlasticSCM5/client/"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/"
-      - "C:/Windows/System32/"
-      - "C:/Windows/"
-      - "C:/Windows/System32/wbem/"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
-      - "C:/Windows/System32/OpenSSH/"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
-      - "C:/Program Files/dotnet/"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
-      - "C:/Butler/"
-      - "C:/Program Files/Git/cmd/"
-      - "C:/Program Files/nodejs/"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/"
-      - "C:/Program Files/PuTTY/"
-      - "C:/Program Files (x86)/ZeroTier/One/"
-      - "C:/Program Files/VisualSVN Server/bin/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/Perforce/"
-      - "C:/Program Files (x86)/eID_klient/"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/"
-      - "C:/Users/bucka/.cargo/bin/"
-      - "C:/Users/bucka/scoop/shims/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/"
-      - "C:/Users/bucka/.dotnet/tools/"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/"
-      - "C:/Program Files (x86)/Nmap/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/"
-      - "C:/Users/bucka/AppData/Roaming/npm/"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/"
-      - "C:/Program Files/Git/usr/bin/core_perl/"
-    searched_directories:
-      - "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/lib.com"
-    found: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/lib.exe"
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-  -
-    kind: "find-v1"
-    backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineRCCompiler.cmake:40 (find_program)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/Platform/Windows-MSVC.cmake:574 (enable_language)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/Platform/Windows-MSVC.cmake:547 (__windows_compiler_msvc_enable_rc)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/Platform/Windows-MSVC-C.cmake:5 (__windows_compiler_msvc)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeCInformation.cmake:48 (include)"
-      - "CMakeLists.txt:2 (project)"
-    mode: "program"
-    variable: "CMAKE_RC_COMPILER"
-    description: "RC compiler"
-    settings:
-      SearchFramework: "NEVER"
-      SearchAppBundle: "NEVER"
-      CMAKE_FIND_USE_CMAKE_PATH: true
-      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
-      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
-      CMAKE_FIND_USE_INSTALL_PREFIX: true
-    names:
-      - "rc"
-    candidate_directories:
-      - "C:/Users/bucka/bin/"
-      - "C:/Program Files/Git/mingw64/bin/"
-      - "C:/Program Files/Git/usr/local/bin/"
-      - "C:/Program Files/Git/usr/bin/"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/"
-      - "C:/Program Files/PlasticSCM5/server/"
-      - "C:/Program Files/PlasticSCM5/client/"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/"
-      - "C:/Windows/System32/"
-      - "C:/Windows/"
-      - "C:/Windows/System32/wbem/"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
-      - "C:/Windows/System32/OpenSSH/"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/"
-      - "C:/Program Files/dotnet/"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
-      - "C:/Butler/"
-      - "C:/Program Files/Git/cmd/"
-      - "C:/Program Files/nodejs/"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/"
-      - "C:/Program Files/PuTTY/"
-      - "C:/Program Files (x86)/ZeroTier/One/"
-      - "C:/Program Files/VisualSVN Server/bin/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/Perforce/"
-      - "C:/Program Files (x86)/eID_klient/"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/"
-      - "C:/Users/bucka/.cargo/bin/"
-      - "C:/Users/bucka/scoop/shims/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/"
-      - "C:/Users/bucka/.dotnet/tools/"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/"
-      - "C:/Program Files (x86)/Nmap/"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/"
-      - "C:/Users/bucka/AppData/Roaming/npm/"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/"
-      - "C:/Program Files/Git/usr/bin/core_perl/"
-      - "C:/Program Files/bin/"
-      - "C:/Program Files/sbin/"
-      - "C:/Program Files/"
-      - "C:/Program Files (x86)/bin/"
-      - "C:/Program Files (x86)/sbin/"
-      - "C:/Program Files (x86)/"
-      - "C:/Program Files/CMake/bin/"
-      - "C:/Program Files/CMake/sbin/"
-      - "C:/Program Files/CMake/"
-      - "C:/Program Files (x86)/Lync/bin/"
-      - "C:/Program Files (x86)/Lync/sbin/"
-      - "C:/Program Files (x86)/Lync/"
-    searched_directories:
-      - "C:/Users/bucka/bin/rc.com"
-      - "C:/Users/bucka/bin/rc.exe"
-      - "C:/Users/bucka/bin/rc"
-      - "C:/Program Files/Git/mingw64/bin/rc.com"
-      - "C:/Program Files/Git/mingw64/bin/rc.exe"
-      - "C:/Program Files/Git/mingw64/bin/rc"
-      - "C:/Program Files/Git/usr/local/bin/rc.com"
-      - "C:/Program Files/Git/usr/local/bin/rc.exe"
-      - "C:/Program Files/Git/usr/local/bin/rc"
-      - "C:/Program Files/Git/usr/bin/rc.com"
-      - "C:/Program Files/Git/usr/bin/rc.exe"
-      - "C:/Program Files/Git/usr/bin/rc"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/rc.com"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/rc.exe"
-      - "C:/Program Files/Common Files/Oracle/Java/javapath/rc"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/rc.com"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/rc.exe"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/java8path/rc"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/rc.com"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/rc.exe"
-      - "C:/Program Files (x86)/Common Files/Oracle/Java/javapath/rc"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/rc.com"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/rc.exe"
-      - "C:/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64/compiler/rc"
-      - "C:/Program Files/PlasticSCM5/server/rc.com"
-      - "C:/Program Files/PlasticSCM5/server/rc.exe"
-      - "C:/Program Files/PlasticSCM5/server/rc"
-      - "C:/Program Files/PlasticSCM5/client/rc.com"
-      - "C:/Program Files/PlasticSCM5/client/rc.exe"
-      - "C:/Program Files/PlasticSCM5/client/rc"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/rc.com"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/rc.exe"
-      - "C:/Program Files/Microsoft/jdk-11.0.16.101-hotspot/bin/rc"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/rc.com"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/rc.exe"
-      - "C:/Program Files/Oculus/Support/oculus-runtime/rc"
-      - "C:/Windows/System32/rc.com"
-      - "C:/Windows/System32/rc.exe"
-      - "C:/Windows/System32/rc"
-      - "C:/Windows/rc.com"
-      - "C:/Windows/rc.exe"
-      - "C:/Windows/rc"
-      - "C:/Windows/System32/wbem/rc.com"
-      - "C:/Windows/System32/wbem/rc.exe"
-      - "C:/Windows/System32/wbem/rc"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.com"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.exe"
-      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc"
-      - "C:/Windows/System32/OpenSSH/rc.com"
-      - "C:/Windows/System32/OpenSSH/rc.exe"
-      - "C:/Windows/System32/OpenSSH/rc"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/rc.com"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/rc.exe"
-      - "C:/Program Files/NVIDIA Corporation/NVIDIA NvDLISR/rc"
-      - "C:/Program Files/dotnet/rc.com"
-      - "C:/Program Files/dotnet/rc.exe"
-      - "C:/Program Files/dotnet/rc"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/rc.com"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/rc.exe"
-      - "C:/Program Files/Microsoft SQL Server/150/Tools/Binn/rc"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.com"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.exe"
-      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc"
-      - "C:/Butler/rc.com"
-      - "C:/Butler/rc.exe"
-      - "C:/Butler/rc"
-      - "C:/Program Files/Git/cmd/rc.com"
-      - "C:/Program Files/Git/cmd/rc.exe"
-      - "C:/Program Files/Git/cmd/rc"
-      - "C:/Program Files/nodejs/rc.com"
-      - "C:/Program Files/nodejs/rc.exe"
-      - "C:/Program Files/nodejs/rc"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.com"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.exe"
-      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/rc.com"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/rc.exe"
-      - "C:/Program Files/AMD/ROCm/6.1/bin/rc"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/rc.com"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/rc.exe"
-      - "C:/Users/bucka/Poc\u00edtac/zluda/rc"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/rc.com"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/rc.exe"
-      - "C:/Users/bucka/Poc\u00edtac/Fooocus_win64_2-5-0/python_embeded/Scripts/rc"
-      - "C:/Program Files/PuTTY/rc.com"
-      - "C:/Program Files/PuTTY/rc.exe"
-      - "C:/Program Files/PuTTY/rc"
-      - "C:/Program Files (x86)/ZeroTier/One/rc.com"
-      - "C:/Program Files (x86)/ZeroTier/One/rc.exe"
-      - "C:/Program Files (x86)/ZeroTier/One/rc"
-      - "C:/Program Files/VisualSVN Server/bin/rc.com"
-      - "C:/Program Files/VisualSVN Server/bin/rc.exe"
-      - "C:/Program Files/VisualSVN Server/bin/rc"
-      - "C:/Program Files/CMake/bin/rc.com"
-      - "C:/Program Files/CMake/bin/rc.exe"
-      - "C:/Program Files/CMake/bin/rc"
-      - "C:/Program Files/Perforce/rc.com"
-      - "C:/Program Files/Perforce/rc.exe"
-      - "C:/Program Files/Perforce/rc"
-      - "C:/Program Files (x86)/eID_klient/rc.com"
-      - "C:/Program Files (x86)/eID_klient/rc.exe"
-      - "C:/Program Files (x86)/eID_klient/rc"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/rc.com"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/rc.exe"
-      - "C:/Program Files (x86)/eID_klient/redist_x64/rc"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/rc.com"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/rc.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/Scripts/rc"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/rc.com"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/rc.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/Python/Python312/rc"
-      - "C:/Users/bucka/.cargo/bin/rc.com"
-      - "C:/Users/bucka/.cargo/bin/rc.exe"
-      - "C:/Users/bucka/.cargo/bin/rc"
-      - "C:/Users/bucka/scoop/shims/rc.com"
-      - "C:/Users/bucka/scoop/shims/rc.exe"
-      - "C:/Users/bucka/scoop/shims/rc"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/rc.com"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/rc.exe"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WindowsApps/rc"
-      - "C:/Users/bucka/.dotnet/tools/rc.com"
-      - "C:/Users/bucka/.dotnet/tools/rc.exe"
-      - "C:/Users/bucka/.dotnet/tools/rc"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/rc.com"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/rc.exe"
-      - "C:/Program Files/JetBrains/PyCharm 2025.3.1.1/bin/rc"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/rc.com"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/rc.exe"
-      - "C:/Users/bucka/OneDrive/Po\u010d\u00edta\u010d/Butler/rc"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/rc.com"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/rc.exe"
-      - "C:/Program Files/JetBrains/RustRover 2024.1.3/bin/rc"
-      - "C:/Program Files (x86)/Nmap/rc.com"
-      - "C:/Program Files (x86)/Nmap/rc.exe"
-      - "C:/Program Files (x86)/Nmap/rc"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/rc.com"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/rc.exe"
-      - "C:/Users/bucka/AppData/Local/Microsoft/WinGet/Packages/Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe/rc"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/rc.com"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/rc.exe"
-      - "C:/Users/bucka/AppData/Local/GitHubDesktop/bin/rc"
-      - "C:/Users/bucka/AppData/Roaming/npm/rc.com"
-      - "C:/Users/bucka/AppData/Roaming/npm/rc.exe"
-      - "C:/Users/bucka/AppData/Roaming/npm/rc"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/rc.com"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/rc.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/Microsoft VS Code/bin/rc"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/rc.com"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/rc.exe"
-      - "C:/Program Files/JetBrains/WebStorm 2025.2.4/bin/rc"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/rc.com"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/rc.exe"
-      - "C:/Program Files/JetBrains/IntelliJ IDEA 2025.2.4/bin/rc"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/rc.com"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/rc.exe"
-      - "C:/Users/bucka/AppData/Local/Programs/MiKTeX/miktex/bin/x64/rc"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/rc.com"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/rc.exe"
-      - "C:/Program Files/Git/usr/bin/vendor_perl/rc"
-      - "C:/Program Files/Git/usr/bin/core_perl/rc.com"
-      - "C:/Program Files/Git/usr/bin/core_perl/rc.exe"
-      - "C:/Program Files/Git/usr/bin/core_perl/rc"
-      - "C:/Program Files/bin/rc.com"
-      - "C:/Program Files/bin/rc.exe"
-      - "C:/Program Files/bin/rc"
-      - "C:/Program Files/sbin/rc.com"
-      - "C:/Program Files/sbin/rc.exe"
-      - "C:/Program Files/sbin/rc"
-      - "C:/Program Files/rc.com"
-      - "C:/Program Files/rc.exe"
-      - "C:/Program Files/rc"
-      - "C:/Program Files (x86)/bin/rc.com"
-      - "C:/Program Files (x86)/bin/rc.exe"
-      - "C:/Program Files (x86)/bin/rc"
-      - "C:/Program Files (x86)/sbin/rc.com"
-      - "C:/Program Files (x86)/sbin/rc.exe"
-      - "C:/Program Files (x86)/sbin/rc"
-      - "C:/Program Files (x86)/rc.com"
-      - "C:/Program Files (x86)/rc.exe"
-      - "C:/Program Files (x86)/rc"
-      - "C:/Program Files/CMake/bin/rc.com"
-      - "C:/Program Files/CMake/bin/rc.exe"
-      - "C:/Program Files/CMake/bin/rc"
-      - "C:/Program Files/CMake/sbin/rc.com"
-      - "C:/Program Files/CMake/sbin/rc.exe"
-      - "C:/Program Files/CMake/sbin/rc"
-      - "C:/Program Files/CMake/rc.com"
-      - "C:/Program Files/CMake/rc.exe"
-      - "C:/Program Files/CMake/rc"
-      - "C:/Program Files (x86)/Lync/bin/rc.com"
-      - "C:/Program Files (x86)/Lync/bin/rc.exe"
-      - "C:/Program Files (x86)/Lync/bin/rc"
-      - "C:/Program Files (x86)/Lync/sbin/rc.com"
-      - "C:/Program Files (x86)/Lync/sbin/rc.exe"
-      - "C:/Program Files (x86)/Lync/sbin/rc"
-      - "C:/Program Files (x86)/Lync/rc.com"
-      - "C:/Program Files (x86)/Lync/rc.exe"
-      - "C:/Program Files (x86)/Lync/rc"
-    found: false
-    search_context:
-      ENV{PATH}:
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\local\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Program Files\\Git\\mingw64\\bin"
-        - "C:\\Program Files\\Git\\usr\\bin"
-        - "C:\\Users\\bucka\\bin"
-        - "C:\\Program Files\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
-        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
-        - "C:\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\intel64\\compiler"
-        - "C:\\Program Files\\PlasticSCM5\\server"
-        - "C:\\Program Files\\PlasticSCM5\\client"
-        - "C:\\Program Files\\Microsoft\\jdk-11.0.16.101-hotspot\\bin"
-        - "C:\\Program Files\\Oculus\\Support\\oculus-runtime"
-        - "C:\\Windows\\system32"
-        - "C:\\Windows"
-        - "C:\\Windows\\System32\\Wbem"
-        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
-        - "C:\\Windows\\System32\\OpenSSH"
-        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR"
-        - "C:\\Program Files\\dotnet"
-        - "C:\\Program Files\\Microsoft SQL Server\\150\\Tools\\Binn"
-        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
-        - "C:\\Butler"
-        - "C:\\Program Files\\Git\\cmd"
-        - "C:\\Program Files\\nodejs"
-        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
-        - "C:\\Program Files\\AMD\\ROCm\\6.1\\bin"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\zluda"
-        - "C:\\Users\\bucka\\Poc\u00edtac\\Fooocus_win64_2-5-0\\python_embeded\\Scripts"
-        - "C:\\Program Files\\PuTTY"
-        - "C:\\Program Files (x86)\\ZeroTier\\One"
-        - "C:\\Program Files\\VisualSVN Server\\bin"
-        - "C:\\Program Files\\CMake\\bin"
-        - "C:\\Program Files\\Perforce"
-        - "C:\\Program Files (x86)\\eID_klient"
-        - "C:\\Program Files (x86)\\eID_klient\\redist_x64"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312\\Scripts"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Python\\Python312"
-        - "C:\\Users\\bucka\\.cargo\\bin"
-        - "C:\\Users\\bucka\\scoop\\shims"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WindowsApps"
-        - "C:\\Users\\bucka\\.dotnet\\tools"
-        - "C:\\Program Files\\JetBrains\\PyCharm 2025.3.1.1\\bin"
-        - "C:\\Users\\bucka\\OneDrive\\Po\u010d\u00edta\u010d\\Butler"
-        - "C:\\Program Files\\JetBrains\\RustRover 2024.1.3\\bin"
-        - "C:\\Program Files (x86)\\Nmap"
-        - "C:\\Users\\bucka\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
-        - "C:\\Users\\bucka\\AppData\\Local\\GitHubDesktop\\bin"
-        - "C:\\Users\\bucka\\AppData\\Roaming\\npm"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
-        - "C:\\Program Files\\JetBrains\\WebStorm 2025.2.4\\bin"
-        - "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.4\\bin"
-        - "C:\\Users\\bucka\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64"
-        - "C:\\Program Files\\Git\\usr\\bin\\vendor_perl"
-        - "C:\\Program Files\\Git\\usr\\bin\\core_perl"
-      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/Lync"
-      CMAKE_SYSTEM_PREFIX_PATH:
-        - "C:/Program Files"
-        - "C:/Program Files (x86)"
-        - "C:/Program Files/CMake"
-        - "C:/Program Files (x86)/Lync"
   -
     kind: "try_compile-v1"
     backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCompilerABI.cmake:67 (try_compile)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
       - "CMakeLists.txt:2 (project)"
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-mxyto8"
-      binary: "C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-mxyto8"
+      source: "C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-blvzet"
+      binary: "C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-blvzet"
     cmakeVariables:
-      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
-      CMAKE_C_FLAGS_DEBUG: "/Ob0 /Od /RTC1"
-      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
     buildResult:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-mxyto8'
+        Change Dir: 'C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-blvzet'
         
-        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_55524.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
-        MSBuild version 17.12.12+1cce77968 for .NET Framework
-        Build started 2/13/2026 12:20:30 AM.
-        
-        Project "C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-mxyto8\\cmTC_55524.vcxproj" on node 1 (default targets).
-        PrepareForBuild:
-          Creating directory "cmTC_55524.dir\\Debug\\".
-          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
-          Creating directory "C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-mxyto8\\Debug\\".
-          Creating directory "cmTC_55524.dir\\Debug\\cmTC_55524.tlog\\".
-        InitializeBuildStatus:
-          Creating "cmTC_55524.dir\\Debug\\cmTC_55524.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
-          Touching "cmTC_55524.dir\\Debug\\cmTC_55524.tlog\\unsuccessfulbuild".
-        ClCompile:
-          C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.42.34433\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Fo"cmTC_55524.dir\\Debug\\\\" /Fd"cmTC_55524.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.1\\Modules\\CMakeCCompilerABI.c"
-          Microsoft (R) C/C++ Optimizing Compiler Version 19.42.34436 for x64
-          Copyright (C) Microsoft Corporation.  All rights reserved.
-          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Fo"cmTC_55524.dir\\Debug\\\\" /Fd"cmTC_55524.dir\\Debug\\vc143.pdb" /external:W1 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.1\\Modules\\CMakeCCompilerABI.c"
-          CMakeCCompilerABI.c
-        Link:
-          C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.42.34433\\bin\\HostX64\\x64\\link.exe /OUT:"C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-mxyto8\\Debug\\cmTC_55524.exe" /INCREMENTAL /ILK:"cmTC_55524.dir\\Debug\\cmTC_55524.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-mxyto8/Debug/cmTC_55524.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-mxyto8/Debug/cmTC_55524.lib" /MACHINE:X64  /machine:x64 cmTC_55524.dir\\Debug\\CMakeCCompilerABI.obj
-          cmTC_55524.vcxproj -> C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-mxyto8\\Debug\\cmTC_55524.exe
-        FinalizeBuildStatus:
-          Deleting file "cmTC_55524.dir\\Debug\\cmTC_55524.tlog\\unsuccessfulbuild".
-          Touching "cmTC_55524.dir\\Debug\\cmTC_55524.tlog\\cmTC_55524.lastbuildstate".
-        Done Building Project "C:\\Users\\bucka\\CLionProjects\\CMinusMinus\\cmake-build-debug\\CMakeFiles\\CMakeScratch\\TryCompile-mxyto8\\cmTC_55524.vcxproj" (default targets).
-        
-        Build succeeded.
-            0 Warning(s)
-            0 Error(s)
-        
-        Time Elapsed 00:00:00.37
+        Run Build Command(s): "C:/Program Files/JetBrains/CLion 2024.2.2/bin/ninja/win/x64/ninja.exe" -v cmTC_85d9a
+        [1/2] C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe   -fdiagnostics-color=always   -v -o CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj -c "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeCCompilerABI.c"
+        Using built-in specs.
+        COLLECT_GCC=C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe
+        Target: x86_64-w64-mingw32
+        Configured with: ../gcc-13.1.0/configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-alpine-linux-musl --prefix=/win --enable-checking=release --enable-fully-dynamic-string --enable-languages=c,c++ --with-arch=nocona --with-tune=generic --enable-libatomic --enable-libgomp --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --enable-seh-exceptions --enable-shared --enable-static --enable-threads=posix --enable-version-specific-runtime-libs --disable-bootstrap --disable-graphite --disable-libada --disable-libstdcxx-pch --disable-libstdcxx-debug --disable-libquadmath --disable-lto --disable-nls --disable-multilib --disable-rpath --disable-symvers --disable-werror --disable-win32-registry --with-gnu-as --with-gnu-ld --with-system-libiconv --with-system-libz --with-gmp=/win/makedepends --with-mpfr=/win/makedepends --with-mpc=/win/makedepends
+        Thread model: posix
+        Supported LTO compression algorithms: zlib
+        gcc version 13.1.0 (GCC) 
+        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj' '-c' '-mtune=generic' '-march=nocona' '-dumpdir' 'CMakeFiles/cmTC_85d9a.dir/'
+         C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/cc1.exe -quiet -v -iprefix C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/ -D_REENTRANT C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_85d9a.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=nocona -version -fdiagnostics-color=always -o C:\\Users\\bucka\\AppData\\Local\\Temp\\ccyhNox5.s
+        GNU C17 (GCC) version 13.1.0 (x86_64-w64-mingw32)
+        	compiled by GNU C version 13.1.0, GMP version 6.2.1, MPFR version 4.2.0-p4, MPC version 1.3.1, isl version none
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../lib/gcc/x86_64-w64-mingw32/13.1.0/include"
+        ignoring nonexistent directory "/win/include"
+        ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../include"
+        ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed"
+        ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/include"
+        ignoring nonexistent directory "/mingw/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include
+         C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../include
+         C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed
+         C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/include
+        End of search list.
+        Compiler executable checksum: 2aa4fcf5c9208168c5e2d38a58fc2a97
+        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj' '-c' '-mtune=generic' '-march=nocona' '-dumpdir' 'CMakeFiles/cmTC_85d9a.dir/'
+         as -v -o CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj C:\\Users\\bucka\\AppData\\Local\\Temp\\ccyhNox5.s
+        GNU assembler version 2.40 (x86_64-w64-mingw32) using BFD version (GNU Binutils) 2.40
+        COMPILER_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/
+        LIBRARY_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../
+        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj' '-c' '-mtune=generic' '-march=nocona' '-dumpdir' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.'\x0d
+        [2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe  -v -Wl,-v CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj -o cmTC_85d9a.exe -Wl,--out-implib,libcmTC_85d9a.dll.a -Wl,--major-image-version,0,--minor-image-version,0   && cd ."
+        Using built-in specs.
+        COLLECT_GCC=C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe
+        COLLECT_LTO_WRAPPER=C:/Program\\ Files/JetBrains/CLion\\ 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/lto-wrapper.exe
+        Target: x86_64-w64-mingw32
+        Configured with: ../gcc-13.1.0/configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-alpine-linux-musl --prefix=/win --enable-checking=release --enable-fully-dynamic-string --enable-languages=c,c++ --with-arch=nocona --with-tune=generic --enable-libatomic --enable-libgomp --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --enable-seh-exceptions --enable-shared --enable-static --enable-threads=posix --enable-version-specific-runtime-libs --disable-bootstrap --disable-graphite --disable-libada --disable-libstdcxx-pch --disable-libstdcxx-debug --disable-libquadmath --disable-lto --disable-nls --disable-multilib --disable-rpath --disable-symvers --disable-werror --disable-win32-registry --with-gnu-as --with-gnu-ld --with-system-libiconv --with-system-libz --with-gmp=/win/makedepends --with-mpfr=/win/makedepends --with-mpc=/win/makedepends
+        Thread model: posix
+        Supported LTO compression algorithms: zlib
+        gcc version 13.1.0 (GCC) 
+        COMPILER_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/
+        LIBRARY_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_85d9a.exe' '-mtune=generic' '-march=nocona' '-dumpdir' 'cmTC_85d9a.'
+         C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/collect2.exe -m i386pep -Bdynamic -o cmTC_85d9a.exe C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/crt2.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtbegin.o -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0 -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../.. -v CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj --out-implib libcmTC_85d9a.dll.a --major-image-version 0 --minor-image-version 0 -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 -lpthread -ladvapi32 -lshell32 -luser32 -lkernel32 -liconv -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/default-manifest.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtend.o
+        collect2 version 13.1.0
+        C:\\Program Files\\JetBrains\\CLion 2024.2.2\\bin\\mingw\\bin/ld.exe -m i386pep -Bdynamic -o cmTC_85d9a.exe C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/crt2.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtbegin.o -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0 -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../.. -v CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj --out-implib libcmTC_85d9a.dll.a --major-image-version 0 --minor-image-version 0 -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 -lpthread -ladvapi32 -lshell32 -luser32 -lkernel32 -liconv -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/default-manifest.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtend.o\x0d
+        GNU ld (GNU Binutils) 2.40\x0d
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_85d9a.exe' '-mtune=generic' '-march=nocona' '-dumpdir' 'cmTC_85d9a.'\x0d
         
       exitCode: 0
   -
     kind: "message-v1"
     backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCompilerABI.cmake:137 (message)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include]
+          add: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../include]
+          add: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed]
+          add: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/include]
+        end of search list found
+        collapse include dir [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include] ==> [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/x86_64-w64-mingw32/13.1.0/include]
+        collapse include dir [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../include] ==> [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/include]
+        collapse include dir [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed] ==> [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed]
+        collapse include dir [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/include] ==> [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/x86_64-w64-mingw32/include]
+        implicit include dirs: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/x86_64-w64-mingw32/13.1.0/include;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/include;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed;C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/x86_64-w64-mingw32/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCompilerABI.cmake:173 (message)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
       - "CMakeLists.txt:2 (project)"
     message: |
       Parsed C implicit link information:
-        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
-        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
-        linker tool for 'C': C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/HostX64/x64/link.exe
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: 'C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/CMakeScratch/TryCompile-blvzet']
+        ignore line: []
+        ignore line: [Run Build Command(s): "C:/Program Files/JetBrains/CLion 2024.2.2/bin/ninja/win/x64/ninja.exe" -v cmTC_85d9a]
+        ignore line: [[1/2] C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe   -fdiagnostics-color=always   -v -o CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj -c "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeCCompilerABI.c"]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe]
+        ignore line: [Target: x86_64-w64-mingw32]
+        ignore line: [Configured with: ../gcc-13.1.0/configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-alpine-linux-musl --prefix=/win --enable-checking=release --enable-fully-dynamic-string --enable-languages=c,c++ --with-arch=nocona --with-tune=generic --enable-libatomic --enable-libgomp --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --enable-seh-exceptions --enable-shared --enable-static --enable-threads=posix --enable-version-specific-runtime-libs --disable-bootstrap --disable-graphite --disable-libada --disable-libstdcxx-pch --disable-libstdcxx-debug --disable-libquadmath --disable-lto --disable-nls --disable-multilib --disable-rpath --disable-symvers --disable-werror --disable-win32-registry --with-gnu-as --with-gnu-ld --with-system-libiconv --with-system-libz --with-gmp=/win/makedepends --with-mpfr=/win/makedepends --with-mpc=/win/makedepends]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib]
+        ignore line: [gcc version 13.1.0 (GCC) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj' '-c' '-mtune=generic' '-march=nocona' '-dumpdir' 'CMakeFiles/cmTC_85d9a.dir/']
+        ignore line: [ C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/cc1.exe -quiet -v -iprefix C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/ -D_REENTRANT C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_85d9a.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=nocona -version -fdiagnostics-color=always -o C:\\Users\\bucka\\AppData\\Local\\Temp\\ccyhNox5.s]
+        ignore line: [GNU C17 (GCC) version 13.1.0 (x86_64-w64-mingw32)]
+        ignore line: [	compiled by GNU C version 13.1.0  GMP version 6.2.1  MPFR version 4.2.0-p4  MPC version 1.3.1  isl version none]
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../lib/gcc/x86_64-w64-mingw32/13.1.0/include"]
+        ignore line: [ignoring nonexistent directory "/win/include"]
+        ignore line: [ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../include"]
+        ignore line: [ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed"]
+        ignore line: [ignoring duplicate directory "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/lib/gcc/../../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/include"]
+        ignore line: [ignoring nonexistent directory "/mingw/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include]
+        ignore line: [ C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../include]
+        ignore line: [ C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed]
+        ignore line: [ C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 2aa4fcf5c9208168c5e2d38a58fc2a97]
+        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj' '-c' '-mtune=generic' '-march=nocona' '-dumpdir' 'CMakeFiles/cmTC_85d9a.dir/']
+        ignore line: [ as -v -o CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj C:\\Users\\bucka\\AppData\\Local\\Temp\\ccyhNox5.s]
+        ignore line: [GNU assembler version 2.40 (x86_64-w64-mingw32) using BFD version (GNU Binutils) 2.40]
+        ignore line: [COMPILER_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/]
+        ignore line: [LIBRARY_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../]
+        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj' '-c' '-mtune=generic' '-march=nocona' '-dumpdir' 'CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.'\x0d]
+        ignore line: [[2/2] C:\\Windows\\system32\\cmd.exe /C "cd . && C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe  -v -Wl -v CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj -o cmTC_85d9a.exe -Wl --out-implib libcmTC_85d9a.dll.a -Wl --major-image-version 0 --minor-image-version 0   && cd ."]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=C:\\PROGRA~1\\JETBRA~1\\CLION2~1.2\\bin\\mingw\\bin\\gcc.exe]
+        ignore line: [COLLECT_LTO_WRAPPER=C:/Program\\ Files/JetBrains/CLion\\ 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/lto-wrapper.exe]
+        ignore line: [Target: x86_64-w64-mingw32]
+        ignore line: [Configured with: ../gcc-13.1.0/configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --build=x86_64-alpine-linux-musl --prefix=/win --enable-checking=release --enable-fully-dynamic-string --enable-languages=c,c++ --with-arch=nocona --with-tune=generic --enable-libatomic --enable-libgomp --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --enable-seh-exceptions --enable-shared --enable-static --enable-threads=posix --enable-version-specific-runtime-libs --disable-bootstrap --disable-graphite --disable-libada --disable-libstdcxx-pch --disable-libstdcxx-debug --disable-libquadmath --disable-lto --disable-nls --disable-multilib --disable-rpath --disable-symvers --disable-werror --disable-win32-registry --with-gnu-as --with-gnu-ld --with-system-libiconv --with-system-libz --with-gmp=/win/makedepends --with-mpfr=/win/makedepends --with-mpc=/win/makedepends]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib]
+        ignore line: [gcc version 13.1.0 (GCC) ]
+        ignore line: [COMPILER_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/]
+        ignore line: [LIBRARY_PATH=C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/]
+        ignore line: [C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_85d9a.exe' '-mtune=generic' '-march=nocona' '-dumpdir' 'cmTC_85d9a.']
+        ignore line: [ C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../libexec/gcc/x86_64-w64-mingw32/13.1.0/collect2.exe -m i386pep -Bdynamic -o cmTC_85d9a.exe C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/crt2.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtbegin.o -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0 -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../.. -v CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj --out-implib libcmTC_85d9a.dll.a --major-image-version 0 --minor-image-version 0 -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 -lpthread -ladvapi32 -lshell32 -luser32 -lkernel32 -liconv -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/default-manifest.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtend.o]
+        ignore line: [collect2 version 13.1.0]
+        ignore line: [C:\\Program Files\\JetBrains\\CLion 2024.2.2\\bin\\mingw\\bin/ld.exe -m i386pep -Bdynamic -o cmTC_85d9a.exe C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/crt2.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtbegin.o -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0 -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib -LC:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../.. -v CMakeFiles/cmTC_85d9a.dir/CMakeCCompilerABI.c.obj --out-implib libcmTC_85d9a.dll.a --major-image-version 0 --minor-image-version 0 -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 -lpthread -ladvapi32 -lshell32 -luser32 -lkernel32 -liconv -lmingw32 -lgcc -lgcc_eh -lmoldname -lmingwex -lmsvcrt -lkernel32 C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/../../../../x86_64-w64-mingw32/lib/../lib/default-manifest.o C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/../lib/gcc/x86_64-w64-mingw32/13.1.0/crtend.o\x0d]
+        ignore line: [GNU ld (GNU Binutils) 2.40\x0d]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_85d9a.exe' '-mtune=generic' '-march=nocona' '-dumpdir' 'cmTC_85d9a.'\x0d]
+        ignore line: []
+        ignore line: []
+        linker tool for 'C': C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/ld.exe
         implicit libs: []
         implicit objs: []
         implicit dirs: []
@@ -1514,12 +213,11 @@ events:
   -
     kind: "message-v1"
     backtrace:
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
-      - "C:/Program Files/CMake/share/cmake-4.1/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeDetermineCompilerABI.cmake:210 (cmake_determine_linker_id)"
+      - "C:/Program Files/JetBrains/CLion 2024.2.2/bin/cmake/win/x64/share/cmake-3.29/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
       - "CMakeLists.txt:2 (project)"
     message: |
-      Running the C compiler's linker: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.42.34433/bin/HostX64/x64/link.exe" "-v"
-      Microsoft (R) Incremental Linker Version 14.42.34436.0
-      Copyright (C) Microsoft Corporation.  All rights reserved.
+      Running the C compiler's linker: "C:/Program Files/JetBrains/CLion 2024.2.2/bin/mingw/bin/ld.exe" "-v"
+      GNU ld (GNU Binutils) 2.40
 ...

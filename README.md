@@ -38,6 +38,22 @@ cmake -B build
 cmake --build build
 ```
 
+### Install (Optional)
+
+To install Lync system-wide and add it to your PATH:
+
+**Windows (PowerShell as Administrator):**
+```powershell
+.\install.ps1
+```
+
+**Windows (Batch File as Administrator):**
+```bash
+install.bat
+```
+
+After installation, you can use `lync` from any directory. See **[INSTALL.md](INSTALL.md)** for detailed installation instructions, troubleshooting, and manual installation steps.
+
 ### Write a program
 
 ```c

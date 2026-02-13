@@ -1,8 +1,0 @@
-C:\Users\bucka\CLionProjects\CMinusMinus\main.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\main.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\lexer.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\lexer.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\parser.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\parser.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\analyzer.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\analyzer.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\codegen.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\codegen.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\error.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\error.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\optimizer.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\optimizer.obj
-C:\Users\bucka\CLionProjects\CMinusMinus\codegen_asm.c;C:\Users\bucka\CLionProjects\CMinusMinus\cmake-build-debug\lync.dir\Debug\codegen_asm.obj
