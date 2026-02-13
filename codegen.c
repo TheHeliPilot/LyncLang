@@ -209,7 +209,7 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
         fstn->height *= 2;
         fstn->elements = realloc(fstn->elements, sizeof(FuncSignToNameElement) * fstn->height);
     }
-    
+
     fprintf(out, "%s", type_to_c_type(f->signature->retType));
     fprintf(out, " %s(", mangled);
 
@@ -532,20 +532,27 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
                 // Stack array
                 emit_indent(out, indent);
-                fprintf(out, "%s %s[%d] = ",
+                fprintf(out, "%s %s[",
                         type_to_c_type(s->as.var_decl.varType),
-                        s->as.var_decl.name,
-                        s->as.var_decl.arraySize);
-                emit_expr(s->as.var_decl.expr, out, fstn);
+                        s->as.var_decl.name);
+                emit_expr(s->as.var_decl.arraySize, out, fstn);
+                fprintf(out, "]");
+
+                // Only emit initialization if present (VLAs can be uninitialized)
+                if (s->as.var_decl.expr->type == ARRAY_DECL_E) {
+                    fprintf(out, " = ");
+                    emit_expr(s->as.var_decl.expr, out, fstn);
+                }
                 fprintf(out, ";\n");
             } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN) {
                 // Heap array
                 emit_indent(out, indent);
-                fprintf(out, "%s* %s = malloc(sizeof(%s) * %d);\n",
+                fprintf(out, "%s* %s = malloc(sizeof(%s) * ",
                         type_to_c_type(s->as.var_decl.varType),
                         s->as.var_decl.name,
-                        type_to_c_type(s->as.var_decl.varType),
-                        s->as.var_decl.arraySize);
+                        type_to_c_type(s->as.var_decl.varType));
+                emit_expr(s->as.var_decl.arraySize, out, fstn);
+                fprintf(out, ");\n");
 
                 // TODO: Handle array initialization in alloc (Phase 6)
             } else if (s->as.var_decl.expr->type == ALLOC_E) {
@@ -578,10 +585,11 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             if (s->as.var_assign.isArray && s->as.var_assign.expr->type == ALLOC_E) {
                 // Array reallocation
                 emit_indent(out, indent);
-                fprintf(out, "%s = malloc(sizeof(%s) * %d);\n",
+                fprintf(out, "%s = malloc(sizeof(%s) * ",
                         s->as.var_assign.name,
-                        type_to_c_type(s->as.var_assign.expr->as.alloc.type),
-                        s->as.var_assign.arraySize);
+                        type_to_c_type(s->as.var_assign.expr->as.alloc.type));
+                emit_expr(s->as.var_assign.expr->as.alloc.initialValue, out, fstn);
+                fprintf(out, ");\n");
             } else {
                 emit_assign_expr_to_var(s->as.var_assign.expr, s->as.var_assign.name, s->as.var_assign.ownership, out, indent, fstn);
             }

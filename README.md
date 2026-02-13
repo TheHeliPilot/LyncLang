@@ -5,7 +5,7 @@ A systems programming language with manual memory management, compile-time owner
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
-![Version: 0.2.2](https://img.shields.io/badge/Version-0.2.2-orange.svg)
+![Version: 0.2.3](https://img.shields.io/badge/Version-0.2.3-orange.svg)
 
 File extension: `.lync`
 
@@ -104,8 +104,8 @@ See [INSTALL.md](INSTALL.md) for detailed installation instructions, troubleshoo
 ```c
 // hello.lync
 def main(): int {
-    print("Hello, world!");
-    return 0;
+print("Hello, world!");
+return 0;
 }
 ```
 
@@ -162,7 +162,7 @@ def main(): int {
 
 | Type | Description | C Equivalent |
 |------|-------------|--------------|
-| `int` | 64-bit signed integer | `int64_t` |
+| `int` | Signed integer | `int` |
 | `bool` | Boolean (`true` / `false`) | `bool` |
 | `string` | String literal (read-only) | `const char*` |
 | `char` | Single character | `char` |
@@ -197,6 +197,71 @@ pi = 400;  // Error: cannot assign to 'pi', variable is immutable
 ```
 
 All types must be explicitly annotated. Variables are mutable by default unless declared with `const`.
+
+### Arrays
+
+**Stack Arrays (Constant Size):**
+```c
+arr: int[5] = {1, 2, 3, 4, 5};
+arr[0] = 10;  // Element access and assignment
+x: int = arr[2];
+```
+
+**Stack Arrays (Variable Size - VLA):**
+```c
+size: int = 5;
+arr: int[size];  // Uninitialized - must assign elements manually
+for (i: 0 to size - 1) {
+    arr[i] = i + 1;
+}
+```
+
+**Heap Arrays (Dynamic Allocation):**
+```c
+arr: own int[5] = alloc int[5];
+arr[0] = 42;  // Elements are uninitialized, must assign manually
+free arr;
+```
+
+**Heap Arrays (Variable Size):**
+```c
+size: int = 10;
+arr: own int[size] = alloc int[size];
+for (i: 0 to size - 1) {
+    arr[i] = i * 2;
+}
+free arr;
+```
+
+**Built-in Functions:**
+```c
+arr: int[5] = {1, 2, 3, 4, 5};
+len: int = length(arr);  // Compile-time constant for stack arrays
+```
+
+**Rules:**
+- Array types must match their declared type
+- Stack arrays with **constant size** can be initialized with array literals
+- Stack arrays with **variable size** (VLAs) cannot be initialized (C limitation)
+- Heap arrays require `alloc` and must be freed
+- Direct array assignment is blocked (prevents accidental copies)
+- Element-wise assignment via `arr[i] = value` is allowed
+- Arrays can use compile-time constants or runtime variables for size
+- **Compile-time bounds checking**: Constant indices on constant-sized arrays are validated at compile time
+
+**Compile-Time Safety:**
+```c
+arr: int[3] = {1, 2, 3};
+
+arr[0];   // ✅ OK
+arr[2];   // ✅ OK (last element)
+arr[3];   // ❌ Error: index 3 out of bounds (valid: 0 to 2)
+arr[-1];  // ❌ Error: index -1 is negative
+
+i: int = 5;
+arr[i];   // ⚠️ No compile-time check (runtime bounds checking needed)
+```
+
 
 ### Functions
 
@@ -393,7 +458,7 @@ print("Element:", arr[1]);
 
 **Heap Arrays:**
 ```c
-arr: own int[2] = alloc 1;
+arr: own int[2] = alloc int[2];
 arr[0] = 5;
 arr[1] = 10;
 free arr;
@@ -583,7 +648,7 @@ ptr: own int = alloc 42;
 free ptr;
 
 // Generated C
-int64_t* ptr = malloc(sizeof(int64_t));
+int* ptr = malloc(sizeof(int));
 *ptr = 42;
 free(ptr);
 ```
@@ -700,12 +765,63 @@ Written in C (C23 standard) with zero external dependencies.
 
 ### Changelog
 
+#### [0.2.3] - 2026-02-13
+
+**Added:**
+- Compile-time bounds checking for constant-sized arrays with constant indices
+  - Detects out-of-bounds access: `arr[6]` when array size is 5
+  - Detects negative indices: `arr[-1]`
+  - Provides helpful error messages with valid index ranges
+  - Zero runtime overhead (compile-time only)
+- Optional array initialization for variable-sized stack arrays (VLAs)
+  - VLAs can now be declared without initialization: `arr: int[size];`
+  - Non-array variables still require initialization
+- Compile-time validation preventing VLA initialization (enforces C language limitation)
+  - Stack arrays with variable size cannot use array literal initialization
+  - Clear error messages direct users to use constant sizes or heap allocation
+
+**Fixed:**
+- Critical segfault when declaring non-array variables (NULL dereference in arraySize analyzer)
+- Array allocation generating garbage values instead of proper size expressions
+- Format string bugs in array size mismatch error messages
+- Stack arrays now properly emit variable-sized array expressions
+- Heap arrays now properly emit size expressions in malloc calls
+- `length()` function incorrectly rejecting constant-sized arrays (type comparison bug)
+- Array size extraction checking wrong type (analyzed type vs expression type)
+
+**Changed:**
+- Integer type now maps to C `int` instead of `int64_t` for simplicity
+- Array sizes can now be runtime variables (e.g., `arr: int[x]` where x is computed)
+- Improved codegen for array declarations to handle both constant and variable sizes
+- Parser now allows optional initialization for arrays (required for non-arrays)
+- Analyzer properly handles uninitialized VLAs using VOID_E placeholder
+
+**Examples:**
+```c
+// Constant size with initialization ✅
+arr1: int[5] = {1, 2, 3, 4, 5};
+
+// Variable size without initialization ✅
+size: int = 5;
+arr2: int[size];
+for (i: 0 to size - 1) {
+    arr2[i] = i + 1;
+}
+
+// Compile-time bounds checking ✅
+arr3: int[3] = {1, 2, 3};
+arr3[5];  // Error: index 5 out of bounds (valid: 0 to 2)
+
+// Variable size with initialization ❌
+arr4: int[size] = {1, 2, 3};  // Error: C limitation
+```
+
 #### [0.2.2] - 2026-02-13
 
 **Added:**
 - Array support with stack and heap allocation
   - Stack arrays: `arr: int[5] = {1, 2, 3, 4, 5};`
-  - Heap arrays: `arr: own int[5] = alloc 1;`
+  - Heap arrays: `arr: own int[5] = alloc int[5];`
   - Element access: `arr[index]`
   - Element assignment: `arr[index] = value;`
   - `length(arr)` built-in for stack arrays (compile-time constant)
@@ -790,6 +906,8 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 - Function overloading by parameter types
 - Cross-platform support (Windows, macOS, Linux)
 - Fixed-size arrays (stack and heap allocated)
+- Variable-size arrays (VLAs on stack, dynamic on heap)
+- Compile-time bounds checking for constant array indices
 - Reallocation after free for owned variables
 
 #### Planned Features
@@ -848,6 +966,9 @@ Issues to address in future releases:
 - No format specifiers in print
 - No multi-file compilation (single input file only)
 - No incremental compilation
+- Variable-sized stack arrays (VLAs) cannot be initialized with array literals (C language limitation)
+- Variable-sized stack arrays (VLAs) cannot be initialized (C language limitation)
+  - Use constant size or heap allocation for initialized arrays
 
 See [TODO.md](TODO.md) for detailed task tracking.
 

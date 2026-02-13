@@ -92,7 +92,7 @@ Expr* parseComparison(Parser* p) {
     Expr* e = parseAdd(p);
     TokenType t = peek(p, 0)->type;
     while (t == LESS_T || t == MORE_T || t == LESS_EQUALS_T ||
-            t == MORE_EQUALS_T || t == DOUBLE_EQUALS_T || t == NOT_EQUALS_T) {
+           t == MORE_EQUALS_T || t == DOUBLE_EQUALS_T || t == NOT_EQUALS_T) {
         Token* op = consume(p);
         Expr* right = parseAdd(p);
         e = makeBinOp(TOK_LOC(op), e, op->type, right);
@@ -272,12 +272,25 @@ Expr* parseFactor(Parser* p) {
         }
         case ALLOC_T: {
             Token* allocTok = consume(p);
+
+            bool isArr = false;
+            if(peek(p, 1)->type == L_BRACKET_T){
+                consume(p);
+                isArr = true;
+                consume(p);
+            }
+
             Expr* e = parseExpr(p);
+
+            if(isArr)
+                expect(p, R_BRACKET_T);
+
             Expr* al = malloc(sizeof(Expr));
             al->type = ALLOC_E;
             al->loc = TOK_LOC(allocTok);
             al->is_nullable = false;  //alloc always returns a pointer
             al->as.alloc.initialValue = e;
+            al->as.alloc.isArray = isArr;
             return al;
         }
 
@@ -336,7 +349,7 @@ IncludeStmt* parseIncludeStmt(Parser* p) {
     //specific import: last part is function, rest is module
     if (part_count < 2) {
         stage_fatal(STAGE_PARSER, stmt->loc,
-            "invalid import: expected 'module.function' or 'module.*' (e.g., 'std.io.read_int')");
+                    "invalid import: expected 'module.function' or 'module.*' (e.g., 'std.io.read_int')");
     }
 
     //build module from all but last part
@@ -369,7 +382,7 @@ Program* parseProgram(Parser* p) {
         if (prog->imports->import_count >= prog->imports->import_capacity) {
             prog->imports->import_capacity *= 2;
             prog->imports->imports = realloc(prog->imports->imports,
-                sizeof(IncludeStmt*) * prog->imports->import_capacity);
+                                             sizeof(IncludeStmt*) * prog->imports->import_capacity);
         }
         prog->imports->imports[prog->imports->import_count++] = parseIncludeStmt(p);
     }
@@ -459,17 +472,29 @@ Stmt* parseStatement(Parser* p) {
                 TokenType varType = consume(p)->type;
 
                 bool isArray = false;
-                int arrSize = 0;
+                Expr* arrSize = NULL;
                 if(peek(p, 0)->type == L_BRACKET_T){
                     isArray = true;
                     consume(p);
-                    int size = *(int*)expect(p, INT_LIT_T)->value;
-                    arrSize = size;
+                    arrSize = parseExpr(p);
                     expect(p, R_BRACKET_T);
                 }
 
-                expect(p, EQUALS_T);
-                Expr *e = parseExpr(p);
+                Expr *e = NULL;
+                if (peek(p, 0)->type == EQUALS_T) {
+                    consume(p);  // consume '='
+                    e = parseExpr(p);
+                } else if (!isArray) {
+                    // Non-array variables must have an initializer
+                    stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 0)),
+                                "variable declaration requires initializer (expected '=')");
+                } else {
+                    // Array without initializer - create VOID expression as placeholder
+                    e = malloc(sizeof(Expr));
+                    e->type = VOID_E;
+                    e->loc = TOK_LOC(peek(p, 0));
+                    e->is_nullable = false;
+                }
                 expect(p, SEMICOLON_T);
 
                 s->type = VAR_DECL_S;
@@ -516,7 +541,8 @@ Stmt* parseStatement(Parser* p) {
                 s->type = EXPR_STMT_S;
                 s->loc = e->loc;  // Use expression's location
                 s->as.expr_stmt = e;
-            } else stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 1)), "Unexpected token after variable: %s", token_type_name(peek(p, 1)->type));
+            } else if (peek(p, 1)->type == R_BRACKET_T); //for '= T[expr];'
+            else stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 1)), "Unexpected token after variable: %s", token_type_name(peek(p, 1)->type));
             return s;
         }
         case IF_T: {
@@ -976,7 +1002,7 @@ void print_stmt(Stmt* s, int depth) {
     switch (s->type) {
         case VAR_DECL_S:
             fprintf(stderr, "VarDecl: %s : %s\n", s->as.var_decl.name,
-                   token_type_name(s->as.var_decl.varType));
+                    token_type_name(s->as.var_decl.varType));
             print_indent(depth);
             fprintf(stderr, "Init:\n");
             print_expr(s->as.var_decl.expr, depth + 1);

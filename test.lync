@@ -1,12 +1,9 @@
-include std.io.*;
-
 def main(): int {
-    i: own? int = read_int();
 
-    if(some(i)) {
-        print(i);
-    }
+    size: int = 5;
+    arr: int[1] = {1};
 
-    read_key();
+    print(arr[6]);
+
     return 0;   
 }

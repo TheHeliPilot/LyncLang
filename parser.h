@@ -105,7 +105,7 @@ typedef enum {
     MATCH_E, VOID_E, ARRAY_DECL_E,
 
     //mem
-    ALLOC_E,
+    ALLOC_E, ALLOC_ARR_E,
 
     //match
     SOME_E,
@@ -168,6 +168,7 @@ struct Expr {
         struct {
             Expr* initialValue;
             TokenType type;
+            bool isArray;
         } alloc;
 
         struct {
@@ -208,7 +209,7 @@ struct Stmt {
             bool isNullable;
             bool isConst;
             bool isArray;
-            int arraySize;
+            Expr* arraySize;
             Expr* expr;
         } var_decl;
 

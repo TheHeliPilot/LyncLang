@@ -87,17 +87,17 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool
 
     scope->symbols[scope->count++] =
             (Symbol){
-                .type = type,
-                .name = name,
-                .ownership = ownership,
-                .is_nullable = isNullable,
-                .is_const = isConst,
-                .state = ALIVE,
-                .owner = nullptr,
-                .is_dangling = false,
-                .is_unwrapped = false,
-                .is_array = isArray,
-                .array_size = arraySize
+                    .type = type,
+                    .name = name,
+                    .ownership = ownership,
+                    .is_nullable = isNullable,
+                    .is_const = isConst,
+                    .state = ALIVE,
+                    .owner = nullptr,
+                    .is_dangling = false,
+                    .is_unwrapped = false,
+                    .is_array = isArray,
+                    .array_size = arraySize
             };
 }
 
@@ -175,11 +175,11 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             // Check for nullable usage in expressions (only allowed if unwrapped)
             if (sym->is_nullable && !sym->is_unwrapped) {
                 stage_error(STAGE_ANALYZER, e->loc,
-                    "nullable variable '%s' must be unwrapped before use",
-                    e->as.var.name);
+                            "nullable variable '%s' must be unwrapped before use",
+                            e->as.var.name);
                 stage_note(STAGE_ANALYZER, e->loc,
-                    "use 'match %s { some(val): { ... } null: { ... } }' to safely unwrap, or 'if(some(%s))' to check",
-                    e->as.var.name, e->as.var.name);
+                           "use 'match %s { some(val): { ... } null: { ... } }' to safely unwrap, or 'if(some(%s))' to check",
+                           e->as.var.name, e->as.var.name);
             }
 
             e->as.var.ownership = sym->ownership;
@@ -205,7 +205,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             TokenType indexType = analyze_expr(scope, funcTable, e->as.array_access.index);
             if (indexType != INT_KEYWORD_T) {
                 stage_error(STAGE_ANALYZER, e->loc,
-                    "array index must be 'int', got '%s'", token_type_name(indexType));
+                            "array index must be 'int', got '%s'", token_type_name(indexType));
             }
 
             result = sym->type;
@@ -259,7 +259,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be int, got %s", token_type_name(op), token_type_name(right));
                 result = INT_KEYWORD_T;
             }
-            // comparison: int op int -> bool
+                // comparison: int op int -> bool
             else if (op == LESS_T || op == MORE_T || op == LESS_EQUALS_T || op == MORE_EQUALS_T) {
                 if (left != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be int, got %s", token_type_name(op), token_type_name(left));
@@ -267,13 +267,13 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be int, got %s", token_type_name(op), token_type_name(right));
                 result = BOOL_KEYWORD_T;
             }
-            // equality: same type op same type -> bool
+                // equality: same type op same type -> bool
             else if (op == DOUBLE_EQUALS_T || op == NOT_EQUALS_T) {
                 if (left != right)
                     stage_error(STAGE_ANALYZER, e->loc, "cannot compare %s with %s using '%s'", token_type_name(left), token_type_name(right), token_type_name(op));
                 result = BOOL_KEYWORD_T;
             }
-            // logical: bool op bool -> bool
+                // logical: bool op bool -> bool
             else if (op == AND_T || op == OR_T) {
                 if (left != BOOL_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be bool, got %s", token_type_name(op), token_type_name(left));
@@ -324,14 +324,16 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "'%s' is not an array", arg->as.var.name);
                 } else if (sym->ownership == OWNERSHIP_OWN) {
                     stage_error(STAGE_ANALYZER, e->loc,
-                        "length() not supported for heap-allocated arrays");
+                                "length() not supported for heap-allocated arrays");
                 } else {
-                    // Replace function call with constant
+                    //replace function call with constant
                     e->type = INT_LIT_E;
                     e->as.int_val = sym->array_size;
+                    if(sym->array_size < 0)
+                        stage_error(STAGE_ANALYZER, e->loc, "dynamically sized array (not using int literal during construction) are not supported by length()");
                 }
 
-                e->as.func_call.resolved_sign = NULL;
+                e->as.func_call.resolved_sign = nullptr;
                 result = INT_KEYWORD_T;
                 break;
             }
@@ -346,14 +348,14 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 // Check if function is imported
                 if (!is_imported(g_import_registry, e->as.func_call.name)) {
                     stage_error(STAGE_ANALYZER, e->loc,
-                        "'%s' is not imported (add 'using std.io.%s;' or 'using std.io.*;')",
-                        e->as.func_call.name, e->as.func_call.name);
+                                "'%s' is not imported (add 'using std.io.%s;' or 'using std.io.*;')",
+                                e->as.func_call.name, e->as.func_call.name);
                 }
 
                 // These functions take no arguments
                 if (e->as.func_call.count != 0) {
                     stage_error(STAGE_ANALYZER, e->loc,
-                        "'%s' takes no arguments", e->as.func_call.name);
+                                "'%s' takes no arguments", e->as.func_call.name);
                 }
 
                 // Determine return type based on function name
@@ -504,7 +506,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     targetType = matchedSym->type;
                 } else {
                     stage_error(STAGE_ANALYZER, e->loc, "variable '%s' is not declared",
-                               e->as.match.var->as.var.name);
+                                e->as.match.var->as.var.name);
                 }
             } else {
                 // For non-variable expressions, analyze normally
@@ -524,13 +526,13 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     hasSome = true;
                     if (!isNullableMatch)
                         stage_error(STAGE_ANALYZER, branch->pattern->loc,
-                            "some() pattern can only be used on nullable types");
+                                    "some() pattern can only be used on nullable types");
                 }
                 else if (branch->pattern->type == NULL_PATTERN) {
                     hasNull = true;
                     if (!isNullableMatch)
                         stage_error(STAGE_ANALYZER, branch->pattern->loc,
-                            "null pattern can only be used on nullable types");
+                                    "null pattern can only be used on nullable types");
                 }
                 else if (branch->pattern->type == WILDCARD_PATTERN) {
                     hasDefault = true;
@@ -551,14 +553,14 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
 
                     // Binding is always a reference (borrows from original)
                     Ownership bindingOwnership = (matchedSym->ownership == OWNERSHIP_NONE)
-                        ? OWNERSHIP_NONE
-                        : OWNERSHIP_REF;
+                                                 ? OWNERSHIP_NONE
+                                                 : OWNERSHIP_REF;
 
                     declare(branchScope,
-                           branch->pattern->as.binding_name,
-                           matchedSym->type,
-                           bindingOwnership,
-                           false, matchedSym->is_const, false, 0);
+                            branch->pattern->as.binding_name,
+                            matchedSym->type,
+                            bindingOwnership,
+                            false, matchedSym->is_const, false, 0);
 
                     // Set owner for ref tracking
                     if (bindingOwnership == OWNERSHIP_REF) {
@@ -596,7 +598,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
 
             if (isNullableMatch && (!hasSome || !hasNull)) {
                 stage_error(STAGE_ANALYZER, e->loc,
-                    "match on nullable type must handle both some and null cases");
+                            "match on nullable type must handle both some and null cases");
             }
 
             if (!hasDefault && !isNullableMatch)
@@ -614,8 +616,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "variable '%s' is not declared", e->as.some.var->as.var.name);
                 } else if (!sym->is_nullable) {
                     stage_warning(STAGE_ANALYZER, e->loc,
-                        "some() used on non-nullable variable '%s' (always true if not null)",
-                        e->as.some.var->as.var.name);
+                                  "some() used on non-nullable variable '%s' (always true if not null)",
+                                  e->as.some.var->as.var.name);
                 }
             } else {
                 // If it's not a simple variable, analyze it normally
@@ -626,7 +628,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
         }
         case ALLOC_E: {
             e->as.alloc.type = analyze_expr(scope, funcTable, e->as.alloc.initialValue);
-            result = e->as.alloc.type;
+            result =  e->as.alloc.type;
             break;
         }
         case VOID_E:
@@ -647,12 +649,17 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
 void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
     switch (s->type) {
         case VAR_DECL_S: {
-            TokenType t = analyze_expr(scope, funcTable, s->as.var_decl.expr);
+            // Skip type analysis for uninitialized arrays (VOID_E placeholder)
+            TokenType t = VOID_KEYWORD_T;
+            if (s->as.var_decl.expr->type != VOID_E) {
+                t = analyze_expr(scope, funcTable, s->as.var_decl.expr);
+            }
 
             // Allow own variables to be initialized with alloc, null (if nullable), or nullable read_* functions
             bool valid_own_init = (s->as.var_decl.expr->type == ALLOC_E) ||
                                   (s->as.var_decl.isNullable && t == NULL_LIT_T) ||
-                                  (s->as.var_decl.isNullable && s->as.var_decl.expr->is_nullable);
+                                  (s->as.var_decl.isNullable && s->as.var_decl.expr->is_nullable) ||
+                                  (s->as.var_decl.expr->type == VOID_E);  // Uninitialized allowed
 
             if (s->as.var_decl.ownership == OWNERSHIP_OWN && !valid_own_init)
                 stage_error(STAGE_ANALYZER, s->loc, "'own' variables must be initialized with 'alloc' or a nullable function");
@@ -660,20 +667,50 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             if (s->as.var_decl.expr->type == ALLOC_E && s->as.var_decl.ownership != OWNERSHIP_OWN)
                 stage_error(STAGE_ANALYZER, s->loc, "'alloc' can only be used with 'own' variables");
 
-            if (t != s->as.var_decl.varType && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
+            if (s->as.var_decl.expr->type != VOID_E && t != s->as.var_decl.varType && !(s->as.var_decl.isNullable && t == NULL_LIT_T))
                 stage_error(STAGE_ANALYZER, s->loc, "variable '%s' declared as %s but initialized with %s",
-                      s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
+                            s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
 
-            if(s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
-                if(s->as.var_decl.expr->type != ARRAY_DECL_E)
-                    stage_error(STAGE_ANALYZER, s->loc, "stack arrays must be initialized with array literal");
-                if(s->as.var_decl.varType != t)
-                    stage_error(STAGE_ANALYZER, s->loc, "cannot assign array of type '%s' to array of type '%s'", token_type_name(t), token_type_name(s->as.var_decl.varType));
-                if(s->as.var_decl.arraySize != s->as.var_decl.expr->as.arr_decl.count)
-                    stage_error(STAGE_ANALYZER, s->loc, "array length mismatch, expected %d but got %d", s->as.var_decl.arraySize, s->as.var_decl.expr->as.arr_decl.count);
+            if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
+                // Check for VLA initialization (C limitation)
+                if (s->as.var_decl.arraySize != NULL &&
+                    s->as.var_decl.arraySize->type != INT_LIT_E &&
+                    s->as.var_decl.expr->type == ARRAY_DECL_E) {
+                    stage_error(STAGE_ANALYZER, s->loc,
+                                "stack arrays with variable size cannot be initialized (C language limitation)");
+                    stage_note(STAGE_ANALYZER, s->loc,
+                               "use a constant size like 'arr: int[5] = {...}', or use heap allocation with 'own'");
+                }
+
+                // Only require array literal for constant-sized arrays
+                bool isConstantSize = (s->as.var_decl.arraySize != NULL &&
+                                       s->as.var_decl.arraySize->type == INT_LIT_E);
+
+                if(isConstantSize && s->as.var_decl.expr->type != ARRAY_DECL_E)
+                    stage_error(STAGE_ANALYZER, s->loc, "stack arrays with constant size must be initialized with array literal");
+
+                if(s->as.var_decl.expr->type == ARRAY_DECL_E) {
+                    if(s->as.var_decl.varType != t)
+                        stage_error(STAGE_ANALYZER, s->loc, "cannot assign array of type '%s' to array of type '%s'", token_type_name(t), token_type_name(s->as.var_decl.varType));
+                    if(s->as.var_decl.arraySize != NULL && s->as.var_decl.arraySize->type == INT_LIT_E)
+                        if(s->as.var_decl.arraySize->as.int_val != s->as.var_decl.expr->as.arr_decl.count)
+                            stage_error(STAGE_ANALYZER, s->loc, "array length mismatch, expected %d but got %d", s->as.var_decl.arraySize->as.int_val, s->as.var_decl.expr->as.arr_decl.count);
+                }
+            } else if (s->as.var_decl.isArray) {
+                if (!s->as.var_decl.isArray)
+                    stage_error(STAGE_ANALYZER, s->loc, "heap arrays must be initialized with array");
+                if (s->as.var_decl.isArray)
+                    if(analyze_expr(scope, funcTable,s->as.var_decl.expr) != INT_KEYWORD_T)
+                        stage_error(STAGE_ANALYZER, s->loc, "array initialization must be int");
             }
 
-            declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable, s->as.var_decl.isConst, s->as.var_decl.isArray, s->as.var_decl.arraySize);
+            int arraySize = -1;
+            if (s->as.var_decl.isArray && s->as.var_decl.arraySize != NULL) {
+                if (s->as.var_decl.arraySize->type == INT_LIT_E) {
+                    arraySize = s->as.var_decl.arraySize->as.int_val;
+                }
+            }
+            declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable, s->as.var_decl.isConst, s->as.var_decl.isArray, arraySize);
 
             // For ref variables, set the owner to the variable being borrowed
             if (s->as.var_decl.ownership == OWNERSHIP_REF) {
@@ -704,8 +741,8 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             }
             if (sym->is_array && s->as.var_assign.expr->type != ALLOC_E) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "cannot assign to array '%s' directly, use element-wise assignment (arr[i] = val)",
-                    s->as.var_assign.name);
+                            "cannot assign to array '%s' directly, use element-wise assignment (arr[i] = val)",
+                            s->as.var_assign.name);
                 break;
             }
             s->as.var_assign.ownership = sym->ownership;
@@ -714,7 +751,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             TokenType t = analyze_expr(scope, funcTable, s->as.var_assign.expr);
             if (t != sym->type)
                 stage_error(STAGE_ANALYZER, s->loc, "cannot assign %s to '%s' of type %s",
-                      token_type_name(t), s->as.var_assign.name, token_type_name(sym->type));
+                            token_type_name(t), s->as.var_assign.name, token_type_name(sym->type));
 
             // Allow reassigning to freed own variables with alloc
             if (sym->ownership == OWNERSHIP_OWN && sym->state == FREED && s->as.var_assign.expr->type == ALLOC_E) {
@@ -822,7 +859,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                     matchedType = matchedSym->type;
                 } else {
                     stage_error(STAGE_ANALYZER, s->loc, "variable '%s' is not declared",
-                               s->as.match_stmt.var->as.var.name);
+                                s->as.match_stmt.var->as.var.name);
                 }
             } else {
                 //for non-variable expressions, analyze normally
@@ -842,13 +879,13 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                     hasSome = true;
                     if (!isNullableMatch)
                         stage_error(STAGE_ANALYZER, branch->pattern->loc,
-                            "some() pattern can only be used on nullable types");
+                                    "some() pattern can only be used on nullable types");
                 }
                 else if (branch->pattern->type == NULL_PATTERN) {
                     hasNull = true;
                     if (!isNullableMatch)
                         stage_error(STAGE_ANALYZER, branch->pattern->loc,
-                            "null pattern can only be used on nullable types");
+                                    "null pattern can only be used on nullable types");
                 }
                 else if (branch->pattern->type == WILDCARD_PATTERN) {
                     hasSome = hasNull = true;  // wildcard covers both
@@ -858,7 +895,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             //exhaustiveness check for nullable types
             if (isNullableMatch && (!hasSome || !hasNull)) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "match on nullable type must handle both some and null cases");
+                            "match on nullable type must handle both some and null cases");
             }
 
             //analyze each branch with appropriate scope
@@ -870,14 +907,14 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                 if (branch->pattern->type == SOME_PATTERN && matchedSym) {
                     //binding is always a reference (borrows from original), not a new owned variable
                     Ownership bindingOwnership = (matchedSym->ownership == OWNERSHIP_NONE)
-                        ? OWNERSHIP_NONE
-                        : OWNERSHIP_REF;
+                                                 ? OWNERSHIP_NONE
+                                                 : OWNERSHIP_REF;
 
                     declare(branchScope,
-                           branch->pattern->as.binding_name,
-                           matchedSym->type,
-                           bindingOwnership,
-                           false, matchedSym->is_const, false, 0);
+                            branch->pattern->as.binding_name,
+                            matchedSym->type,
+                            bindingOwnership,
+                            false, matchedSym->is_const, false, 0);
 
                     // Set owner for ref tracking (if it's a ref)
                     if (bindingOwnership == OWNERSHIP_REF) {
@@ -919,33 +956,33 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             Symbol* sym = lookup(scope, s->as.array_elem_assign.arrayName);
             if (!sym) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "undefined variable '%s'", s->as.array_elem_assign.arrayName);
+                            "undefined variable '%s'", s->as.array_elem_assign.arrayName);
                 break;
             }
 
             if (!sym->is_array) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "'%s' is not an array", s->as.array_elem_assign.arrayName);
+                            "'%s' is not an array", s->as.array_elem_assign.arrayName);
                 break;
             }
 
             if (sym->is_const) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "cannot modify const array '%s'", s->as.array_elem_assign.arrayName);
+                            "cannot modify const array '%s'", s->as.array_elem_assign.arrayName);
                 break;
             }
 
             TokenType indexType = analyze_expr(scope, funcTable, s->as.array_elem_assign.index);
             if (indexType != INT_KEYWORD_T) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "array index must be 'int', got '%s'", token_type_name(indexType));
+                            "array index must be 'int', got '%s'", token_type_name(indexType));
             }
 
             TokenType valueType = analyze_expr(scope, funcTable, s->as.array_elem_assign.value);
             if (valueType != sym->type) {
                 stage_error(STAGE_ANALYZER, s->loc,
-                    "cannot assign '%s' to array of type '%s'",
-                    token_type_name(valueType), token_type_name(sym->type));
+                            "cannot assign '%s' to array of type '%s'",
+                            token_type_name(valueType), token_type_name(sym->type));
             }
 
             break;
@@ -1002,7 +1039,7 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
     //add to table - need deep copy of FuncSign
     stage_trace(STAGE_ANALYZER, "defineAndAnalyzeFunc: copying func '%s'", func->signature->name);
     stage_trace(STAGE_ANALYZER, "  func->signature=%p, name=%p ('%s')",
-        func->signature, func->signature->name, func->signature->name);
+                func->signature, func->signature->name, func->signature->name);
 
     FuncSign copy;
     copy.name = strdup(func->signature->name);  // Make a real copy of the name string
@@ -1026,12 +1063,12 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
     }
 
     stage_trace(STAGE_ANALYZER, "  storing at table->signs[%d], table=%p, signs=%p",
-        table->count, table, table->signs);
+                table->count, table, table->signs);
     stage_trace(STAGE_ANALYZER, "  address of table->signs[%d] = %p",
-        table->count, &table->signs[table->count]);
+                table->count, &table->signs[table->count]);
     table->signs[table->count] = copy;
     stage_trace(STAGE_ANALYZER, "  stored, table->signs[%d].name=%p ('%s')",
-        table->count, table->signs[table->count].name, table->signs[table->count].name);
+                table->count, table->signs[table->count].name, table->signs[table->count].name);
     table->count++;
 }
 
