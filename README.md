@@ -736,7 +736,7 @@ Make pattern matching more powerful and safer.
 
 User-defined composite types with compile-time field checking.
 
-- Struct definitions: `struct Name { field: type; }`
+- Struct definitions: `Name: struct { field: type; }`
 - Plain fields only in v1 (`int`, `bool`, `char` — no `own`/`ref` fields yet)
 - Auto-dereferencing with `.` (no `->` syntax needed)
 - "Did you mean" suggestions for field name typos
@@ -771,11 +771,10 @@ Long-term goals beyond the core language:
 
 - **Dynamic arrays / lists** — as a standard library, not a built-in
 - **Templates** — C++ style generics for containers and algorithms
-- **`str` type** — a string type built as stdlib *in Lync itself* (not a primitive), using `char` + `own` + length tracking
+- **full `string` type** — a string type built as stdlib *in Lync itself* (not a primitive), using `char` + `own` + length tracking
 - **Owned struct fields** — `own` and `ref` qualifiers inside struct definitions
 - **`const` keyword** — immutable variable declarations
 - **User-defined modules** — `.lync` files as importable modules
-- **VS Code integration** — syntax highlighting, inline diagnostics, build tasks
 
 ---
 
