@@ -61,33 +61,37 @@ Lync provides manual memory management with compile-time safety guarantees. The 
 
 ## Installation
 
-### Prerequisites
+### Quick Install (Windows)
 
-- C compiler (GCC, Clang, or MSVC)
-- CMake 3.29+
+**Download the latest release** containing:
+- `lync.exe` - The Lync compiler
+- `install.bat` - Automated installer
+- `uninstall.bat` - Automated uninstaller
+- `lync-language-0.2.1.vsix` - VS Code extension (optional)
+
+**To install:**
+1. Right-click `install.bat` and select **"Run as Administrator"**
+2. Restart your terminal
+3. Test: `lync --help`
+
+The installer copies `lync.exe` to `C:\Program Files\Lync\` and adds it to your system PATH.
+
+**VS Code Extension (Optional):**
+1. Open VS Code
+2. Press `Ctrl+Shift+X` (Extensions)
+3. Click the `...` menu → `Install from VSIX...`
+4. Select `lync-language-0.2.1.vsix`
 
 ### Build from Source
+
+If you want to build from source:
 
 ```bash
 cmake -B build
 cmake --build build
 ```
 
-The executable will be in `cmake-build-debug/lync` (or `cmake-build-debug/lync.exe` on Windows).
-
-### System-Wide Installation (Optional)
-
-**Windows (PowerShell as Administrator):**
-```powershell
-.\install.ps1
-```
-
-**Windows (Batch File as Administrator):**
-```bash
-install.bat
-```
-
-After installation, `lync` is available globally from any directory.
+The executable will be in the build directory.
 
 See [INSTALL.md](INSTALL.md) for detailed installation instructions, troubleshooting, and manual installation steps.
 
@@ -139,13 +143,13 @@ def main(): int {
     match num {
         some(n): {
             print("You entered:", n);
-            free n;
         }
         null: {
             print("Invalid input");
         }
     };
 
+    free num;
     return 0;
 }
 ```
@@ -294,12 +298,13 @@ maybe: own? int = read_int();
 match maybe {
     some(val): {
         print("Got:", val);
-        free val;
     }
     null: {
         print("No value");
     }
 };
+
+free maybe;
 ```
 
 **Pattern Types:**
@@ -356,13 +361,13 @@ def main(): int {
     match num {
         some(n): {
             print("Got:", n);
-            free n;
         }
         null: {
             print("Invalid");
         }
     };
 
+    free num;
     return 0;
 }
 ```

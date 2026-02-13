@@ -1,24 +1,23 @@
 ================================================================================
-                    Lync Compiler v0.2.0 - Installation
+                    Lync Compiler v0.2.1 - Installation
 ================================================================================
 
 QUICK INSTALL (Windows):
 
-1. Right-click "install.bat" and select "Run as Administrator"
-   OR
-   Right-click PowerShell, select "Run as Administrator", then run:
-   .\install.ps1
+1. Copy lync.exe to the same folder as install.bat
 
-2. Restart your terminal
+2. Right-click "install.bat" and select "Run as Administrator"
 
-3. Test by running:
+3. Restart your terminal
+
+4. Test by running:
    lync --help
 
 ================================================================================
 
 The installer will:
 - Copy lync.exe to C:\Program Files\Lync\
-- Add C:\Program Files\Lync\ to your system PATH
+- Add C:\Program Files\Lync\ to your system PATH (if not already added)
 - Allow you to run "lync" from any directory
 
 ================================================================================
@@ -28,6 +27,7 @@ REQUIREMENTS:
 - Windows 10 or later
 - Administrator privileges
 - A C compiler installed (GCC, Clang, or MSVC)
+- lync.exe in the same directory as install.bat
 
 ================================================================================
 
@@ -42,7 +42,7 @@ USAGE AFTER INSTALLATION:
 
 TO UNINSTALL:
 
-Run uninstall.bat or uninstall.ps1 as Administrator
+Run uninstall.bat as Administrator
 
 ================================================================================
 

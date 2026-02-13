@@ -17,15 +17,17 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-REM Define installation directory
+REM Get the directory where this .bat file is located
+set "SCRIPT_DIR=%~dp0"
 set "INSTALL_DIR=C:\Program Files\Lync"
-set "SOURCE_EXE=.\cmake-build-debug\lync.exe"
+set "SOURCE_EXE=%SCRIPT_DIR%lync.exe"
 
 REM Check if source executable exists
 if not exist "%SOURCE_EXE%" (
-    echo ERROR: Could not find lync.exe at %SOURCE_EXE%
-    echo Please build the compiler first using:
-    echo   cmake --build cmake-build-debug
+    echo ERROR: Could not find lync.exe in the same directory as this installer
+    echo Expected location: %SOURCE_EXE%
+    echo.
+    echo Please ensure lync.exe is in the same folder as install.bat
     echo.
     pause
     exit /b 1

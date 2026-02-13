@@ -20,31 +20,20 @@ cmake -B cmake-build-debug
 cmake --build cmake-build-debug
 ```
 
-This will create `lync.exe` in `cmake-build-debug\Debug\`.
+This will create `lync.exe` in the build directory.
 
-### Option 1: PowerShell Installer (Recommended)
+### Option 1: Automatic Installer (Recommended)
 
-1. **Right-click PowerShell** and select **"Run as Administrator"**
-2. Navigate to the Lync project directory:
-   ```powershell
-   cd C:\Users\bucka\CLionProjects\CMinusMinus
-   ```
-3. Run the installer:
-   ```powershell
-   .\install.ps1
-   ```
+1. **Copy `lync.exe`** to the same folder as `install.bat`
+2. **Right-click** `install.bat` and select **"Run as Administrator"**
+3. Follow the on-screen prompts
 
 The installer will:
 - Copy `lync.exe` to `C:\Program Files\Lync\`
-- Add `C:\Program Files\Lync\` to your system PATH
+- Add `C:\Program Files\Lync\` to your system PATH (if not already added)
 - Display success message
 
-### Option 2: Batch File Installer
-
-1. **Right-click** `install.bat` and select **"Run as Administrator"**
-2. Follow the on-screen prompts
-
-### Option 3: Manual Installation
+### Option 2: Manual Installation
 
 If you prefer to install manually:
 
@@ -55,7 +44,7 @@ If you prefer to install manually:
 
 2. Copy the executable:
    ```bash
-   copy cmake-build-debug\Debug\lync.exe "C:\Program Files\Lync\lync.exe"
+   copy lync.exe "C:\Program Files\Lync\lync.exe"
    ```
 
 3. Add to PATH:
