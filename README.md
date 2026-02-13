@@ -72,7 +72,6 @@ def main(): int {
         some(n): {
             result: int = add(n, 10);
             print("Result:", result);
-            free n;
         }
         null: {
             print("Invalid input");
@@ -173,7 +172,6 @@ def main(): int {
     match age {
         some(a): {
             print("You are", a, "years old");
-            free a;
         }
         null: {
             print("Invalid age");
@@ -632,7 +630,6 @@ def main(): int {
     match num {
         some(n): {
             print("Got:", n);
-            free n;
         }
         null: { print("Invalid"); }
     };
