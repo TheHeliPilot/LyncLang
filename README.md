@@ -743,7 +743,7 @@ User-defined composite types with compile-time field checking.
 
 ```c
 // Preview syntax
-struct Entity {
+Entity: struct {
     health: int;
     alive: bool;
 }
