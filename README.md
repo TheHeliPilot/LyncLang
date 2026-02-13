@@ -607,7 +607,7 @@ Written in **C (C23 standard)** with zero external dependencies.
 
 ## Recent Features
 
-### Module System with `using` Statement (✅ New in v0.2.0)
+### Module System with `include` Statement (✅ New in v0.2.0)
 
 A Java/C#-style module system for clean, selective imports:
 
