@@ -122,6 +122,9 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             print_usage(argv[0]);
             return 0;
+        } else if (strcmp(argv[i], "--version") == 0) {
+            printf("lync version %s\n", LYNC_VERSION);
+            return 0;
         } else if (argv[i][0] != '-') {
             input_file = argv[i];
         } else {

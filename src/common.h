@@ -15,6 +15,8 @@
 #define nullptr NULL
 #endif
 
+#define LYNC_VERSION "0.3.2"
+
 typedef enum {
     STAGE_LEXER,
     STAGE_PARSER,
