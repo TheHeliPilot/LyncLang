@@ -54,3 +54,8 @@ dkms.conf
 /.claude/
 /_cmake-build-debug/
 /cmake-build-debug
+
+out/
+.idea
+.vscode
+
