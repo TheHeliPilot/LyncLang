@@ -200,12 +200,11 @@ All types must be explicitly annotated. Variables are mutable by default unless 
 
 ### Arrays
 
-Lync uses a prefix `[size]` syntax for array declarations. Combined with `own`, this creates 5 distinct array/pointer types:
+Lync uses a prefix `[size]` syntax for array declarations. Combined with `own`, this creates 4 distinct array types. For reference, `own type` on its own is a simple owned pointer (not an array).
 
 | Lync Syntax | How to Read |
 |---|---|
 | `arr: [5] int` | 5 ints |
-| `arr: own int` | pointer to int |
 | `arr: own [5] int` | pointer to 5 ints (heap array) |
 | `arr: [5] own int` | 5 pointers to ints (stack array of owns) |
 | `arr: own [5] own int` | pointer to 5 pointers to ints (heap array of pointers) |
