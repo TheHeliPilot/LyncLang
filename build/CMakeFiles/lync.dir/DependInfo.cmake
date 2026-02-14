@@ -8,15 +8,15 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/cottosen/source/repos/LyncLang/analyzer.c" "CMakeFiles/lync.dir/analyzer.c.o" "gcc" "CMakeFiles/lync.dir/analyzer.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/codegen.c" "CMakeFiles/lync.dir/codegen.c.o" "gcc" "CMakeFiles/lync.dir/codegen.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/codegen_asm.c" "CMakeFiles/lync.dir/codegen_asm.c.o" "gcc" "CMakeFiles/lync.dir/codegen_asm.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/error.c" "CMakeFiles/lync.dir/error.c.o" "gcc" "CMakeFiles/lync.dir/error.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/file_loader.c" "CMakeFiles/lync.dir/file_loader.c.o" "gcc" "CMakeFiles/lync.dir/file_loader.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/lexer.c" "CMakeFiles/lync.dir/lexer.c.o" "gcc" "CMakeFiles/lync.dir/lexer.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/main.c" "CMakeFiles/lync.dir/main.c.o" "gcc" "CMakeFiles/lync.dir/main.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/optimizer.c" "CMakeFiles/lync.dir/optimizer.c.o" "gcc" "CMakeFiles/lync.dir/optimizer.c.o.d"
-  "/home/cottosen/source/repos/LyncLang/parser.c" "CMakeFiles/lync.dir/parser.c.o" "gcc" "CMakeFiles/lync.dir/parser.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/analyzer.c" "CMakeFiles/lync.dir/src/analyzer.c.o" "gcc" "CMakeFiles/lync.dir/src/analyzer.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/codegen.c" "CMakeFiles/lync.dir/src/codegen.c.o" "gcc" "CMakeFiles/lync.dir/src/codegen.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/codegen_asm.c" "CMakeFiles/lync.dir/src/codegen_asm.c.o" "gcc" "CMakeFiles/lync.dir/src/codegen_asm.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/error.c" "CMakeFiles/lync.dir/src/error.c.o" "gcc" "CMakeFiles/lync.dir/src/error.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/file_loader.c" "CMakeFiles/lync.dir/src/file_loader.c.o" "gcc" "CMakeFiles/lync.dir/src/file_loader.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/lexer.c" "CMakeFiles/lync.dir/src/lexer.c.o" "gcc" "CMakeFiles/lync.dir/src/lexer.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/main.c" "CMakeFiles/lync.dir/src/main.c.o" "gcc" "CMakeFiles/lync.dir/src/main.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/optimizer.c" "CMakeFiles/lync.dir/src/optimizer.c.o" "gcc" "CMakeFiles/lync.dir/src/optimizer.c.o.d"
+  "/home/cottosen/source/repos/LyncLang/src/parser.c" "CMakeFiles/lync.dir/src/parser.c.o" "gcc" "CMakeFiles/lync.dir/src/parser.c.o.d"
   "" "lync" "gcc" "CMakeFiles/lync.dir/link.d"
   )
 

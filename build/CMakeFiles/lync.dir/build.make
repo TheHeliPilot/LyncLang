@@ -72,156 +72,156 @@ include CMakeFiles/lync.dir/flags.make
 CMakeFiles/lync.dir/codegen:
 .PHONY : CMakeFiles/lync.dir/codegen
 
-CMakeFiles/lync.dir/main.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/main.c.o: /home/cottosen/source/repos/LyncLang/main.c
-CMakeFiles/lync.dir/main.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/lync.dir/main.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/main.c.o -MF CMakeFiles/lync.dir/main.c.o.d -o CMakeFiles/lync.dir/main.c.o -c /home/cottosen/source/repos/LyncLang/main.c
+CMakeFiles/lync.dir/src/main.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/main.c.o: /home/cottosen/source/repos/LyncLang/src/main.c
+CMakeFiles/lync.dir/src/main.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/lync.dir/src/main.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/main.c.o -MF CMakeFiles/lync.dir/src/main.c.o.d -o CMakeFiles/lync.dir/src/main.c.o -c /home/cottosen/source/repos/LyncLang/src/main.c
 
-CMakeFiles/lync.dir/main.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/main.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/main.c > CMakeFiles/lync.dir/main.c.i
+CMakeFiles/lync.dir/src/main.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/main.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/main.c > CMakeFiles/lync.dir/src/main.c.i
 
-CMakeFiles/lync.dir/main.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/main.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/main.c -o CMakeFiles/lync.dir/main.c.s
+CMakeFiles/lync.dir/src/main.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/main.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/main.c -o CMakeFiles/lync.dir/src/main.c.s
 
-CMakeFiles/lync.dir/lexer.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/lexer.c.o: /home/cottosen/source/repos/LyncLang/lexer.c
-CMakeFiles/lync.dir/lexer.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/lync.dir/lexer.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/lexer.c.o -MF CMakeFiles/lync.dir/lexer.c.o.d -o CMakeFiles/lync.dir/lexer.c.o -c /home/cottosen/source/repos/LyncLang/lexer.c
+CMakeFiles/lync.dir/src/lexer.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/lexer.c.o: /home/cottosen/source/repos/LyncLang/src/lexer.c
+CMakeFiles/lync.dir/src/lexer.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/lync.dir/src/lexer.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/lexer.c.o -MF CMakeFiles/lync.dir/src/lexer.c.o.d -o CMakeFiles/lync.dir/src/lexer.c.o -c /home/cottosen/source/repos/LyncLang/src/lexer.c
 
-CMakeFiles/lync.dir/lexer.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/lexer.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/lexer.c > CMakeFiles/lync.dir/lexer.c.i
+CMakeFiles/lync.dir/src/lexer.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/lexer.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/lexer.c > CMakeFiles/lync.dir/src/lexer.c.i
 
-CMakeFiles/lync.dir/lexer.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/lexer.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/lexer.c -o CMakeFiles/lync.dir/lexer.c.s
+CMakeFiles/lync.dir/src/lexer.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/lexer.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/lexer.c -o CMakeFiles/lync.dir/src/lexer.c.s
 
-CMakeFiles/lync.dir/parser.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/parser.c.o: /home/cottosen/source/repos/LyncLang/parser.c
-CMakeFiles/lync.dir/parser.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/lync.dir/parser.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/parser.c.o -MF CMakeFiles/lync.dir/parser.c.o.d -o CMakeFiles/lync.dir/parser.c.o -c /home/cottosen/source/repos/LyncLang/parser.c
+CMakeFiles/lync.dir/src/parser.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/parser.c.o: /home/cottosen/source/repos/LyncLang/src/parser.c
+CMakeFiles/lync.dir/src/parser.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/lync.dir/src/parser.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/parser.c.o -MF CMakeFiles/lync.dir/src/parser.c.o.d -o CMakeFiles/lync.dir/src/parser.c.o -c /home/cottosen/source/repos/LyncLang/src/parser.c
 
-CMakeFiles/lync.dir/parser.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/parser.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/parser.c > CMakeFiles/lync.dir/parser.c.i
+CMakeFiles/lync.dir/src/parser.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/parser.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/parser.c > CMakeFiles/lync.dir/src/parser.c.i
 
-CMakeFiles/lync.dir/parser.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/parser.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/parser.c -o CMakeFiles/lync.dir/parser.c.s
+CMakeFiles/lync.dir/src/parser.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/parser.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/parser.c -o CMakeFiles/lync.dir/src/parser.c.s
 
-CMakeFiles/lync.dir/analyzer.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/analyzer.c.o: /home/cottosen/source/repos/LyncLang/analyzer.c
-CMakeFiles/lync.dir/analyzer.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/lync.dir/analyzer.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/analyzer.c.o -MF CMakeFiles/lync.dir/analyzer.c.o.d -o CMakeFiles/lync.dir/analyzer.c.o -c /home/cottosen/source/repos/LyncLang/analyzer.c
+CMakeFiles/lync.dir/src/analyzer.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/analyzer.c.o: /home/cottosen/source/repos/LyncLang/src/analyzer.c
+CMakeFiles/lync.dir/src/analyzer.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/lync.dir/src/analyzer.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/analyzer.c.o -MF CMakeFiles/lync.dir/src/analyzer.c.o.d -o CMakeFiles/lync.dir/src/analyzer.c.o -c /home/cottosen/source/repos/LyncLang/src/analyzer.c
 
-CMakeFiles/lync.dir/analyzer.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/analyzer.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/analyzer.c > CMakeFiles/lync.dir/analyzer.c.i
+CMakeFiles/lync.dir/src/analyzer.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/analyzer.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/analyzer.c > CMakeFiles/lync.dir/src/analyzer.c.i
 
-CMakeFiles/lync.dir/analyzer.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/analyzer.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/analyzer.c -o CMakeFiles/lync.dir/analyzer.c.s
+CMakeFiles/lync.dir/src/analyzer.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/analyzer.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/analyzer.c -o CMakeFiles/lync.dir/src/analyzer.c.s
 
-CMakeFiles/lync.dir/codegen.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/codegen.c.o: /home/cottosen/source/repos/LyncLang/codegen.c
-CMakeFiles/lync.dir/codegen.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/lync.dir/codegen.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/codegen.c.o -MF CMakeFiles/lync.dir/codegen.c.o.d -o CMakeFiles/lync.dir/codegen.c.o -c /home/cottosen/source/repos/LyncLang/codegen.c
+CMakeFiles/lync.dir/src/codegen.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/codegen.c.o: /home/cottosen/source/repos/LyncLang/src/codegen.c
+CMakeFiles/lync.dir/src/codegen.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/lync.dir/src/codegen.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/codegen.c.o -MF CMakeFiles/lync.dir/src/codegen.c.o.d -o CMakeFiles/lync.dir/src/codegen.c.o -c /home/cottosen/source/repos/LyncLang/src/codegen.c
 
-CMakeFiles/lync.dir/codegen.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/codegen.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/codegen.c > CMakeFiles/lync.dir/codegen.c.i
+CMakeFiles/lync.dir/src/codegen.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/codegen.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/codegen.c > CMakeFiles/lync.dir/src/codegen.c.i
 
-CMakeFiles/lync.dir/codegen.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/codegen.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/codegen.c -o CMakeFiles/lync.dir/codegen.c.s
+CMakeFiles/lync.dir/src/codegen.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/codegen.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/codegen.c -o CMakeFiles/lync.dir/src/codegen.c.s
 
-CMakeFiles/lync.dir/error.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/error.c.o: /home/cottosen/source/repos/LyncLang/error.c
-CMakeFiles/lync.dir/error.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/lync.dir/error.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/error.c.o -MF CMakeFiles/lync.dir/error.c.o.d -o CMakeFiles/lync.dir/error.c.o -c /home/cottosen/source/repos/LyncLang/error.c
+CMakeFiles/lync.dir/src/error.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/error.c.o: /home/cottosen/source/repos/LyncLang/src/error.c
+CMakeFiles/lync.dir/src/error.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/lync.dir/src/error.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/error.c.o -MF CMakeFiles/lync.dir/src/error.c.o.d -o CMakeFiles/lync.dir/src/error.c.o -c /home/cottosen/source/repos/LyncLang/src/error.c
 
-CMakeFiles/lync.dir/error.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/error.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/error.c > CMakeFiles/lync.dir/error.c.i
+CMakeFiles/lync.dir/src/error.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/error.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/error.c > CMakeFiles/lync.dir/src/error.c.i
 
-CMakeFiles/lync.dir/error.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/error.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/error.c -o CMakeFiles/lync.dir/error.c.s
+CMakeFiles/lync.dir/src/error.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/error.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/error.c -o CMakeFiles/lync.dir/src/error.c.s
 
-CMakeFiles/lync.dir/optimizer.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/optimizer.c.o: /home/cottosen/source/repos/LyncLang/optimizer.c
-CMakeFiles/lync.dir/optimizer.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/lync.dir/optimizer.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/optimizer.c.o -MF CMakeFiles/lync.dir/optimizer.c.o.d -o CMakeFiles/lync.dir/optimizer.c.o -c /home/cottosen/source/repos/LyncLang/optimizer.c
+CMakeFiles/lync.dir/src/optimizer.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/optimizer.c.o: /home/cottosen/source/repos/LyncLang/src/optimizer.c
+CMakeFiles/lync.dir/src/optimizer.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/lync.dir/src/optimizer.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/optimizer.c.o -MF CMakeFiles/lync.dir/src/optimizer.c.o.d -o CMakeFiles/lync.dir/src/optimizer.c.o -c /home/cottosen/source/repos/LyncLang/src/optimizer.c
 
-CMakeFiles/lync.dir/optimizer.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/optimizer.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/optimizer.c > CMakeFiles/lync.dir/optimizer.c.i
+CMakeFiles/lync.dir/src/optimizer.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/optimizer.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/optimizer.c > CMakeFiles/lync.dir/src/optimizer.c.i
 
-CMakeFiles/lync.dir/optimizer.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/optimizer.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/optimizer.c -o CMakeFiles/lync.dir/optimizer.c.s
+CMakeFiles/lync.dir/src/optimizer.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/optimizer.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/optimizer.c -o CMakeFiles/lync.dir/src/optimizer.c.s
 
-CMakeFiles/lync.dir/codegen_asm.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/codegen_asm.c.o: /home/cottosen/source/repos/LyncLang/codegen_asm.c
-CMakeFiles/lync.dir/codegen_asm.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/lync.dir/codegen_asm.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/codegen_asm.c.o -MF CMakeFiles/lync.dir/codegen_asm.c.o.d -o CMakeFiles/lync.dir/codegen_asm.c.o -c /home/cottosen/source/repos/LyncLang/codegen_asm.c
+CMakeFiles/lync.dir/src/codegen_asm.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/codegen_asm.c.o: /home/cottosen/source/repos/LyncLang/src/codegen_asm.c
+CMakeFiles/lync.dir/src/codegen_asm.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/lync.dir/src/codegen_asm.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/codegen_asm.c.o -MF CMakeFiles/lync.dir/src/codegen_asm.c.o.d -o CMakeFiles/lync.dir/src/codegen_asm.c.o -c /home/cottosen/source/repos/LyncLang/src/codegen_asm.c
 
-CMakeFiles/lync.dir/codegen_asm.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/codegen_asm.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/codegen_asm.c > CMakeFiles/lync.dir/codegen_asm.c.i
+CMakeFiles/lync.dir/src/codegen_asm.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/codegen_asm.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/codegen_asm.c > CMakeFiles/lync.dir/src/codegen_asm.c.i
 
-CMakeFiles/lync.dir/codegen_asm.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/codegen_asm.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/codegen_asm.c -o CMakeFiles/lync.dir/codegen_asm.c.s
+CMakeFiles/lync.dir/src/codegen_asm.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/codegen_asm.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/codegen_asm.c -o CMakeFiles/lync.dir/src/codegen_asm.c.s
 
-CMakeFiles/lync.dir/file_loader.c.o: CMakeFiles/lync.dir/flags.make
-CMakeFiles/lync.dir/file_loader.c.o: /home/cottosen/source/repos/LyncLang/file_loader.c
-CMakeFiles/lync.dir/file_loader.c.o: CMakeFiles/lync.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/lync.dir/file_loader.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/file_loader.c.o -MF CMakeFiles/lync.dir/file_loader.c.o.d -o CMakeFiles/lync.dir/file_loader.c.o -c /home/cottosen/source/repos/LyncLang/file_loader.c
+CMakeFiles/lync.dir/src/file_loader.c.o: CMakeFiles/lync.dir/flags.make
+CMakeFiles/lync.dir/src/file_loader.c.o: /home/cottosen/source/repos/LyncLang/src/file_loader.c
+CMakeFiles/lync.dir/src/file_loader.c.o: CMakeFiles/lync.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cottosen/source/repos/LyncLang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/lync.dir/src/file_loader.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/lync.dir/src/file_loader.c.o -MF CMakeFiles/lync.dir/src/file_loader.c.o.d -o CMakeFiles/lync.dir/src/file_loader.c.o -c /home/cottosen/source/repos/LyncLang/src/file_loader.c
 
-CMakeFiles/lync.dir/file_loader.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/file_loader.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/file_loader.c > CMakeFiles/lync.dir/file_loader.c.i
+CMakeFiles/lync.dir/src/file_loader.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/lync.dir/src/file_loader.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/cottosen/source/repos/LyncLang/src/file_loader.c > CMakeFiles/lync.dir/src/file_loader.c.i
 
-CMakeFiles/lync.dir/file_loader.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/file_loader.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/file_loader.c -o CMakeFiles/lync.dir/file_loader.c.s
+CMakeFiles/lync.dir/src/file_loader.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/lync.dir/src/file_loader.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/cottosen/source/repos/LyncLang/src/file_loader.c -o CMakeFiles/lync.dir/src/file_loader.c.s
 
 # Object files for target lync
 lync_OBJECTS = \
-"CMakeFiles/lync.dir/main.c.o" \
-"CMakeFiles/lync.dir/lexer.c.o" \
-"CMakeFiles/lync.dir/parser.c.o" \
-"CMakeFiles/lync.dir/analyzer.c.o" \
-"CMakeFiles/lync.dir/codegen.c.o" \
-"CMakeFiles/lync.dir/error.c.o" \
-"CMakeFiles/lync.dir/optimizer.c.o" \
-"CMakeFiles/lync.dir/codegen_asm.c.o" \
-"CMakeFiles/lync.dir/file_loader.c.o"
+"CMakeFiles/lync.dir/src/main.c.o" \
+"CMakeFiles/lync.dir/src/lexer.c.o" \
+"CMakeFiles/lync.dir/src/parser.c.o" \
+"CMakeFiles/lync.dir/src/analyzer.c.o" \
+"CMakeFiles/lync.dir/src/codegen.c.o" \
+"CMakeFiles/lync.dir/src/error.c.o" \
+"CMakeFiles/lync.dir/src/optimizer.c.o" \
+"CMakeFiles/lync.dir/src/codegen_asm.c.o" \
+"CMakeFiles/lync.dir/src/file_loader.c.o"
 
 # External object files for target lync
 lync_EXTERNAL_OBJECTS =
 
-lync: CMakeFiles/lync.dir/main.c.o
-lync: CMakeFiles/lync.dir/lexer.c.o
-lync: CMakeFiles/lync.dir/parser.c.o
-lync: CMakeFiles/lync.dir/analyzer.c.o
-lync: CMakeFiles/lync.dir/codegen.c.o
-lync: CMakeFiles/lync.dir/error.c.o
-lync: CMakeFiles/lync.dir/optimizer.c.o
-lync: CMakeFiles/lync.dir/codegen_asm.c.o
-lync: CMakeFiles/lync.dir/file_loader.c.o
+lync: CMakeFiles/lync.dir/src/main.c.o
+lync: CMakeFiles/lync.dir/src/lexer.c.o
+lync: CMakeFiles/lync.dir/src/parser.c.o
+lync: CMakeFiles/lync.dir/src/analyzer.c.o
+lync: CMakeFiles/lync.dir/src/codegen.c.o
+lync: CMakeFiles/lync.dir/src/error.c.o
+lync: CMakeFiles/lync.dir/src/optimizer.c.o
+lync: CMakeFiles/lync.dir/src/codegen_asm.c.o
+lync: CMakeFiles/lync.dir/src/file_loader.c.o
 lync: CMakeFiles/lync.dir/build.make
 lync: CMakeFiles/lync.dir/compiler_depend.ts
 lync: CMakeFiles/lync.dir/link.txt

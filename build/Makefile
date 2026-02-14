@@ -129,221 +129,221 @@ lync/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/build
 .PHONY : lync/fast
 
-analyzer.o: analyzer.c.o
-.PHONY : analyzer.o
+src/analyzer.o: src/analyzer.c.o
+.PHONY : src/analyzer.o
 
 # target to build an object file
-analyzer.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/analyzer.c.o
-.PHONY : analyzer.c.o
+src/analyzer.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/analyzer.c.o
+.PHONY : src/analyzer.c.o
 
-analyzer.i: analyzer.c.i
-.PHONY : analyzer.i
+src/analyzer.i: src/analyzer.c.i
+.PHONY : src/analyzer.i
 
 # target to preprocess a source file
-analyzer.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/analyzer.c.i
-.PHONY : analyzer.c.i
+src/analyzer.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/analyzer.c.i
+.PHONY : src/analyzer.c.i
 
-analyzer.s: analyzer.c.s
-.PHONY : analyzer.s
+src/analyzer.s: src/analyzer.c.s
+.PHONY : src/analyzer.s
 
 # target to generate assembly for a file
-analyzer.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/analyzer.c.s
-.PHONY : analyzer.c.s
+src/analyzer.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/analyzer.c.s
+.PHONY : src/analyzer.c.s
 
-codegen.o: codegen.c.o
-.PHONY : codegen.o
+src/codegen.o: src/codegen.c.o
+.PHONY : src/codegen.o
 
 # target to build an object file
-codegen.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/codegen.c.o
-.PHONY : codegen.c.o
+src/codegen.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/codegen.c.o
+.PHONY : src/codegen.c.o
 
-codegen.i: codegen.c.i
-.PHONY : codegen.i
+src/codegen.i: src/codegen.c.i
+.PHONY : src/codegen.i
 
 # target to preprocess a source file
-codegen.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/codegen.c.i
-.PHONY : codegen.c.i
+src/codegen.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/codegen.c.i
+.PHONY : src/codegen.c.i
 
-codegen.s: codegen.c.s
-.PHONY : codegen.s
+src/codegen.s: src/codegen.c.s
+.PHONY : src/codegen.s
 
 # target to generate assembly for a file
-codegen.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/codegen.c.s
-.PHONY : codegen.c.s
+src/codegen.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/codegen.c.s
+.PHONY : src/codegen.c.s
 
-codegen_asm.o: codegen_asm.c.o
-.PHONY : codegen_asm.o
+src/codegen_asm.o: src/codegen_asm.c.o
+.PHONY : src/codegen_asm.o
 
 # target to build an object file
-codegen_asm.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/codegen_asm.c.o
-.PHONY : codegen_asm.c.o
+src/codegen_asm.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/codegen_asm.c.o
+.PHONY : src/codegen_asm.c.o
 
-codegen_asm.i: codegen_asm.c.i
-.PHONY : codegen_asm.i
+src/codegen_asm.i: src/codegen_asm.c.i
+.PHONY : src/codegen_asm.i
 
 # target to preprocess a source file
-codegen_asm.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/codegen_asm.c.i
-.PHONY : codegen_asm.c.i
+src/codegen_asm.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/codegen_asm.c.i
+.PHONY : src/codegen_asm.c.i
 
-codegen_asm.s: codegen_asm.c.s
-.PHONY : codegen_asm.s
+src/codegen_asm.s: src/codegen_asm.c.s
+.PHONY : src/codegen_asm.s
 
 # target to generate assembly for a file
-codegen_asm.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/codegen_asm.c.s
-.PHONY : codegen_asm.c.s
+src/codegen_asm.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/codegen_asm.c.s
+.PHONY : src/codegen_asm.c.s
 
-error.o: error.c.o
-.PHONY : error.o
+src/error.o: src/error.c.o
+.PHONY : src/error.o
 
 # target to build an object file
-error.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/error.c.o
-.PHONY : error.c.o
+src/error.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/error.c.o
+.PHONY : src/error.c.o
 
-error.i: error.c.i
-.PHONY : error.i
+src/error.i: src/error.c.i
+.PHONY : src/error.i
 
 # target to preprocess a source file
-error.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/error.c.i
-.PHONY : error.c.i
+src/error.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/error.c.i
+.PHONY : src/error.c.i
 
-error.s: error.c.s
-.PHONY : error.s
+src/error.s: src/error.c.s
+.PHONY : src/error.s
 
 # target to generate assembly for a file
-error.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/error.c.s
-.PHONY : error.c.s
+src/error.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/error.c.s
+.PHONY : src/error.c.s
 
-file_loader.o: file_loader.c.o
-.PHONY : file_loader.o
+src/file_loader.o: src/file_loader.c.o
+.PHONY : src/file_loader.o
 
 # target to build an object file
-file_loader.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/file_loader.c.o
-.PHONY : file_loader.c.o
+src/file_loader.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/file_loader.c.o
+.PHONY : src/file_loader.c.o
 
-file_loader.i: file_loader.c.i
-.PHONY : file_loader.i
+src/file_loader.i: src/file_loader.c.i
+.PHONY : src/file_loader.i
 
 # target to preprocess a source file
-file_loader.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/file_loader.c.i
-.PHONY : file_loader.c.i
+src/file_loader.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/file_loader.c.i
+.PHONY : src/file_loader.c.i
 
-file_loader.s: file_loader.c.s
-.PHONY : file_loader.s
+src/file_loader.s: src/file_loader.c.s
+.PHONY : src/file_loader.s
 
 # target to generate assembly for a file
-file_loader.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/file_loader.c.s
-.PHONY : file_loader.c.s
+src/file_loader.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/file_loader.c.s
+.PHONY : src/file_loader.c.s
 
-lexer.o: lexer.c.o
-.PHONY : lexer.o
+src/lexer.o: src/lexer.c.o
+.PHONY : src/lexer.o
 
 # target to build an object file
-lexer.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/lexer.c.o
-.PHONY : lexer.c.o
+src/lexer.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/lexer.c.o
+.PHONY : src/lexer.c.o
 
-lexer.i: lexer.c.i
-.PHONY : lexer.i
+src/lexer.i: src/lexer.c.i
+.PHONY : src/lexer.i
 
 # target to preprocess a source file
-lexer.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/lexer.c.i
-.PHONY : lexer.c.i
+src/lexer.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/lexer.c.i
+.PHONY : src/lexer.c.i
 
-lexer.s: lexer.c.s
-.PHONY : lexer.s
+src/lexer.s: src/lexer.c.s
+.PHONY : src/lexer.s
 
 # target to generate assembly for a file
-lexer.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/lexer.c.s
-.PHONY : lexer.c.s
+src/lexer.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/lexer.c.s
+.PHONY : src/lexer.c.s
 
-main.o: main.c.o
-.PHONY : main.o
+src/main.o: src/main.c.o
+.PHONY : src/main.o
 
 # target to build an object file
-main.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/main.c.o
-.PHONY : main.c.o
+src/main.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/main.c.o
+.PHONY : src/main.c.o
 
-main.i: main.c.i
-.PHONY : main.i
+src/main.i: src/main.c.i
+.PHONY : src/main.i
 
 # target to preprocess a source file
-main.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/main.c.i
-.PHONY : main.c.i
+src/main.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/main.c.i
+.PHONY : src/main.c.i
 
-main.s: main.c.s
-.PHONY : main.s
+src/main.s: src/main.c.s
+.PHONY : src/main.s
 
 # target to generate assembly for a file
-main.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/main.c.s
-.PHONY : main.c.s
+src/main.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/main.c.s
+.PHONY : src/main.c.s
 
-optimizer.o: optimizer.c.o
-.PHONY : optimizer.o
+src/optimizer.o: src/optimizer.c.o
+.PHONY : src/optimizer.o
 
 # target to build an object file
-optimizer.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/optimizer.c.o
-.PHONY : optimizer.c.o
+src/optimizer.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/optimizer.c.o
+.PHONY : src/optimizer.c.o
 
-optimizer.i: optimizer.c.i
-.PHONY : optimizer.i
+src/optimizer.i: src/optimizer.c.i
+.PHONY : src/optimizer.i
 
 # target to preprocess a source file
-optimizer.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/optimizer.c.i
-.PHONY : optimizer.c.i
+src/optimizer.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/optimizer.c.i
+.PHONY : src/optimizer.c.i
 
-optimizer.s: optimizer.c.s
-.PHONY : optimizer.s
+src/optimizer.s: src/optimizer.c.s
+.PHONY : src/optimizer.s
 
 # target to generate assembly for a file
-optimizer.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/optimizer.c.s
-.PHONY : optimizer.c.s
+src/optimizer.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/optimizer.c.s
+.PHONY : src/optimizer.c.s
 
-parser.o: parser.c.o
-.PHONY : parser.o
+src/parser.o: src/parser.c.o
+.PHONY : src/parser.o
 
 # target to build an object file
-parser.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/parser.c.o
-.PHONY : parser.c.o
+src/parser.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/parser.c.o
+.PHONY : src/parser.c.o
 
-parser.i: parser.c.i
-.PHONY : parser.i
+src/parser.i: src/parser.c.i
+.PHONY : src/parser.i
 
 # target to preprocess a source file
-parser.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/parser.c.i
-.PHONY : parser.c.i
+src/parser.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/parser.c.i
+.PHONY : src/parser.c.i
 
-parser.s: parser.c.s
-.PHONY : parser.s
+src/parser.s: src/parser.c.s
+.PHONY : src/parser.s
 
 # target to generate assembly for a file
-parser.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/parser.c.s
-.PHONY : parser.c.s
+src/parser.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/parser.c.s
+.PHONY : src/parser.c.s
 
 # Help Target
 help:
@@ -354,33 +354,33 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... lync"
-	@echo "... analyzer.o"
-	@echo "... analyzer.i"
-	@echo "... analyzer.s"
-	@echo "... codegen.o"
-	@echo "... codegen.i"
-	@echo "... codegen.s"
-	@echo "... codegen_asm.o"
-	@echo "... codegen_asm.i"
-	@echo "... codegen_asm.s"
-	@echo "... error.o"
-	@echo "... error.i"
-	@echo "... error.s"
-	@echo "... file_loader.o"
-	@echo "... file_loader.i"
-	@echo "... file_loader.s"
-	@echo "... lexer.o"
-	@echo "... lexer.i"
-	@echo "... lexer.s"
-	@echo "... main.o"
-	@echo "... main.i"
-	@echo "... main.s"
-	@echo "... optimizer.o"
-	@echo "... optimizer.i"
-	@echo "... optimizer.s"
-	@echo "... parser.o"
-	@echo "... parser.i"
-	@echo "... parser.s"
+	@echo "... src/analyzer.o"
+	@echo "... src/analyzer.i"
+	@echo "... src/analyzer.s"
+	@echo "... src/codegen.o"
+	@echo "... src/codegen.i"
+	@echo "... src/codegen.s"
+	@echo "... src/codegen_asm.o"
+	@echo "... src/codegen_asm.i"
+	@echo "... src/codegen_asm.s"
+	@echo "... src/error.o"
+	@echo "... src/error.i"
+	@echo "... src/error.s"
+	@echo "... src/file_loader.o"
+	@echo "... src/file_loader.i"
+	@echo "... src/file_loader.s"
+	@echo "... src/lexer.o"
+	@echo "... src/lexer.i"
+	@echo "... src/lexer.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
+	@echo "... src/optimizer.o"
+	@echo "... src/optimizer.i"
+	@echo "... src/optimizer.s"
+	@echo "... src/parser.o"
+	@echo "... src/parser.i"
+	@echo "... src/parser.s"
 .PHONY : help
 
 
