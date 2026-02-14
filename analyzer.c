@@ -398,6 +398,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 strcmp(e->as.func_call.name, "read_str") == 0 ||
                 strcmp(e->as.func_call.name, "read_bool") == 0 ||
                 strcmp(e->as.func_call.name, "read_char") == 0 ||
+                strcmp(e->as.func_call.name, "read_float") == 0 ||
+                strcmp(e->as.func_call.name, "read_double") == 0 ||
                 strcmp(e->as.func_call.name, "read_key") == 0) {
 
                 //check if function is imported
@@ -423,11 +425,26 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 } else if (strcmp(e->as.func_call.name, "read_char") == 0 ||
                            strcmp(e->as.func_call.name, "read_key") == 0) {
                     result = CHAR_KEYWORD_T;
+                } else if (strcmp(e->as.func_call.name, "read_float") == 0) {
+                    result = FLOAT_KEYWORD_T;
+                } else if (strcmp(e->as.func_call.name, "read_double") == 0) {
+                    result = DOUBLE_KEYWORD_T;
                 }
 
                 //mark this expression as nullable
                 e->is_nullable = true;
-                e->as.func_call.resolved_sign = NULL;
+                e->is_nullable = true;
+                
+                //create a dummy signature to handle ownership
+                //we need this so that assigning to 'own' variables works
+                FuncSign* sig = malloc(sizeof(FuncSign));
+                sig->name = strdup(e->as.func_call.name);
+                sig->retType = result;
+                sig->retOwnership = OWNERSHIP_OWN; //all read_* functions return owned pointers
+                sig->paramNum = 0;
+                sig->parameters = NULL;
+                
+                e->as.func_call.resolved_sign = sig;
                 break;
             }
 

@@ -74,3 +74,17 @@
 10	152	7927806991900658	CMakeFiles/lync.dir/parser.c.obj	3c32c226d73d55c2
 16	156	7927806991955979	CMakeFiles/lync.dir/analyzer.c.obj	9b550cbf6e25bbcd
 157	235	7927806993359766	lync.exe	3cb54d543a22ce6f
+29	105	7927830900327479	CMakeFiles/lync.dir/codegen_asm.c.obj	50922ed47004a683
+8	106	7927830900107004	CMakeFiles/lync.dir/lexer.c.obj	5274857ca8febb09
+4	107	7927830900081685	CMakeFiles/lync.dir/main.c.obj	e45bc10902c16ca5
+25	125	7927830900282444	CMakeFiles/lync.dir/optimizer.c.obj	e717a44c48a1cb0c
+34	127	7927830900372573	CMakeFiles/lync.dir/file_loader.c.obj	f418a2c9a9408fd8
+17	151	7927830900199932	CMakeFiles/lync.dir/codegen.c.obj	284296355a5f3f7d
+11	155	7927830900154862	CMakeFiles/lync.dir/parser.c.obj	3c32c226d73d55c2
+14	157	7927830900179891	CMakeFiles/lync.dir/analyzer.c.obj	9b550cbf6e25bbcd
+21	2349	7927830900252453	CMakeFiles/lync.dir/error.c.obj	473a4476bb132ecd
+2349	2426	7927830923533300	lync.exe	3cb54d543a22ce6f
+3	128	7927834320060135	CMakeFiles/lync.dir/analyzer.c.obj	9b550cbf6e25bbcd
+128	196	7927834321302812	lync.exe	3cb54d543a22ce6f
+3	102	7927836766224233	CMakeFiles/lync.dir/codegen.c.obj	284296355a5f3f7d
+103	174	7927836767224685	lync.exe	3cb54d543a22ce6f

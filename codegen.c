@@ -353,6 +353,12 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             } else if (strcmp(e->as.func_call.name, "read_key") == 0) {
                 fprintf(out, "read_key()");
                 break;
+            } else if (strcmp(e->as.func_call.name, "read_float") == 0) {
+                fprintf(out, "read_float()");
+                break;
+            } else if (strcmp(e->as.func_call.name, "read_double") == 0) {
+                fprintf(out, "read_double()");
+                break;
             }
 
             if(strcmp(e->as.func_call.name, "print") == 0) {
@@ -904,6 +910,8 @@ void generate_code(Program* prog, FILE* output) {
         bool need_read_str = false;
         bool need_read_bool = false;
         bool need_read_char = false;
+        bool need_read_float = false;
+        bool need_read_double = false;
         bool need_read_key = false;
 
         for (int i = 0; i < prog->imports->import_count; i++) {
@@ -916,6 +924,8 @@ void generate_code(Program* prog, FILE* output) {
                 else if (strcmp(import->function_name, "read_str") == 0) need_read_str = true;
                 else if (strcmp(import->function_name, "read_bool") == 0) need_read_bool = true;
                 else if (strcmp(import->function_name, "read_char") == 0) need_read_char = true;
+                else if (strcmp(import->function_name, "read_float") == 0) need_read_float = true;
+                else if (strcmp(import->function_name, "read_double") == 0) need_read_double = true;
                 else if (strcmp(import->function_name, "read_key") == 0) need_read_key = true;
             }
         }
@@ -975,6 +985,28 @@ void generate_code(Program* prog, FILE* output) {
             fprintf(output, "    if (buffer[0] == '\\0' || buffer[0] == '\\n') return NULL;\n");
             fprintf(output, "    char* result = malloc(sizeof(char));\n");
             fprintf(output, "    *result = buffer[0];\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+
+        //generate read_float
+        if (has_wildcard || need_read_float) {
+            fprintf(output, "float* read_float() {\n");
+            fprintf(output, "    char buffer[256];\n");
+            fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
+            fprintf(output, "    float* result = malloc(sizeof(float));\n");
+            fprintf(output, "    *result = strtof(buffer, NULL);\n");
+            fprintf(output, "    return result;\n");
+            fprintf(output, "}\n\n");
+        }
+
+        //generate read_double
+        if (has_wildcard || need_read_double) {
+            fprintf(output, "double* read_double() {\n");
+            fprintf(output, "    char buffer[256];\n");
+            fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
+            fprintf(output, "    double* result = malloc(sizeof(double));\n");
+            fprintf(output, "    *result = strtod(buffer, NULL);\n");
             fprintf(output, "    return result;\n");
             fprintf(output, "}\n\n");
         }
