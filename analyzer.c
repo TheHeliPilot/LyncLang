@@ -433,7 +433,6 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
 
                 //mark this expression as nullable
                 e->is_nullable = true;
-                e->is_nullable = true;
                 
                 //create a dummy signature to handle ownership
                 //we need this so that assigning to 'own' variables works

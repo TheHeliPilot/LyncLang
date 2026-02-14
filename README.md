@@ -406,6 +406,8 @@ include std.io.read_int;      // Import specific function
 | `read_str()` | `own? string` | Read string from stdin |
 | `read_bool()` | `own? bool` | Read boolean from stdin |
 | `read_char()` | `own? char` | Read character from stdin |
+| `read_float()` | `own? float` | Read float from stdin |
+| `read_double()` | `own? double` | Read double from stdin |
 | `read_key()` | `own? char` | Read keypress without echo |
 
 **Example:**
