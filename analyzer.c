@@ -176,8 +176,6 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 }
             }
 
-            }
-
             //Check for nullable usage in expressions (only allowed if unwrapped)
             if (sym->is_nullable && !sym->is_unwrapped) {
                 stage_error(STAGE_ANALYZER, e->loc,
@@ -645,6 +643,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
 
                     //Mark original variable as unwrapped in this branch scope
                     Symbol* origSym = lookup(branchScope, matchedSym->name);
+                    if (origSym) {
                         origSym->is_unwrapped = true;
                     }
                 }
@@ -804,6 +803,12 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                 }
             }
             declare(scope, s->as.var_decl.name, s->as.var_decl.varType, s->as.var_decl.ownership, s->as.var_decl.isNullable, s->as.var_decl.isConst, s->as.var_decl.isArray, arraySize);
+
+            // Set element ownership on the symbol
+            if (s->as.var_decl.elementOwnership != OWNERSHIP_NONE) {
+                Symbol* sym = lookup(scope, s->as.var_decl.name);
+                if (sym) sym->element_ownership = s->as.var_decl.elementOwnership;
+            }
 
             // For ref variables, set the owner to the variable being borrowed
             if (s->as.var_decl.ownership == OWNERSHIP_REF) {
@@ -1099,6 +1104,10 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
             // CHECK: Free after move
             if (sym->state == MOVED)
                 stage_error(STAGE_ANALYZER, s->loc, "cannot free '%s', ownership has been moved", s->as.free_stmt.varName);
+
+            // Set cascading free info for codegen
+            s->as.free_stmt.isArrayOfOwned = (sym->is_array && sym->element_ownership == OWNERSHIP_OWN);
+            s->as.free_stmt.arraySize = sym->array_size;
 
             //mark as freed
             sym->state = FREED;

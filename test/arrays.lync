@@ -1,6 +1,6 @@
 def main(): int {
     // Stack array with initialization
-    arr1: int[3] = {10, 20, 30};
+    arr1: [3] int = {10, 20, 30};
     print("arr1[0]:", arr1[0]);
     print("arr1[1]:", arr1[1]);
     print("arr1[2]:", arr1[2]);
@@ -10,7 +10,7 @@ def main(): int {
     print("arr1[1] after:", arr1[1]);
 
     // Heap array element assignment
-    arr3: own int[2] = alloc 1;
+    arr3: own [2] int = alloc 1;
     arr3[0] = 5;
     arr3[1] = 10;
     print("arr3[0]:", arr3[0]);

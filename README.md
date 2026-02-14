@@ -5,7 +5,7 @@ A systems programming language with manual memory management, compile-time owner
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
-![Version: 0.2.3](https://img.shields.io/badge/Version-0.2.3-orange.svg)
+![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-orange.svg)
 
 File extension: `.lync`
 
@@ -200,42 +200,63 @@ All types must be explicitly annotated. Variables are mutable by default unless 
 
 ### Arrays
 
-**Stack Arrays (Constant Size):**
-```c
-arr: int[5] = {1, 2, 3, 4, 5};
+Lync uses a prefix `[size]` syntax for array declarations. Combined with `own`, this creates 5 distinct array/pointer types:
+
+| Lync Syntax | How to Read |
+|---|---|
+| `arr: [5] int` | 5 ints |
+| `arr: own int` | pointer to int |
+| `arr: own [5] int` | pointer to 5 ints (heap array) |
+| `arr: [5] own int` | 5 pointers to ints (stack array of owns) |
+| `arr: own [5] own int` | pointer to 5 pointers to ints (heap array of pointers) |
+
+**1. Stack Array — `[N] type`**
+```
+arr: [5] int = {1, 2, 3, 4, 5};
 arr[0] = 10;  // Element access and assignment
 x: int = arr[2];
 ```
 
-**Stack Arrays (Variable Size - VLA):**
-```c
+**2. Owned Pointer (Scalar) — `own type`**
+```
+ptr: own int = alloc 42;
+free ptr;
+```
+
+**3. Heap Array — `own [N] type`**
+```
+arr: own [5] int = alloc 0;
+arr[0] = 42;
+free arr;
+```
+
+**4. Stack Array of Owned Pointers — `[N] own type`**
+```
+ptrs: [5] own int;
+// Each element is an owned pointer (int*)
+// Generates: int* ptrs[5]
+```
+
+**5. Heap Array of Owned Pointers — `own [N] own type`**
+```
+ptrs: own [5] own int;
+// Double pointer: int** ptrs = malloc(5 * sizeof(int*))
+// On free, automatically frees all elements first:
+free ptrs;  // → for each element: free(ptrs[i]); then free(ptrs);
+```
+
+**Variable-Length Arrays (VLA):**
+```
 size: int = 5;
-arr: int[size];  // Uninitialized - must assign elements manually
+arr: [size] int;  // Uninitialized — must assign elements manually
 for (i: 0 to size - 1) {
     arr[i] = i + 1;
 }
 ```
 
-**Heap Arrays (Dynamic Allocation):**
-```c
-arr: own int[5] = alloc int[5];
-arr[0] = 42;  // Elements are uninitialized, must assign manually
-free arr;
-```
-
-**Heap Arrays (Variable Size):**
-```c
-size: int = 10;
-arr: own int[size] = alloc int[size];
-for (i: 0 to size - 1) {
-    arr[i] = i * 2;
-}
-free arr;
-```
-
 **Built-in Functions:**
-```c
-arr: int[5] = {1, 2, 3, 4, 5};
+```
+arr: [5] int = {1, 2, 3, 4, 5};
 len: int = length(arr);  // Compile-time constant for stack arrays
 ```
 
@@ -246,12 +267,12 @@ len: int = length(arr);  // Compile-time constant for stack arrays
 - Heap arrays require `alloc` and must be freed
 - Direct array assignment is blocked (prevents accidental copies)
 - Element-wise assignment via `arr[i] = value` is allowed
-- Arrays can use compile-time constants or runtime variables for size
+- `free` on arrays of owned pointers automatically frees all elements first (cascading free)
 - **Compile-time bounds checking**: Constant indices on constant-sized arrays are validated at compile time
 
 **Compile-Time Safety:**
-```c
-arr: int[3] = {1, 2, 3};
+```
+arr: [3] int = {1, 2, 3};
 
 arr[0];   // ✅ OK
 arr[2];   // ✅ OK (last element)

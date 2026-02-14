@@ -529,8 +529,8 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
     switch (s->type) {
         //inside emit_stmt switch case VAR_DECL_S:
         case VAR_DECL_S:
-            if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
-                //stack array
+            if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE && s->as.var_decl.elementOwnership == OWNERSHIP_NONE) {
+                // Case 1: stack array of values - int arr[5]
                 emit_indent(out, indent);
                 fprintf(out, "%s %s[",
                         type_to_c_type(s->as.var_decl.varType),
@@ -538,14 +538,13 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, "]");
 
-                //only emit initialization if present (VLAs can be uninitialized)
                 if (s->as.var_decl.expr->type == ARRAY_DECL_E) {
                     fprintf(out, " = ");
                     emit_expr(s->as.var_decl.expr, out, fstn);
                 }
                 fprintf(out, ";\n");
-            } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN) {
-                //heap array
+            } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.elementOwnership == OWNERSHIP_NONE) {
+                // Case 3: heap array of values - int* arr = malloc(N * sizeof(int))
                 emit_indent(out, indent);
                 fprintf(out, "%s* %s = malloc(sizeof(%s) * ",
                         type_to_c_type(s->as.var_decl.varType),
@@ -553,8 +552,23 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                         type_to_c_type(s->as.var_decl.varType));
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, ");\n");
-
-                //todo: handle array initialization in alloc (Phase 6)
+            } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE && s->as.var_decl.elementOwnership == OWNERSHIP_OWN) {
+                // Case 4: stack array of owned pointers - int* arr[5]
+                emit_indent(out, indent);
+                fprintf(out, "%s* %s[",
+                        type_to_c_type(s->as.var_decl.varType),
+                        s->as.var_decl.name);
+                emit_expr(s->as.var_decl.arraySize, out, fstn);
+                fprintf(out, "];\n");
+            } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.elementOwnership == OWNERSHIP_OWN) {
+                // Case 5: heap array of owned pointers - int** arr = malloc(N * sizeof(int*))
+                emit_indent(out, indent);
+                fprintf(out, "%s** %s = malloc(sizeof(%s*) * ",
+                        type_to_c_type(s->as.var_decl.varType),
+                        s->as.var_decl.name,
+                        type_to_c_type(s->as.var_decl.varType));
+                emit_expr(s->as.var_decl.arraySize, out, fstn);
+                fprintf(out, ");\n");
             } else if (s->as.var_decl.expr->type == ALLOC_E) {
                 // Regular alloc (non-array)
                 emit_indent(out, indent);
@@ -742,6 +756,17 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
         }
 
         case FREE_S: {
+            // For arrays of owned pointers, free each element first
+            // We store element ownership info via the analyzed symbol
+            // The codegen needs to check the symbol table, so we pass it via free_stmt
+            if (s->as.free_stmt.isArrayOfOwned) {
+                emit_indent(out, indent);
+                fprintf(out, "for (int _i = 0; _i < %d; _i++) {\n", s->as.free_stmt.arraySize);
+                emit_indent(out, indent + 1);
+                fprintf(out, "free(%s[_i]);\n", s->as.free_stmt.varName);
+                emit_indent(out, indent);
+                fprintf(out, "}\n");
+            }
             emit_indent(out, indent);
             fprintf(out, "free(%s);\n", s->as.free_stmt.varName);
             break;

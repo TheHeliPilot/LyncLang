@@ -10,7 +10,8 @@ Pattern* parsePattern(Parser* p);
 
 Token* peek(Parser* parser, int offset) {
     //use last tokens location if available
-    Token* lastTok = parser->pos > 0 ? &parser->tokens[parser->pos - 1] : &parser->tokens[0];
+    if (parser->pos + offset >= parser->count) {
+        Token* lastTok = parser->pos > 0 ? &parser->tokens[parser->pos - 1] : &parser->tokens[0];
         stage_fatal(STAGE_PARSER, TOK_LOC(lastTok),
                     "peek beyond token stream (pos=%d)", parser->pos);
     }
@@ -285,16 +286,16 @@ Expr* parseFactor(Parser* p) {
             Token* allocTok = consume(p);
 
             bool isArr = false;
-            if(peek(p, 1)->type == L_BRACKET_T){
-                consume(p);
+            Expr* arrSizeExpr = NULL;
+            if(peek(p, 0)->type == L_BRACKET_T){
                 isArr = true;
                 consume(p);
+                arrSizeExpr = parseExpr(p);
+                expect(p, R_BRACKET_T);
+                consume(p); //consume the type token (e.g. int) after [size]
             }
 
-            Expr* e = parseExpr(p);
-
-            if(isArr)
-                expect(p, R_BRACKET_T);
+            Expr* e = isArr ? arrSizeExpr : parseExpr(p);
 
             Expr* al = malloc(sizeof(Expr));
             al->type = ALLOC_E;
@@ -480,8 +481,6 @@ Stmt* parseStatement(Parser* p) {
                     isNullable = true;
                 }
 
-                TokenType varType = consume(p)->type;
-
                 bool isArray = false;
                 Expr* arrSize = NULL;
                 if(peek(p, 0)->type == L_BRACKET_T){
@@ -490,6 +489,18 @@ Stmt* parseStatement(Parser* p) {
                     arrSize = parseExpr(p);
                     expect(p, R_BRACKET_T);
                 }
+
+                // Parse element ownership (for [N] own int)
+                Ownership elemOwnership = OWNERSHIP_NONE;
+                if(isArray && peek(p, 0)->type == OWN_T) {
+                    consume(p);
+                    elemOwnership = OWNERSHIP_OWN;
+                } else if(isArray && peek(p, 0)->type == REF_T) {
+                    consume(p);
+                    elemOwnership = OWNERSHIP_REF;
+                }
+
+                TokenType varType = consume(p)->type;
 
                 Expr *e = NULL;
                 if (peek(p, 0)->type == EQUALS_T) {
@@ -514,6 +525,7 @@ Stmt* parseStatement(Parser* p) {
                 s->as.var_decl.varType = varType;
                 s->as.var_decl.name = name;
                 s->as.var_decl.ownership = o;
+                s->as.var_decl.elementOwnership = elemOwnership;
                 s->as.var_decl.isNullable = isNullable;
                 s->as.var_decl.isConst = isConst;
                 s->as.var_decl.isArray = isArray;

@@ -1,4 +1,4 @@
 def main(): int {
-    arr3: own int[2] = alloc 1;
+    arr3: own [2] int = alloc 1;
     return 0;
 }

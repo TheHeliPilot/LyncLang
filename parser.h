@@ -207,6 +207,7 @@ struct Stmt {
             char* name;
             TokenType varType;
             Ownership ownership;
+            Ownership elementOwnership; // ownership of each element (for [N] own int)
             bool isNullable;
             bool isConst;
             bool isArray;
@@ -258,6 +259,8 @@ struct Stmt {
 
         struct {
             char* varName;
+            bool isArrayOfOwned;  // set by analyzer: array has element ownership
+            int arraySize;        // set by analyzer: number of elements to free
         } free_stmt;
 
         struct {

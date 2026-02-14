@@ -18,6 +18,7 @@ typedef struct {
     TokenType type;
     char* name;
     Ownership ownership;
+    Ownership element_ownership; // for arrays of owned pointers
     VarState state;
     char* owner;
     bool is_nullable;
