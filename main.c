@@ -21,7 +21,7 @@ ErrorCollector* g_error_collector = nullptr;
 bool g_trace_mode = false;
 int g_trace_depth = 0;
 
-// --- C compiler detection ---
+//--- c compiler detection ---
 
 static const char* find_c_compiler(void) {
     const char* compilers[] = {
@@ -47,7 +47,7 @@ static char* replace_extension(const char* path, const char* new_ext) {
     size_t len = strlen(path);
     const char* dot = nullptr;
 
-    // Find the last '.' that comes after the last path separator
+    //find the last '.' that comes after the last path separator
     for (size_t i = len; i > 0; i--) {
         if (path[i - 1] == '.' && dot == nullptr) {
             dot = &path[i - 1];
@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
     code[bytes_read] = '\0';
     fclose(file);
 
-    // --- LEXER ---
+    //--- lexer ---
     stage_trace_enter(STAGE_LEXER, "starting lexical analysis");
     int token_count;
     Token* tokens = tokenize(code, &token_count, input_file);
@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- PARSER ---
+    //--- parser ---
     stage_trace_enter(STAGE_PARSER, "starting parsing");
     Parser parser = {
             .tokens = tokens,
@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- ANALYZER ---
+    //--- analyzer ---
     stage_trace_enter(STAGE_ANALYZER, "starting semantic analysis");
     analyze_program(program);
     stage_trace_exit(STAGE_ANALYZER, "analysis complete");
@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // --- OPTIMIZER ---
+    //--- optimizer ---
     if (opt_level > 0) {
         stage_trace_enter(STAGE_OPTIMIZER, "starting optimizations");
 
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
         stage_trace_exit(STAGE_OPTIMIZER, "optimizations complete");
     }
 
-    // --- CODEGEN ---
+    //--- codegen ---
     stage_trace_enter(STAGE_CODEGEN, "starting code generation");
     FILE *output = fopen(c_file, "w");
     if (!output) {
@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
         remove(c_file);
     }
 
-    // --- SUCCESS or RUN ---
+    //--- success or run ---
     int exit_code = 0;
 
     if (run_mode) {
@@ -301,7 +301,7 @@ int main(int argc, char** argv) {
 #ifdef _WIN32
         snprintf(run_cmd, sizeof(run_cmd), "\"%s\"", exe_file);
 #else
-        // Prepend ./ if the path doesn't contain a separator
+        //prepend ./ if the path doesn't contain a separator
         if (strchr(exe_file, '/') == nullptr) {
             snprintf(run_cmd, sizeof(run_cmd), "./%s", exe_file);
         } else {

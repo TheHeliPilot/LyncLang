@@ -4,11 +4,15 @@
 #include <stdbool.h>
 #include <string.h>
 
+int* f_int();
 int main()
 {
-  int64_t size;
+  int size;
   size = 5;
-  int64_t arr[1] = {1};
+  int arr[1] = {1};
   printf("%d\n", arr[6]);
   return 0;
+}
+int* f_int()
+{
 }

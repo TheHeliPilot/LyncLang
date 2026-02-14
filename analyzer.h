@@ -9,9 +9,9 @@
 #include "parser.h"
 
 typedef enum {
-    ALIVE,   // can be used
-    MOVED,   // ownership transferred, cannot be used
-    FREED,   // has been freed, cannot be used
+    ALIVE,   //can be used
+    MOVED,   //ownership transferred, cannot be used
+    FREED,   //has been freed, cannot be used
 } VarState;
 
 typedef struct {
@@ -45,10 +45,10 @@ struct FuncTable {
 };
 
 typedef struct {
-    char** imported_functions;  // array of function names that are imported
+    char** imported_functions;  //array of function names that are imported
     int count;
     int capacity;
-    bool has_wildcard_io;  // true if "using std.io.*" was used
+    bool has_wildcard_io;  //true if "using std.io.*" was used
 } ImportRegistry;
 
 ImportRegistry* make_import_registry();
@@ -65,8 +65,8 @@ FuncTable* make_funcTable();
 void declare(Scope*, char* name, TokenType type, Ownership ownership, bool isNullable, bool isConst, bool isArray, int arraySize);
 Symbol* lookup(Scope*, char* name);
 
-TokenType analyze_expr(Scope*, FuncTable*, Expr*);
-void analyze_stmt(Scope*, FuncTable*, Stmt*);
+TokenType analyze_expr(Scope*, FuncTable*, Expr*, FuncSign* currentFunc);
+void analyze_stmt(Scope*, FuncTable*, Stmt*, FuncSign* currentFunc);
 void analyze_program(Program*);
 
 #endif //LYNC_ANALYZER_H

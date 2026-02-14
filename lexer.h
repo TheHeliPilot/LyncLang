@@ -8,16 +8,16 @@
 #include "common.h"
 
 typedef enum {
-    // Literals
+    //literals
     INT_LIT_T,
     BOOL_LIT_T,
     STR_LIT_T,
     VAR_T,
 
-    // Arithmetic operators
+    //arithmetic operators
     PLUS_T, MINUS_T, STAR_T, SLASH_T,
 
-    // Comparison operators
+    //comparison operators
     EQUALS_T,           // =
     DOUBLE_EQUALS_T,    // ==
     NOT_EQUALS_T,       // !=
@@ -26,24 +26,26 @@ typedef enum {
     LESS_EQUALS_T,      // <=
     MORE_EQUALS_T,      // >=
 
-    // Logical operators
+    //logical operators
     NEGATION_T,         // !
     AND_T,              // &&
     OR_T,               // ||
 
-    // Punctuation
+    //punctuation
+
     SEMICOLON_T,
     COLON_T,
     COMMA_T,
     DOT_T,
     QUESTION_MARK_T,
 
-    // Braces & parentheses
+    //braces & parentheses
     L_PAREN_T, R_PAREN_T,
     L_BRACE_T, R_BRACE_T,
     L_BRACKET_T, R_BRACKET_T,
 
-    // Control flow keywords
+    //control flow keywords
+
     IF_T,
     ELSE_T,
     WHILE_T,
@@ -55,7 +57,8 @@ typedef enum {
     RETURN_T,
     SOME_T,
 
-    // Type keywords
+    //type keywords
+
     INT_KEYWORD_T,
     BOOL_KEYWORD_T,
     STR_KEYWORD_T,
@@ -63,18 +66,21 @@ typedef enum {
     VOID_KEYWORD_T,
     NULL_LIT_T,
 
-    // Function stuff
+    //function stuff
+
     DEF_KEYWORD_T,
     PRINT_KEYWORD_T,
     INCLUDE_T,
 
-    // Mem stuff
+    //mem stuff
+
     OWN_T,
     REF_T,
     ALLOC_T,
     FREE_T,
 
-    // Other
+    //other
+
     CONST_T,
     DOUBLE_SLASH_T,
     COMMENT_L_T,

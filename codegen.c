@@ -6,7 +6,7 @@
 
 char* type_to_c_type(TokenType t) {
     switch (t) {
-        case INT_KEYWORD_T: return "int64_t";
+        case INT_KEYWORD_T: return "int";
         case BOOL_KEYWORD_T: return "bool";
         case CHAR_KEYWORD_T: return "char";
         case VOID_KEYWORD_T: return "void";
@@ -23,7 +23,7 @@ void emit_indent(FILE* out, int level) {
 
 void emit_type(TokenType type, FILE* out) {
     switch (type) {
-        case INT_KEYWORD_T: fprintf(out, "int64_t"); break;
+        case INT_KEYWORD_T: fprintf(out, "int"); break;
         case BOOL_KEYWORD_T: fprintf(out, "bool"); break;
         case STR_KEYWORD_T: fprintf(out, "char"); break;
         case CHAR_KEYWORD_T: fprintf(out, "char"); break;
@@ -161,7 +161,7 @@ void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
     stage_trace(STAGE_CODEGEN, "emit_func: %s", f->signature->name);
 
     if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
-    else fprintf(out, "%s", type_to_c_type(f->signature->retType));
+    else fprintf(out, "%s%s", type_to_c_type(f->signature->retType), f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
     fprintf(out, " %s(", strcmp(f->signature->name, "main") == 0 ? "main" : get_func_name_from_sign(fstn, f->signature));
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
@@ -210,7 +210,7 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
         fstn->elements = realloc(fstn->elements, sizeof(FuncSignToNameElement) * fstn->height);
     }
 
-    fprintf(out, "%s", type_to_c_type(f->signature->retType));
+    fprintf(out, "%s%s", type_to_c_type(f->signature->retType), f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
     fprintf(out, " %s(", mangled);
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
@@ -388,7 +388,7 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                 emit_indent(out, 0);
                 fprintf(out, "{\n");
                 emit_indent(out, 0 + 1);
-                fprintf(out, "int64_t _ret;\n");
+                fprintf(out, "int _ret;\n");
                 emit_assign_expr_to_var(e->as.func_ret_expr, "_ret", OWNERSHIP_NONE, out, 0 + 1, fstn);
                 emit_indent(out, 0 + 1);
                 fprintf(out, "return _ret;\n");
@@ -530,7 +530,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
         //inside emit_stmt switch case VAR_DECL_S:
         case VAR_DECL_S:
             if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
-                // Stack array
+                //stack array
                 emit_indent(out, indent);
                 fprintf(out, "%s %s[",
                         type_to_c_type(s->as.var_decl.varType),
@@ -538,14 +538,14 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, "]");
 
-                // Only emit initialization if present (VLAs can be uninitialized)
+                //only emit initialization if present (VLAs can be uninitialized)
                 if (s->as.var_decl.expr->type == ARRAY_DECL_E) {
                     fprintf(out, " = ");
                     emit_expr(s->as.var_decl.expr, out, fstn);
                 }
                 fprintf(out, ";\n");
             } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN) {
-                // Heap array
+                //heap array
                 emit_indent(out, indent);
                 fprintf(out, "%s* %s = malloc(sizeof(%s) * ",
                         type_to_c_type(s->as.var_decl.varType),
@@ -554,7 +554,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, ");\n");
 
-                // TODO: Handle array initialization in alloc (Phase 6)
+                //todo: handle array initialization in alloc (Phase 6)
             } else if (s->as.var_decl.expr->type == ALLOC_E) {
                 // Regular alloc (non-array)
                 emit_indent(out, indent);
@@ -568,7 +568,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                                         out,
                                         indent, fstn);
             } else {
-                // Normal variable
+                //normal variable
                 emit_indent(out, indent);
                 fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
                 fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
@@ -583,7 +583,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
 
         case ASSIGN_S:
             if (s->as.var_assign.isArray && s->as.var_assign.expr->type == ALLOC_E) {
-                // Array reallocation
+                //array reallocation
                 emit_indent(out, indent);
                 fprintf(out, "%s = malloc(sizeof(%s) * ",
                         s->as.var_assign.name,
@@ -710,7 +710,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                     emit_indent(out, indent + 1);
                     emit_type(branch->analyzed_type, out);
                     fprintf(out, "* %s = ", branch->pattern->as.binding_name);
-                    // Emit just the variable name, not dereferenced
+                    //emit just the variable name, not dereferenced
                     if (s->as.match_stmt.var->type == VAR_E) {
                         fprintf(out, "%s", s->as.match_stmt.var->as.var.name);
                     } else {
@@ -824,10 +824,10 @@ void generate_code(Program* prog, FILE* output) {
 
         //generate read_int
         if (has_wildcard || need_read_int) {
-            fprintf(output, "int64_t* read_int() {\n");
+            fprintf(output, "int* read_int() {\n");
             fprintf(output, "    char buffer[256];\n");
             fprintf(output, "    if (fgets(buffer, sizeof(buffer), stdin) == NULL) return NULL;\n");
-            fprintf(output, "    int64_t* result = malloc(sizeof(int64_t));\n");
+            fprintf(output, "    int* result = malloc(sizeof(int));\n");
             fprintf(output, "    *result = atoll(buffer);\n");
             fprintf(output, "    return result;\n");
             fprintf(output, "}\n\n");

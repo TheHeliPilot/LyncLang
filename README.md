@@ -511,7 +511,7 @@ The ownership system tracks heap memory at compile time, ensuring every allocati
 ptr: own int = alloc 42;
 free ptr;
 ```
-- Must be initialized with `alloc`
+- Must be initialized with `alloc` or a function returning `own`
 - Must be freed before scope exit
 - Exactly one owner at a time
 
@@ -587,6 +587,23 @@ def main(): int {
     return 0;
 }
 ```
+
+**Ownership Return (Factory Functions):**
+```c
+def create_number(): own int {
+    x: own int = alloc 42;
+    return x;  // Ownership transfers to caller
+}
+
+def main(): int {
+    num: own int = create_number();  // Receives ownership
+    print("Value:", num);
+    free num;
+    return 0;
+}
+```
+
+Functions returning `own` transfer ownership to the caller. The caller must free the returned value.
 
 **Dangling Reference Prevention:**
 ```c
@@ -708,7 +725,7 @@ lync -O2 example.lync          # Compile with optimizations
 
 **Example:**
 ```
-[test.lync:4:5] analyzer:error: 'own' variables must be initialized with 'alloc'
+[test.lync:4:5] analyzer:error: 'own' variables must be initialized with 'alloc' or a function returning 'own'
 [test.lync:10:5] analyzer:error: double free: variable 'ptr2' has already been freed
 
 2 errors generated.

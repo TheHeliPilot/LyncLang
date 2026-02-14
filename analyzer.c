@@ -4,10 +4,10 @@
 
 #include "analyzer.h"
 
-// Forward declaration
+//Forward declaration
 void check_function_cleanup(Scope* scope);
 
-// Global import registry (will be initialized in analyze_program)
+//Global import registry (will be initialized in analyze_program)
 static ImportRegistry* g_import_registry = nullptr;
 
 ImportRegistry* make_import_registry() {
@@ -29,7 +29,7 @@ void register_import(ImportRegistry* reg, IncludeStmt* stmt) {
         reg->has_wildcard_io = true;
         stage_trace(STAGE_ANALYZER, "registered wildcard import: std.io.*");
     } else {
-        // IMPORT_SPECIFIC
+        //IMPORT_SPECIFIC
         if (reg->count >= reg->capacity) {
             reg->capacity *= 2;
             reg->imported_functions = realloc(reg->imported_functions, sizeof(char*) * reg->capacity);
@@ -41,7 +41,7 @@ void register_import(ImportRegistry* reg, IncludeStmt* stmt) {
 
 bool is_imported(ImportRegistry* reg, const char* func_name) {
     if (reg->has_wildcard_io) {
-        return true;  // All std.io functions are imported
+        return true;  //All std.io functions are imported
     }
 
     for (int i = 0; i < reg->count; i++) {
@@ -132,7 +132,7 @@ void mark_dangling_refs(Scope* scope, char* owner_name) {
     }
 }
 
-TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
+TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* currentFunc) {
     TokenType result;
 
     switch (e->type) {
@@ -155,7 +155,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
         case VAR_E: {
             Symbol* sym = lookup(scope, e->as.var.name);
             if (sym == nullptr) {
-                // Check if trying to use 'print' as a variable (give better error message)
+                //Check if trying to use 'print' as a variable (give better error message)
                 if (strcmp(e->as.var.name, "print") == 0) {
                     stage_error(STAGE_ANALYZER, e->loc, "'print' is a built-in function, not a variable (use print(...) to call it)");
                 } else {
@@ -169,10 +169,16 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 stage_error(STAGE_ANALYZER, e->loc, "use after free: variable '%s' has been freed", e->as.var.name);
             if (sym->ownership == OWNERSHIP_OWN && sym->state == MOVED)
                 stage_error(STAGE_ANALYZER, e->loc, "use after move: variable '%s' has been moved", e->as.var.name);
-            if (sym->ownership == OWNERSHIP_REF && lookup(scope, sym->owner)->state != ALIVE)
-                stage_error(STAGE_ANALYZER, e->loc, "use after owner no longer in scope: owner '%s' of '%s' is out of scope", lookup(scope, sym->owner)->name, e->as.var.name);
+            if (sym->ownership == OWNERSHIP_REF && sym->owner != nullptr) {
+                Symbol* owner = lookup(scope, sym->owner);
+                if (owner && owner->state != ALIVE) {
+                    stage_error(STAGE_ANALYZER, e->loc, "use after owner no longer in scope: owner '%s' of '%s' is out of scope", owner->name, e->as.var.name);
+                }
+            }
 
-            // Check for nullable usage in expressions (only allowed if unwrapped)
+            }
+
+            //Check for nullable usage in expressions (only allowed if unwrapped)
             if (sym->is_nullable && !sym->is_unwrapped) {
                 stage_error(STAGE_ANALYZER, e->loc,
                             "nullable variable '%s' must be unwrapped before use",
@@ -202,7 +208,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 break;
             }
 
-            TokenType indexType = analyze_expr(scope, funcTable, e->as.array_access.index);
+            TokenType indexType = analyze_expr(scope, funcTable, e->as.array_access.index, currentFunc);
             if (indexType != INT_KEYWORD_T) {
                 stage_error(STAGE_ANALYZER, e->loc,
                             "array index must be 'int', got '%s'", token_type_name(indexType));
@@ -216,9 +222,9 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             if (e->as.arr_decl.count <= 0)
                 stage_error(STAGE_ANALYZER, e->loc, "array cannot be initialized with %d parameters",
                             e->as.arr_decl.count);
-            TokenType t = analyze_expr(scope, funcTable, e->as.arr_decl.values[0]);
+            TokenType t = analyze_expr(scope, funcTable, e->as.arr_decl.values[0], currentFunc);
             for (int i = 0; i < e->as.arr_decl.count; ++i) {
-                TokenType ta = analyze_expr(scope, funcTable, e->as.arr_decl.values[0]);
+                TokenType ta = analyze_expr(scope, funcTable, e->as.arr_decl.values[0], currentFunc);
                 if (t != ta)
                     stage_error(STAGE_ANALYZER, e->loc,
                                 "all parameters in array need to be the same type! Expected '%s' but got '%s'",
@@ -229,7 +235,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
         }
 
         case UN_OP_E: {
-            TokenType operand = analyze_expr(scope, funcTable, e->as.un_op.expr);
+            TokenType operand = analyze_expr(scope, funcTable, e->as.un_op.expr, currentFunc);
 
             if (e->as.un_op.op == MINUS_T) {
                 if (operand != INT_KEYWORD_T)
@@ -248,10 +254,10 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
 
         case BIN_OP_E: {
             TokenType op = e->as.bin_op.op;
-            TokenType left = analyze_expr(scope, funcTable, e->as.bin_op.exprL);
-            TokenType right = analyze_expr(scope, funcTable, e->as.bin_op.exprR);
+            TokenType left = analyze_expr(scope, funcTable, e->as.bin_op.exprL, currentFunc);
+            TokenType right = analyze_expr(scope, funcTable, e->as.bin_op.exprR, currentFunc);
 
-            // arithmetic: int op int -> int
+            //arithmetic: int op int -> int
             if (op == PLUS_T || op == MINUS_T || op == STAR_T || op == SLASH_T) {
                 if (left != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be int, got %s", token_type_name(op), token_type_name(left));
@@ -259,7 +265,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be int, got %s", token_type_name(op), token_type_name(right));
                 result = INT_KEYWORD_T;
             }
-                // comparison: int op int -> bool
+                //comparison: int op int -> bool
             else if (op == LESS_T || op == MORE_T || op == LESS_EQUALS_T || op == MORE_EQUALS_T) {
                 if (left != INT_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be int, got %s", token_type_name(op), token_type_name(left));
@@ -267,13 +273,13 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be int, got %s", token_type_name(op), token_type_name(right));
                 result = BOOL_KEYWORD_T;
             }
-                // equality: same type op same type -> bool
+                //equality: same type op same type -> bool
             else if (op == DOUBLE_EQUALS_T || op == NOT_EQUALS_T) {
                 if (left != right)
                     stage_error(STAGE_ANALYZER, e->loc, "cannot compare %s with %s using '%s'", token_type_name(left), token_type_name(right), token_type_name(op));
                 result = BOOL_KEYWORD_T;
             }
-                // logical: bool op bool -> bool
+                //logical: bool op bool -> bool
             else if (op == AND_T || op == OR_T) {
                 if (left != BOOL_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "left side of '%s' must be bool, got %s", token_type_name(op), token_type_name(left));
@@ -287,11 +293,11 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             break;
         }
         case FUNC_CALL_E: {
-            // Handle built-in 'print' function
+            //Handle built-in 'print' function
             if(strcmp(e->as.func_call.name, "print") == 0) {
-                // Type-check each argument
+                //Type-check each argument
                 for (int i = 0; i < e->as.func_call.count; ++i) {
-                    TokenType argType = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
+                    TokenType argType = analyze_expr(scope, funcTable, e->as.func_call.params[i], currentFunc);
                     if (argType != INT_KEYWORD_T && argType != BOOL_KEYWORD_T && argType != STR_KEYWORD_T) {
                         stage_error(STAGE_ANALYZER, e->as.func_call.params[i]->loc,
                                     "print only supports int, bool, and string, got %s",
@@ -306,7 +312,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 break;
             }
 
-            // Handle length() built-in
+            //Handle length() built-in
             if (strcmp(e->as.func_call.name, "length") == 0) {
                 if (e->as.func_call.count != 1) {
                     stage_error(STAGE_ANALYZER, e->loc, "length() takes exactly 1 argument");
@@ -338,27 +344,27 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 break;
             }
 
-            // Handle std.io read_* functions
+            //Handle std.io read_* functions
             if (strcmp(e->as.func_call.name, "read_int") == 0 ||
                 strcmp(e->as.func_call.name, "read_str") == 0 ||
                 strcmp(e->as.func_call.name, "read_bool") == 0 ||
                 strcmp(e->as.func_call.name, "read_char") == 0 ||
                 strcmp(e->as.func_call.name, "read_key") == 0) {
 
-                // Check if function is imported
+                //Check if function is imported
                 if (!is_imported(g_import_registry, e->as.func_call.name)) {
                     stage_error(STAGE_ANALYZER, e->loc,
                                 "'%s' is not imported (add 'using std.io.%s;' or 'using std.io.*;')",
                                 e->as.func_call.name, e->as.func_call.name);
                 }
 
-                // These functions take no arguments
+                //These functions take no arguments
                 if (e->as.func_call.count != 0) {
                     stage_error(STAGE_ANALYZER, e->loc,
                                 "'%s' takes no arguments", e->as.func_call.name);
                 }
 
-                // Determine return type based on function name
+                //Determine return type based on function name
                 if (strcmp(e->as.func_call.name, "read_int") == 0) {
                     result = INT_KEYWORD_T;
                 } else if (strcmp(e->as.func_call.name, "read_str") == 0) {
@@ -370,19 +376,19 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     result = CHAR_KEYWORD_T;
                 }
 
-                // Mark this expression as nullable
+                //Mark this expression as nullable
                 e->is_nullable = true;
                 e->as.func_call.resolved_sign = NULL;
                 break;
             }
 
-            // Analyze all arguments first
+            //Analyze all arguments first
             TokenType* argTypes = malloc(sizeof(TokenType) * e->as.func_call.count);
             for (int i = 0; i < e->as.func_call.count; ++i) {
-                argTypes[i] = analyze_expr(scope, funcTable, e->as.func_call.params[i]);
+                argTypes[i] = analyze_expr(scope, funcTable, e->as.func_call.params[i], currentFunc);
             }
 
-            // Find ALL matching overloads by name and arity
+            //Find ALL matching overloads by name and arity
             FuncSign** matches = malloc(sizeof(FuncSign*) * funcTable->count);
             int matchCount = 0;
 
@@ -405,7 +411,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 break;
             }
 
-            // Find exact type match
+            //Find exact type match
             FuncSign* match = NULL;
             for (int i = 0; i < matchCount; i++) {
                 FuncSign* candidate = matches[i];
@@ -426,7 +432,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 stage_error(STAGE_ANALYZER, e->loc,
                             "no matching overload for '%s'", e->as.func_call.name);
 
-                // Show argument types as a note
+                //Show argument types as a note
                 char arg_buffer[256];
                 char* ptr = arg_buffer;
                 ptr += sprintf(ptr, "argument types: (");
@@ -437,7 +443,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 ptr += sprintf(ptr, ")");
                 stage_note(STAGE_ANALYZER, e->loc, "%s", arg_buffer);
 
-                // Show each candidate as a separate note
+                //Show each candidate as a separate note
                 for (int i = 0; i < matchCount; i++) {
                     FuncSign* candidate = matches[i];
                     char cand_buffer[256];
@@ -458,10 +464,10 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                 break;
             }
 
-            // Store the resolved signature
+            //Store the resolved signature
             e->as.func_call.resolved_sign = match;
 
-            // Handle ownership transfer for 'own' parameters
+            //Handle ownership transfer for 'own' parameters
             for (int i = 0; i < match->paramNum; ++i) {
                 if (match->parameters[i].ownership == OWNERSHIP_OWN) {
                     if (e->as.func_call.params[i]->type != VAR_E) {
@@ -491,12 +497,76 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             break;
         }
 
-        case FUNC_RET_E:
-            result = analyze_expr(scope, funcTable, e->as.func_ret_expr);
+        case FUNC_RET_E: {
+            stage_trace(STAGE_ANALYZER, "FUNC_RET_E: analyzing return expression");
+            result = analyze_expr(scope, funcTable, e->as.func_ret_expr, currentFunc);
+            stage_trace(STAGE_ANALYZER, "FUNC_RET_E: finished analyzing return expression");
+
+            //Check ownership transfer on return
+            if (!currentFunc) {
+                stage_trace(STAGE_ANALYZER, "WARNING: currentFunc is NULL in FUNC_RET_E");
+                break;
+            }
+
+            stage_trace(STAGE_ANALYZER, "FUNC_RET_E: currentFunc=%p, retOwnership=%d", currentFunc, currentFunc->retOwnership);
+
+            if (e->as.func_ret_expr->type == VAR_E) {
+                stage_trace(STAGE_ANALYZER, "FUNC_RET_E: return expr is VAR_E");
+                Symbol* sym = lookup(scope, e->as.func_ret_expr->as.var.name);
+                stage_trace(STAGE_ANALYZER, "FUNC_RET_E: lookup complete, sym=%p", sym);
+
+                if (sym && sym->ownership == OWNERSHIP_OWN) {
+                    stage_trace(STAGE_ANALYZER, "FUNC_RET_E: returning owned variable");
+                    //Owned variables can ONLY be returned if function returns 'own'
+                    if (currentFunc->retOwnership == OWNERSHIP_OWN) {
+                        //Transfer ownership - mark as MOVED
+                        if (sym->state != ALIVE) {
+                            stage_error(STAGE_ANALYZER, e->loc,
+                                        "cannot return '%s': already moved or freed", sym->name);
+                        } else {
+                            sym->state = MOVED;
+                            stage_trace(STAGE_ANALYZER, "moved '%s' via return", sym->name);
+                        }
+                    } else if (currentFunc->retOwnership == OWNERSHIP_REF) {
+                        stage_error(STAGE_ANALYZER, e->loc,
+                                    "cannot return owned variable '%s' as 'ref' - would leak or dangle (function must return 'own' or free before returning)",
+                                    sym->name);
+                    } else {
+                        //Returning by value
+                        stage_error(STAGE_ANALYZER, e->loc,
+                                    "cannot return owned variable '%s' by value - would cause memory leak (function must return 'own' to transfer ownership)",
+                                    sym->name);
+                    }
+                }
+                    //Non-owned variables
+                else if (sym) {
+                    if (currentFunc->retOwnership == OWNERSHIP_OWN) {
+                        if (sym->ownership == OWNERSHIP_NONE) {
+                            stage_error(STAGE_ANALYZER, e->loc,
+                                        "cannot return non-owned variable '%s' from function returning 'own'",
+                                        sym->name);
+                        } else if (sym->ownership == OWNERSHIP_REF) {
+                            stage_error(STAGE_ANALYZER, e->loc,
+                                        "cannot return borrowed reference '%s' as 'own'",
+                                        sym->name);
+                        }
+                    }
+                    //ref/value returns are fine for non-owned variables
+                }
+            }
+                //For alloc expressions being returned
+            else if (e->as.func_ret_expr->type == ALLOC_E) {
+                if (currentFunc->retOwnership != OWNERSHIP_OWN) {
+                    stage_error(STAGE_ANALYZER, e->loc,
+                                "cannot return 'alloc' from function that doesn't return 'own'");
+                }
+            }
+
             break;
+        }
 
         case MATCH_E: {
-            // Get the matched variable (special handling for nullable to bypass unwrap check)
+            //Get the matched variable (special handling for nullable to bypass unwrap check)
             Symbol* matchedSym = nullptr;
             TokenType targetType = VOID_KEYWORD_T;
 
@@ -509,8 +579,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                                 e->as.match.var->as.var.name);
                 }
             } else {
-                // For non-variable expressions, analyze normally
-                targetType = analyze_expr(scope, funcTable, e->as.match.var);
+                //For non-variable expressions, analyze normally
+                targetType = analyze_expr(scope, funcTable, e->as.match.var, currentFunc);
             }
 
             bool isNullableMatch = (matchedSym && matchedSym->is_nullable);
@@ -521,7 +591,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             for (int i = 0; i < e->as.match.branchCount; i++) {
                 MatchBranchExpr* branch = &e->as.match.branches[i];
 
-                // Validate pattern types
+                //Validate pattern types
                 if (branch->pattern->type == SOME_PATTERN) {
                     hasSome = true;
                     if (!isNullableMatch)
@@ -539,19 +609,19 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                     hasSome = hasNull = true;
                 }
                 else if (branch->pattern->type == VALUE_PATTERN) {
-                    TokenType patternType = analyze_expr(scope, funcTable, branch->pattern->as.value_expr);
+                    TokenType patternType = analyze_expr(scope, funcTable, branch->pattern->as.value_expr, currentFunc);
                     if (patternType != targetType)
                         stage_error(STAGE_ANALYZER, branch->pattern->loc,
                                     "match pattern type %s doesn't match target type %s",
                                     token_type_name(patternType), token_type_name(targetType));
                 }
 
-                // For SOME_PATTERN in expression match, create a temporary scope with the binding
+                //For SOME_PATTERN in expression match, create a temporary scope with the binding
                 Scope* branchScope = scope;
                 if (branch->pattern->type == SOME_PATTERN && matchedSym) {
                     branchScope = make_scope(scope);
 
-                    // Binding is always a reference (borrows from original)
+                    //Binding is always a reference (borrows from original)
                     Ownership bindingOwnership = (matchedSym->ownership == OWNERSHIP_NONE)
                                                  ? OWNERSHIP_NONE
                                                  : OWNERSHIP_REF;
@@ -562,7 +632,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                             bindingOwnership,
                             false, matchedSym->is_const, false, 0);
 
-                    // Set owner for ref tracking
+                    //Set owner for ref tracking
                     if (bindingOwnership == OWNERSHIP_REF) {
                         Symbol* bindingSym = lookup(branchScope, branch->pattern->as.binding_name);
                         if (bindingSym) {
@@ -570,19 +640,18 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                         }
                     }
 
-                    // Store type for codegen
+                    //Store type for codegen
                     branch->analyzed_type = matchedSym->type;
 
-                    // Mark original variable as unwrapped in this branch scope
+                    //Mark original variable as unwrapped in this branch scope
                     Symbol* origSym = lookup(branchScope, matchedSym->name);
-                    if (origSym) {
                         origSym->is_unwrapped = true;
                     }
                 }
 
-                TokenType bodyType = analyze_expr(branchScope, funcTable, branch->caseRet);
+                TokenType bodyType = analyze_expr(branchScope, funcTable, branch->caseRet, currentFunc);
 
-                // Clean up temporary scope
+                //Clean up temporary scope
                 if (branchScope != scope) {
                     free(branchScope);
                 }
@@ -608,8 +677,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             break;
         }
         case SOME_E: {
-            // some() is allowed to access nullable variables without unwrapping
-            // Just verify the variable exists and is nullable
+            //some() is allowed to access nullable variables without unwrapping
+            //Just verify the variable exists and is nullable
             if (e->as.some.var->type == VAR_E) {
                 Symbol* sym = lookup(scope, e->as.some.var->as.var.name);
                 if (sym == nullptr) {
@@ -620,14 +689,14 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
                                   e->as.some.var->as.var.name);
                 }
             } else {
-                // If it's not a simple variable, analyze it normally
-                analyze_expr(scope, funcTable, e->as.some.var);
+                //If it's not a simple variable, analyze it normally
+                analyze_expr(scope, funcTable, e->as.some.var, currentFunc);
             }
             result = BOOL_KEYWORD_T;
             break;
         }
         case ALLOC_E: {
-            e->as.alloc.type = analyze_expr(scope, funcTable, e->as.alloc.initialValue);
+            e->as.alloc.type = analyze_expr(scope, funcTable, e->as.alloc.initialValue, currentFunc);
             result =  e->as.alloc.type;
             break;
         }
@@ -641,28 +710,52 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e) {
             break;
     }
 
-    // Store the analyzed type in the expression
+    //Store the analyzed type in the expression
     e->analyzedType = result;
     return result;
 }
 
-void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
+void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* currentFunc) {
     switch (s->type) {
         case VAR_DECL_S: {
-            // Skip type analysis for uninitialized arrays (VOID_E placeholder)
+            //Skip type analysis for uninitialized arrays (VOID_E placeholder)
             TokenType t = VOID_KEYWORD_T;
             if (s->as.var_decl.expr->type != VOID_E) {
-                t = analyze_expr(scope, funcTable, s->as.var_decl.expr);
+                t = analyze_expr(scope, funcTable, s->as.var_decl.expr, currentFunc);
             }
 
-            // Allow own variables to be initialized with alloc, null (if nullable), or nullable read_* functions
+            bool is_owned_func_call = false;
+            if (s->as.var_decl.expr->type == FUNC_CALL_E) {
+                FuncSign* sig = s->as.var_decl.expr->as.func_call.resolved_sign;
+                if (sig && sig->retOwnership == OWNERSHIP_OWN) {
+                    is_owned_func_call = true;
+                }
+            }
+
             bool valid_own_init = (s->as.var_decl.expr->type == ALLOC_E) ||
                                   (s->as.var_decl.isNullable && t == NULL_LIT_T) ||
-                                  (s->as.var_decl.isNullable && s->as.var_decl.expr->is_nullable) ||
-                                  (s->as.var_decl.expr->type == VOID_E);  // Uninitialized allowed
+                                  (s->as.var_decl.expr->type == VOID_E) ||
+                                  is_owned_func_call ||
+                                  (s->as.var_decl.expr->type == VAR_E &&
+                                   s->as.var_decl.expr->as.var.ownership == OWNERSHIP_OWN);
 
-            if (s->as.var_decl.ownership == OWNERSHIP_OWN && !valid_own_init)
-                stage_error(STAGE_ANALYZER, s->loc, "'own' variables must be initialized with 'alloc' or a nullable function");
+            if (s->as.var_decl.ownership == OWNERSHIP_OWN && !valid_own_init) {
+                stage_error(STAGE_ANALYZER, s->loc, "'own' variables must be initialized with 'alloc' or a function returning 'own'");
+            }
+
+            //Handle move semantics: if initializing own from another own variable, mark source as MOVED
+            if (s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.expr->type == VAR_E) {
+                Symbol* src = lookup(scope, s->as.var_decl.expr->as.var.name);
+                if (src && src->ownership == OWNERSHIP_OWN) {
+                    if (src->state != ALIVE) {
+                        stage_error(STAGE_ANALYZER, s->loc,
+                                    "cannot move from '%s': already moved or freed", src->name);
+                    } else {
+                        src->state = MOVED;
+                        stage_trace(STAGE_ANALYZER, "moved '%s' to '%s'", src->name, s->as.var_decl.name);
+                    }
+                }
+            }
 
             if (s->as.var_decl.expr->type == ALLOC_E && s->as.var_decl.ownership != OWNERSHIP_OWN)
                 stage_error(STAGE_ANALYZER, s->loc, "'alloc' can only be used with 'own' variables");
@@ -672,7 +765,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                             s->as.var_decl.name, token_type_name(s->as.var_decl.varType), token_type_name(t));
 
             if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE) {
-                // Check for VLA initialization (C limitation)
+                //Check for VLA initialization (C limitation)
                 if (s->as.var_decl.arraySize != NULL &&
                     s->as.var_decl.arraySize->type != INT_LIT_E &&
                     s->as.var_decl.expr->type == ARRAY_DECL_E) {
@@ -682,7 +775,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                                "use a constant size like 'arr: int[5] = {...}', or use heap allocation with 'own'");
                 }
 
-                // Only require array literal for constant-sized arrays
+                //Only require array literal for constant-sized arrays
                 bool isConstantSize = (s->as.var_decl.arraySize != NULL &&
                                        s->as.var_decl.arraySize->type == INT_LIT_E);
 
@@ -700,7 +793,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                 if (!s->as.var_decl.isArray)
                     stage_error(STAGE_ANALYZER, s->loc, "heap arrays must be initialized with array");
                 if (s->as.var_decl.isArray)
-                    if(analyze_expr(scope, funcTable,s->as.var_decl.expr) != INT_KEYWORD_T)
+                    if(analyze_expr(scope, funcTable, s->as.var_decl.expr, currentFunc) != INT_KEYWORD_T)
                         stage_error(STAGE_ANALYZER, s->loc, "array initialization must be int");
             }
 
@@ -748,7 +841,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
             s->as.var_assign.ownership = sym->ownership;
             s->as.var_assign.isArray = sym->is_array;
             s->as.var_assign.arraySize = sym->array_size;
-            TokenType t = analyze_expr(scope, funcTable, s->as.var_assign.expr);
+            TokenType t = analyze_expr(scope, funcTable, s->as.var_assign.expr, currentFunc);
             if (t != sym->type)
                 stage_error(STAGE_ANALYZER, s->loc, "cannot assign %s to '%s' of type %s",
                             token_type_name(t), s->as.var_assign.name, token_type_name(sym->type));
@@ -771,7 +864,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         }
 
         case IF_S: {
-            TokenType c = analyze_expr(scope, funcTable, s->as.if_stmt.cond);
+            TokenType c = analyze_expr(scope, funcTable, s->as.if_stmt.cond, currentFunc);
             if (c != BOOL_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "if condition must be bool, got %s", token_type_name(c));
 
@@ -790,32 +883,32 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                     sym->is_unwrapped = true;
                 }
             }
-            analyze_stmt(tScope, funcTable, s->as.if_stmt.trueStmt);
+            analyze_stmt(tScope, funcTable, s->as.if_stmt.trueStmt, currentFunc);
             free(tScope);
 
             if (s->as.if_stmt.falseStmt != nullptr) {
                 Scope* fScope = make_scope(scope);
-                analyze_stmt(fScope, funcTable, s->as.if_stmt.falseStmt);
+                analyze_stmt(fScope, funcTable, s->as.if_stmt.falseStmt, currentFunc);
                 free(fScope);
             }
             break;
         }
 
         case WHILE_S: {
-            TokenType c = analyze_expr(scope, funcTable, s->as.while_stmt.cond);
+            TokenType c = analyze_expr(scope, funcTable, s->as.while_stmt.cond, currentFunc);
             if (c != BOOL_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "while condition must be bool, got %s", token_type_name(c));
             Scope* body = make_scope(scope);
-            analyze_stmt(body, funcTable, s->as.while_stmt.body);
+            analyze_stmt(body, funcTable, s->as.while_stmt.body, currentFunc);
             free(body);
             break;
         }
 
         case DO_WHILE_S: {
             Scope* body = make_scope(scope);
-            analyze_stmt(body, funcTable, s->as.do_while_stmt.body);
+            analyze_stmt(body, funcTable, s->as.do_while_stmt.body, currentFunc);
             free(body);
-            TokenType c = analyze_expr(scope, funcTable, s->as.do_while_stmt.cond);
+            TokenType c = analyze_expr(scope, funcTable, s->as.do_while_stmt.cond, currentFunc);
             if (c != BOOL_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "do-while condition must be bool, got %s", token_type_name(c));
             break;
@@ -824,11 +917,11 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         case FOR_S: {
             Scope* body = make_scope(scope);
             declare(body, s->as.for_stmt.varName, INT_KEYWORD_T, OWNERSHIP_NONE, false, true, false, 0);
-            if (analyze_expr(body, funcTable, s->as.for_stmt.min) != INT_KEYWORD_T)
+            if (analyze_expr(body, funcTable, s->as.for_stmt.min, currentFunc) != INT_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "for loop min must be int");
-            if (analyze_expr(body, funcTable, s->as.for_stmt.max) != INT_KEYWORD_T)
+            if (analyze_expr(body, funcTable, s->as.for_stmt.max, currentFunc) != INT_KEYWORD_T)
                 stage_error(STAGE_ANALYZER, s->loc, "for loop max must be int");
-            analyze_stmt(body, funcTable, s->as.for_stmt.body);
+            analyze_stmt(body, funcTable, s->as.for_stmt.body, currentFunc);
             free(body);
             break;
         }
@@ -836,7 +929,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         case BLOCK_S: {
             Scope* block = make_scope(scope);
             for (int i = 0; i < s->as.block_stmt.count; ++i) {
-                analyze_stmt(block, funcTable, s->as.block_stmt.stmts[i]);
+                analyze_stmt(block, funcTable, s->as.block_stmt.stmts[i], currentFunc);
             }
             check_function_cleanup(block);
             free(block);
@@ -844,7 +937,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
         }
 
         case EXPR_STMT_S: {
-            analyze_expr(scope, funcTable, s->as.expr_stmt);
+            analyze_expr(scope, funcTable, s->as.expr_stmt, currentFunc);
             break;
         }
 
@@ -863,7 +956,7 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                 }
             } else {
                 //for non-variable expressions, analyze normally
-                matchedType = analyze_expr(scope, funcTable, s->as.match_stmt.var);
+                matchedType = analyze_expr(scope, funcTable, s->as.match_stmt.var, currentFunc);
             }
 
             //determine if this is a nullable match
@@ -936,12 +1029,12 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
 
                 //for VALUE_PATTERN, analyze the pattern expression
                 if (branch->pattern->type == VALUE_PATTERN) {
-                    analyze_expr(branchScope, funcTable, branch->pattern->as.value_expr);
+                    analyze_expr(branchScope, funcTable, branch->pattern->as.value_expr, currentFunc);
                 }
 
                 //analyze branch statements
                 for (int j = 0; j < branch->stmtCount; j++) {
-                    analyze_stmt(branchScope, funcTable, branch->stmts[j]);
+                    analyze_stmt(branchScope, funcTable, branch->stmts[j], currentFunc);
                 }
 
                 //check ownership cleanup within branch
@@ -972,13 +1065,13 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s) {
                 break;
             }
 
-            TokenType indexType = analyze_expr(scope, funcTable, s->as.array_elem_assign.index);
+            TokenType indexType = analyze_expr(scope, funcTable, s->as.array_elem_assign.index, currentFunc);
             if (indexType != INT_KEYWORD_T) {
                 stage_error(STAGE_ANALYZER, s->loc,
                             "array index must be 'int', got '%s'", token_type_name(indexType));
             }
 
-            TokenType valueType = analyze_expr(scope, funcTable, s->as.array_elem_assign.value);
+            TokenType valueType = analyze_expr(scope, funcTable, s->as.array_elem_assign.value, currentFunc);
             if (valueType != sym->type) {
                 stage_error(STAGE_ANALYZER, s->loc,
                             "cannot assign '%s' to array of type '%s'",
@@ -1044,6 +1137,7 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
     FuncSign copy;
     copy.name = strdup(func->signature->name);  // Make a real copy of the name string
     copy.retType = func->signature->retType;
+    copy.retOwnership = func->signature->retOwnership;
     copy.paramNum = func->signature->paramNum;
 
     // Deep copy parameters array
@@ -1097,12 +1191,13 @@ FuncTable* make_funcTable() {
 
 void check_function_cleanup(Scope* scope) {
     for (int i = 0; i < scope->count; i++) {
-        Symbol* sym = &scope->symbols[i];
-        // Nullable own variables are allowed to go out of scope (they might be null)
-        if (sym->ownership == OWNERSHIP_OWN && sym->state == ALIVE && !sym->is_nullable) {
-            stage_error(STAGE_ANALYZER, NO_LOC,
-                        "memory leak: 'own' variable '%s' was not freed or moved before function end",
-                        sym->name);
+        Symbol* s = &scope->symbols[i];
+        if (s->ownership == OWNERSHIP_OWN) {
+            if (s->state == ALIVE) {
+                // This is a leak!
+                stage_error(STAGE_ANALYZER, NO_LOC, "Memory leak: '%s' is not freed or moved", s->name);
+            }
+            // If state is MOVED or FREED, we are happy.
         }
     }
 }
@@ -1136,7 +1231,7 @@ void analyze_program(Program* prog) {
             declare(funcScope, fs[i]->signature->parameters[j].name, fs[i]->signature->parameters[j].type, fs[i]->signature->parameters[j].ownership, fs[i]->signature->parameters[j].isNullable, fs[i]->signature->parameters[j].isConst, false, 0);
         }
 
-        analyze_stmt(funcScope, funcTable, fs[i]->body);
+        analyze_stmt(funcScope, funcTable, fs[i]->body, fs[i]->signature);
 
         check_function_cleanup(funcScope);
 

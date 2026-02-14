@@ -1,9 +1,69 @@
+include std.io.*;
+
+// ✅ Test 1: Return owned pointer (move semantics)
+def create_number(): own int {
+    x: own int = alloc 42;
+    return x;  // Should move ownership to caller
+}
+
+// ✅ Test 2: Return value (copy)
+def double_value(x: int): int {
+    return x * 2;
+}
+
+// ✅ Test 3: Return ref parameter (pass through)
+def pass_ref(x: ref int): ref int {
+    return x;
+}
+
+// ✅ Test 4: Return value from ref (dereference)
+def get_value_from_ref(x: ref int): int {
+    return x;
+}
+
+// ✅ Test 5: Return alloc directly
+def make_number(): own int {
+    return alloc 100;
+}
+
+// ❌ Test 6: ERROR - Return owned by value (should leak)
+def bad_leak(): int {
+    x: own int = alloc 5;
+    return x;  // Should error: cannot return owned by value
+}
+
+// ❌ Test 7: ERROR - Return owned as ref (would dangle)
+def bad_ref(x: own int): ref int {
+    return x;  // Should error: owned would leak or dangle
+}
+
+// ❌ Test 8: ERROR - Return non-owned as own
+def bad_upgrade(x: int): own int {
+    return x;  // Should error: can't create ownership from nothing
+}
+
+// ❌ Test 9: ERROR - Use after move
+def bad_move(): own int {
+    x: own int = alloc 42;
+    y: own int = x;  // x is moved
+    return x;  // Should error: already moved
+}
+
+// ✅ Test 10: Proper usage
 def main(): int {
-
-    size: int = 5;
-    arr: int[1] = {1};
-
-    print(arr[6]);
-
-    return 0;   
+    // Test creating and receiving ownership
+    num: own int = create_number();
+    print("Created:", num);
+    free num;
+    
+    // Test value returns
+    val: int = double_value(5);
+    print("Doubled:", val);
+    
+    // Test alloc return
+    num2: own int = make_number();
+    print("Made:", num2);
+    free num2;
+    
+    return 0;
 }

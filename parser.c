@@ -9,9 +9,8 @@
 Pattern* parsePattern(Parser* p);
 
 Token* peek(Parser* parser, int offset) {
-    if (parser->pos + offset >= parser->count) {
-        //use last tokens location if available
-        Token* lastTok = parser->pos > 0 ? &parser->tokens[parser->pos - 1] : &parser->tokens[0];
+    //use last tokens location if available
+    Token* lastTok = parser->pos > 0 ? &parser->tokens[parser->pos - 1] : &parser->tokens[0];
         stage_fatal(STAGE_PARSER, TOK_LOC(lastTok),
                     "peek beyond token stream (pos=%d)", parser->pos);
     }
@@ -45,7 +44,7 @@ Func** parseFunctions(Parser* p, int* num) {
     int count = 0;
 
     while (p->pos < p->count && peek(p, 0)->type == DEF_KEYWORD_T) {
-        consume(p); // consume 'def'
+        consume(p); //consume 'def'
         Token* name = expect(p, VAR_T);
         expect(p, L_PAREN_T);
 
@@ -55,10 +54,22 @@ Func** parseFunctions(Parser* p, int* num) {
         expect(p, R_PAREN_T);
         expect(p, COLON_T);
 
+        Ownership o = OWNERSHIP_NONE;
+        Token* retOwn = peek(p, 0);
+        if (retOwn->type == OWN_T)
+        {
+            consume(p);
+            o = OWNERSHIP_OWN;
+        } else if (retOwn->type == REF_T)
+        {
+            consume(p);
+            o = OWNERSHIP_REF;
+        }
+
         Token* ret = consume(p);
         Stmt* body = parseBlock(p);
 
-        functions[count++] = makeFunc(name->value, params, pCount, ret->type, body);
+        functions[count++] = makeFunc(name->value, params, pCount, ret->type, o, body);
 
         if(count >= size) {
             size *= 2;
@@ -184,9 +195,9 @@ Expr* parseFactor(Parser* p) {
             return makeUnOp(TOK_LOC(t), NEGATION_T, parseFactor(p));
         }
         case L_PAREN_T: {
-            consume(p);  // eat '('
+            consume(p);  //eat '('
             Expr* expr = parseExpr(p);
-            expect(p, R_PAREN_T);  // eat ')'
+            expect(p, R_PAREN_T);  //eat ')'
             return expr;
         }
         case L_BRACE_T: {
@@ -315,7 +326,7 @@ IncludeStmt* parseIncludeStmt(Parser* p) {
     parts[part_count++] = expect(p, VAR_T)->value;
 
     while (peek(p, 0)->type == DOT_T) {
-        consume(p);  // consume .
+        consume(p);  //consume .
 
         if (peek(p, 0)->type == STAR_T) {
             //wildcard: everything so far is the module
@@ -451,7 +462,7 @@ Stmt* parseStatement(Parser* p) {
                 Ownership o = OWNERSHIP_NONE;
                 Token* varTok = consume(p);
                 char *name = varTok->value;
-                expect(p, COLON_T); //:
+                expect(p, COLON_T); // :
 
                 if (peek(p, 0)->type == OWN_T) {
                     consume(p);
@@ -673,7 +684,7 @@ Stmt* parseStatement(Parser* p) {
             return s;
         }
         case RETURN_T: {
-            // Parse as expression statement
+            //parse as expression statement
             Expr* e = parseExpr(p);
             expect(p, SEMICOLON_T);
 
@@ -721,9 +732,10 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
 
         Token* t = consume(p);
         bool isConst = false;
-        if(t->type == CONST_T)
+        if(t->type == CONST_T) {
             isConst = true;
-        t = consume(p);
+            t = consume(p);  //now get the actual parameter name
+        }
 
         if(t->type != VAR_T) {
             stage_fatal(STAGE_PARSER, TOK_LOC(t),
@@ -901,7 +913,7 @@ Stmt* makeExprStmt(SourceLocation loc, Expr* e) {
     return s;
 }
 
-Func* makeFunc(char* name, FuncParam* params, int paramCount, TokenType ret, Stmt* body) {
+Func* makeFunc(char* name, FuncParam* params, int paramCount, TokenType ret, Ownership retOwnership, Stmt* body) {
     Func* f = malloc(sizeof(Func));
     f->body = body;
     f->signature = malloc(sizeof(FuncSign));
@@ -909,6 +921,7 @@ Func* makeFunc(char* name, FuncParam* params, int paramCount, TokenType ret, Stm
     f->signature->parameters = params;
     f->signature->paramNum = paramCount;
     f->signature->retType = ret;
+    f->signature->retOwnership = retOwnership;
     return f;
 }
 bool check_func_sign(FuncSign* a, FuncSign* b) {

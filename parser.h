@@ -55,6 +55,7 @@ typedef struct {
     FuncParam* parameters;
     int paramNum;
     TokenType retType;
+    Ownership retOwnership;
 } FuncSign;
 
 struct Func {
@@ -63,18 +64,18 @@ struct Func {
 };
 
 typedef enum {
-    NULL_PATTERN,      // null
-    SOME_PATTERN,      // some(binding_name)
-    WILDCARD_PATTERN,  // _
-    VALUE_PATTERN,     // any expression (for non-nullable matches)
+    NULL_PATTERN,      //null
+    SOME_PATTERN,      //some(binding_name)
+    WILDCARD_PATTERN,  //_
+    VALUE_PATTERN,     //any expression (for non-nullable matches)
 } PatternType;
 
 typedef struct Pattern {
     PatternType type;
     SourceLocation loc;
     union {
-        char* binding_name;  // for SOME_PATTERN
-        Expr* value_expr;    // for VALUE_PATTERN
+        char* binding_name;  //for SOME_PATTERN
+        Expr* value_expr;    //for VALUE_PATTERN
     } as;
 } Pattern;
 
@@ -184,17 +185,17 @@ struct Expr {
 };
 
 typedef enum {
-    VAR_DECL_S,         // x: int = 5;
-    ASSIGN_S,           // x = 5;
-    ARRAY_ELEM_ASSIGN_S, // arr[i] = value;
-    IF_S,               // if cond { } else { }
-    WHILE_S,            // while cond { }
-    DO_WHILE_S,         // do { } while cond
-    FOR_S,              // for (var: min to max) { }
+    VAR_DECL_S,         //x: int = 5;
+    ASSIGN_S,           //x = 5;
+    ARRAY_ELEM_ASSIGN_S, //arr[i] = value;
+    IF_S,               //if cond { } else { }
+    WHILE_S,            //while cond { }
+    DO_WHILE_S,         //do { } while cond
+    FOR_S,              //for (var: min to max) { }
     BLOCK_S,            // { stmt; stmt; stmt; }
     MATCH_S,
     FREE_S,
-    EXPR_STMT_S,        // expression as statement
+    EXPR_STMT_S,        //expression as statement
 } StmtType;
 
 struct Stmt {
@@ -299,7 +300,7 @@ Stmt* makeWhile(SourceLocation, Expr*, Stmt*);
 Stmt* makeBlock(SourceLocation, Stmt**, int);
 Stmt* makeExprStmt(SourceLocation, Expr*);
 
-Func* makeFunc(char*, FuncParam*, int, TokenType, Stmt*);
+Func* makeFunc(char*, FuncParam*, int, TokenType, Ownership, Stmt*);
 bool check_func_sign(FuncSign *a, FuncSign *b);
 bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters);
 
