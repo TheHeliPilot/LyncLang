@@ -3,7 +3,7 @@ REM Lync Compiler Installer for Windows
 REM Installs lync.exe to C:\Program Files\Lync and adds it to system PATH
 
 echo ========================================
-echo Lync Compiler Installer v0.3.0
+echo Lync Compiler Installer v0.3.1
 echo ========================================
 echo.
 

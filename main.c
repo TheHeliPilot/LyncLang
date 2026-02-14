@@ -5,6 +5,7 @@
 #include "codegen.h"
 #include "analyzer.h"
 #include "optimizer.h"
+#include "file_loader.h"
 
 #ifdef _WIN32
 #include <process.h>
@@ -205,6 +206,21 @@ int main(int argc, char** argv) {
     print_ast(program->functions, program->func_count);
 
     //check for parser errors
+    if (has_errors(g_error_collector)) {
+        print_messages(g_error_collector);
+        free_error_collector(g_error_collector);
+        free(code);
+        free(c_file);
+        free(exe_file);
+        return 1;
+    }
+
+    //--- file includes ---
+    stage_trace_enter(STAGE_PARSER, "processing file includes");
+    process_file_includes(program, input_file);
+    stage_trace_exit(STAGE_PARSER, "file includes processed, now %d functions", program->func_count);
+
+    //check for include errors
     if (has_errors(g_error_collector)) {
         print_messages(g_error_collector);
         free_error_collector(g_error_collector);

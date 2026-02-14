@@ -1,0 +1,17 @@
+include std.io.*;
+include lib.math_utils.*;
+
+def main(): int {
+    val: int = 5;
+    sq: int = square(val);
+    print("Square of 5 is:", sq);
+    
+    sum: int = add(10, 20);
+    print("Sum is:", sum);
+    
+    return 0;
+}
+
+def square(x: int): int {
+    return 0;
+}

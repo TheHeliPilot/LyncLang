@@ -23,4 +23,6 @@ add_executable(lync main.c
         optimizer.c
         optimizer.h
         codegen_asm.c
+        file_loader.c
+        file_loader.h
 )

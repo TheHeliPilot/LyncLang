@@ -1,0 +1,8 @@
+
+def square(x: int): int {
+    return x * x;
+}
+
+def add(x: int, y: int): int {
+    return x + y;
+}

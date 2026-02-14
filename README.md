@@ -5,7 +5,7 @@ A systems programming language with manual memory management, compile-time owner
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
-![Version: 0.3.0](https://img.shields.io/badge/Version-0.3.0-orange.svg)
+![Version: 0.3.1](https://img.shields.io/badge/Version-0.3.1-orange.svg)
 
 File extension: `.lync`
 
@@ -67,7 +67,7 @@ Lync provides manual memory management with compile-time safety guarantees. The 
 - `lync.exe` - The Lync compiler
 - `install.bat` - Automated installer
 - `uninstall.bat` - Automated uninstaller
-- `lync-language-0.2.1.vsix` - VS Code extension (optional)
+- `lync-language-0.3.1.vsix` - VS Code extension (optional)
 
 **To install:**
 1. Right-click `install.bat` and select **"Run as Administrator"**
@@ -80,7 +80,7 @@ The installer copies `lync.exe` to `C:\Program Files\Lync\` and adds it to your 
 1. Open VS Code
 2. Press `Ctrl+Shift+X` (Extensions)
 3. Click the `...` menu → `Install from VSIX...`
-4. Select `lync-language-0.2.1.vsix`
+4. Select `lync-language-0.3.1.vsix`
 
 ### Build from Source
 
@@ -881,6 +881,44 @@ arr4: int[size] = {1, 2, 3};  // Error: C limitation
 - `const` keyword for immutable variables
   - Syntax: `const x: int = 10;`
   - Assignment to const variables triggers compile error
+### File Includes (Modules)
+
+You can split your code into multiple files and include them.
+
+The `include` statement works with:
+1. **Standard Library**: `include std.io.*;`
+2. **Local Files**: `include path.to.file.*;`
+
+**Rules:**
+- Paths are relative to the current file.
+- Dots (`.`) usage represent directory separators.
+- The `.lync` extension is appended automatically.
+- Use `*` to import all functions, or specify a function name.
+
+**Example:**
+Refactoring helper functions into `utils/math.lync`:
+
+**File: `utils/math.lync`**
+```
+def square(x: int): int {
+    return x * x;
+}
+```
+
+**File: `main.lync`**
+```
+include std.io.*;
+include utils.math.*;  // Imports utils/math.lync
+
+def main(): int {
+    x: int = square(5);
+    print(x);
+    return 0;
+}
+```
+
+### Functions
+Lync requires function signatures to be explicit.
 - `const` parameters in function signatures
   - Syntax: `def foo(const x: int): void`
   - Attempting to assign to const parameters triggers compile error

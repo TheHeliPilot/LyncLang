@@ -20,8 +20,27 @@ ImportRegistry* make_import_registry() {
 }
 
 void register_import(ImportRegistry* reg, IncludeStmt* stmt) {
+    // Non-std modules are handled by file_loader, just register std.io here
+    if (strncmp(stmt->module_name, "std.", 4) != 0) {
+        // User file import — functions are already merged by file_loader
+        // Just register the function names so is_imported() works
+        if (stmt->type == IMPORT_ALL) {
+            // For wildcard user imports, functions are already in the program
+            // Nothing to register here — they're regular functions
+            return;
+        } else {
+            // Register specific import name
+            if (reg->count >= reg->capacity) {
+                reg->capacity *= 2;
+                reg->imported_functions = realloc(reg->imported_functions, sizeof(char*) * reg->capacity);
+            }
+            reg->imported_functions[reg->count++] = stmt->function_name;
+            return;
+        }
+    }
+
     if (strcmp(stmt->module_name, "std.io") != 0) {
-        stage_warning(STAGE_ANALYZER, stmt->loc, "unknown module '%s' (only std.io is supported)", stmt->module_name);
+        stage_warning(STAGE_ANALYZER, stmt->loc, "unknown standard module '%s' (only std.io is supported)", stmt->module_name);
         return;
     }
 

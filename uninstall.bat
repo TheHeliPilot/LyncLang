@@ -3,7 +3,7 @@ REM Lync Compiler Uninstaller for Windows
 REM Removes lync.exe from C:\Program Files\Lync and removes from system PATH
 
 echo ========================================
-echo Lync Compiler Uninstaller v0.3.0
+echo Lync Compiler Uninstaller v0.3.1
 echo ========================================
 echo.
 
