@@ -6,7 +6,7 @@ This document tracks planned features and improvements for the Lync programming 
 
 ## In Progress
 
-Currently no features in active development.
+**Current Focus:** [Phase 6: Structs](#phase-6-structs)
 
 ---
 
@@ -223,11 +223,11 @@ Node: struct {
 ```
 
 ### User-Defined Modules
-- [ ] Allow `.lync` files as modules
+- [x] Allow `.lync` files as modules
 - [ ] Public/private visibility modifiers
-- [ ] Module resolution and search paths
-- [ ] Module dependency tracking
-- [ ] Prevent circular dependencies
+- [x] Module resolution and search paths
+- [x] Module dependency tracking
+- [x] Prevent circular dependencies
 
 **Example (syntax TBD):**
 ```c
@@ -256,10 +256,10 @@ include math.square;
 - [ ] Strength reduction
 
 ### Developer Tools
-- [ ] VS Code extension
-  - Syntax highlighting
-  - Error diagnostics
-  - Code completion
+- [x] VS Code extension
+  - [x] Syntax highlighting
+  - [x] Error diagnostics
+  - [x] Code completion
   - Go to definition
 - [ ] Language Server Protocol (LSP) implementation
 - [ ] Debugger integration (map back to .lync source)
@@ -303,7 +303,7 @@ Features that have been implemented.
 
 - [x] Ownership tracking (ref/own with lifetime validation)
 - [x] Nullable types with pattern matching
-- [x] Module system with `include` statement
+- [x] Module system with `include` statement (Standard Lib & User Files)
 - [x] Print statement with string literals
 - [x] `char` primitive type
 - [x] Immutability with `const` keyword
