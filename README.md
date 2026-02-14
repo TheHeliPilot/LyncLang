@@ -41,71 +41,42 @@ File extension: `.lync`
 
 ## Overview
 
-Lync provides manual memory management with compile-time safety guarantees. The ownership system prevents memory leaks, double frees, and use-after-free errors without runtime overhead.
+Lync is a systems programming language that provides manual memory management with compile-time safety guarantees. It prevents memory leaks, double frees, and use-after-free errors through a strict ownership system, without runtime garbage collection.
 
-**Core Features:**
-- Explicit memory control with `alloc` and `free`
-- Compile-time ownership tracking (zero runtime cost)
-- Nullable types with safe pattern matching
-- Module system with selective imports
-- Immutability with `const` qualifier
-- Transpiles to readable, standard C
+**Key Features:**
+- **Manual Memory Control**: `alloc` and `free` for explicit heap management.
+- **Ownership System**: Zero-cost, compile-time tracking of resource ownership.
+- **Safety**: Nullable types (`?`) and exhaustive pattern matching.
+- **Interoperability**: Transpiles to standard C23 for wide compatibility.
 
-**Design Philosophy:**
-- Manual control where it matters
-- Compile-time guarantees where possible
-- Zero-cost abstractions
-- Readable generated code
-
----
 
 ## Installation
 
-### Quick Install (Windows)
+### Windows (Pre-built)
 
-**Download the latest release** containing:
-- `lync.exe` - The Lync compiler
-- `install.bat` - Automated installer
-- `uninstall.bat` - Automated uninstaller
-- `lync-language-0.3.1.vsix` - VS Code extension (optional)
-
-**To install:**
-1. Right-click `install.bat` and select **"Run as Administrator"**
-2. Restart your terminal
-3. Test: `lync --help`
-
-The installer copies `lync.exe` to `C:\Program Files\Lync\` and adds it to your system PATH.
-
-**VS Code Extension (Optional):**
-1. Open VS Code
-2. Press `Ctrl+Shift+X` (Extensions)
-3. Click the `...` menu → `Install from VSIX...`
-4. Select `lync-language-0.3.1.vsix`
+1. Download the latest release.
+2. Run `install.bat` as Administrator.
+3. (Optional) Install `lync-language-0.3.1.vsix` in VS Code for syntax highlighting.
 
 ### Build from Source
 
-If you want to build from source:
+Requirements: CMake 3.29+, a C compiler (GCC/Clang/MSVC).
 
 ```bash
 cmake -B build
 cmake --build build
 ```
 
-The executable will be in the build directory.
-
-See [INSTALL.md](INSTALL.md) for detailed installation instructions, troubleshooting, and manual installation steps.
-
----
 
 ## Quick Start
 
 ### Hello World
 
+**hello.lync**
 ```c
-// hello.lync
 def main(): int {
-print("Hello, world!");
-return 0;
+    print("Hello, world!");
+    return 0;
 }
 ```
 
@@ -273,13 +244,13 @@ len: int = length(arr);  // Compile-time constant for stack arrays
 ```
 arr: [3] int = {1, 2, 3};
 
-arr[0];   // ✅ OK
-arr[2];   // ✅ OK (last element)
-arr[3];   // ❌ Error: index 3 out of bounds (valid: 0 to 2)
-arr[-1];  // ❌ Error: index -1 is negative
+arr[0];   // OK
+arr[2];   // OK (last element)
+arr[3];   // Error: index 3 out of bounds (valid: 0 to 2)
+arr[-1];  // Error: index -1 is negative
 
 i: int = 5;
-arr[i];   // ⚠️ No compile-time check (runtime bounds checking needed)
+arr[i];   // No compile-time check (runtime bounds checking needed)
 ```
 
 
@@ -737,11 +708,11 @@ lync -O2 example.lync          # Compile with optimizations
 
 **Severities:**
 
-| Severity | Color | Behavior |
-|----------|-------|----------|
-| `error` | Red | Compilation fails |
-| `warning` | Yellow | Compilation continues |
-| `note` | Cyan | Additional context |
+| Severity | Behavior |
+|----------|----------|
+| `error` | Compilation fails |
+| `warning` | Compilation continues |
+| `note` | Additional context |
 
 **Example:**
 ```
