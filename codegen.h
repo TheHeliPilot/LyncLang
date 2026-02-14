@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/9/2026.
-//
+// created by bucka on 2/9/2026.
 
 #ifndef LYNC_CODEGEN_H
 #define LYNC_CODEGEN_H
@@ -40,4 +38,4 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership, FILE* ou
 
 char* type_to_c_type(TokenType t);
 
-#endif //LYNC_CODEGEN_H
+#endif //lYNC_CODEGEN_H

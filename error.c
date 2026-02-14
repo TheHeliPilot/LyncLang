@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/10/2026.
-//
+// created by bucka on 2/10/2026.
 
 #include "error.h"
 #include <stdio.h>
@@ -17,7 +15,7 @@
 #include <unistd.h>
 #endif
 
-//ANSI color codes
+//aNSI color codes
 #define ANSI_RED     "\033[1;31m"
 #define ANSI_YELLOW  "\033[1;33m"
 #define ANSI_CYAN    "\033[1;36m"

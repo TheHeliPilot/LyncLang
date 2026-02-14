@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/9/2026.
-//
+//created by bucka on 2/9/2026.
 
 #include "lexer.h"
 #include "error.h"
@@ -35,24 +33,63 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             continue;
         }
 
-        //number literals
+        //number literals (int or float/double)
         if (code[i] >= '0' && code[i] <= '9') {
-            int num = 0;
+            int num_start = i;
+            bool is_float = false;
+
+            //consume integer part
             while (code[i] >= '0' && code[i] <= '9') {
-                num = num * 10 + (code[i] - '0');
                 i++;
                 column++;
             }
 
-            int* heap_num = malloc(sizeof(int));
-            *heap_num = num;
-            tokens[count++] = (Token){
-                .type = INT_LIT_T,
-                .value = heap_num,
-                .line = line,
-                .column = start_col,
-                .filename = filename
-            };
+            //check for decimal point followed by digit
+            if (code[i] == '.' && code[i+1] >= '0' && code[i+1] <= '9') {
+                is_float = true;
+                i++;  //consume .
+                column++;
+                while (code[i] >= '0' && code[i] <= '9') {
+                    i++;
+                    column++;
+                }
+            }
+
+            //check for f or F suffix (only if we have a decimal)
+            if (is_float && (code[i] == 'f' || code[i] == 'F')) {
+                i++;
+                column++;
+            }
+
+            if (is_float) {
+                int len = i - num_start;
+                char* float_str = malloc(len + 1);
+                strncpy(float_str, &code[num_start], len);
+                float_str[len] = '\0';
+
+                tokens[count++] = (Token){
+                    .type = FLOAT_LIT_T,
+                    .value = float_str,
+                    .line = line,
+                    .column = start_col,
+                    .filename = filename
+                };
+            } else {
+                //parse as integer
+                int num = 0;
+                for (int j = num_start; j < i; j++) {
+                    num = num * 10 + (code[j] - '0');
+                }
+                int* heap_num = malloc(sizeof(int));
+                *heap_num = num;
+                tokens[count++] = (Token){
+                    .type = INT_LIT_T,
+                    .value = heap_num,
+                    .line = line,
+                    .column = start_col,
+                    .filename = filename
+                };
+            }
 
             if (count >= capacity) {
                 capacity *= 2;
@@ -63,7 +100,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
 
         //string literals
         if (c == '"') {
-            i++;  // skip opening quote
+            i++;  //skip opening quote
             column++;
             int str_start = i;
             int str_len = 0;
@@ -129,6 +166,62 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             continue;
         }
 
+        //character literals
+        if (c == '\'') {
+            i++; //skip opening quote
+            column++;
+            
+            char char_val = 0;
+            
+            if (code[i] == '\\') {
+                i++;
+                column++;
+                if (code[i] == 'n') char_val = '\n';
+                else if (code[i] == 't') char_val = '\t';
+                else if (code[i] == 'r') char_val = '\r';
+                else if (code[i] == '0') char_val = '\0';
+                else if (code[i] == '\\') char_val = '\\';
+                else if (code[i] == '\'') char_val = '\'';
+                else {
+                    SourceLocation loc = {.line = line, .column = column, .filename = filename};
+                    add_error(g_error_collector, STAGE_LEXER, loc, "unknown escape sequence");
+                    char_val = code[i];
+                }
+                i++;
+                column++;
+            } else {
+                char_val = code[i];
+                i++;
+                column++;
+            }
+
+            if (code[i] != '\'') {
+                SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
+                add_error(g_error_collector, STAGE_LEXER, loc, "unterminated character literal (expected ')");
+                //recover by skipping until whitespace or next quote
+            } else {
+                i++;
+                column++;
+            }
+
+            int* val_ptr = malloc(sizeof(int));
+            *val_ptr = (int)char_val;
+
+            tokens[count++] = (Token){
+                .type = CHAR_LIT_T,
+                .value = val_ptr,
+                .line = line,
+                .column = start_col,
+                .filename = filename
+            };
+            
+            if (count >= capacity) {
+                capacity *= 2;
+                tokens = realloc(tokens, capacity * sizeof(Token));
+            }
+            continue;
+        }
+
         //keywords and identifiers
         if ((code[i] >= 'a' && code[i] <= 'z') || (code[i] >= 'A' && code[i] <= 'Z') || code[i] == '_') {
             int start = i;
@@ -159,6 +252,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "string") == 0) { type = STR_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "def") == 0) { type = DEF_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "include") == 0) { type = INCLUDE_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "extern") == 0) { type = EXTERN_T; value = NULL; free_word = true; }
             else if (strcmp(word, "while") == 0) { type = WHILE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "do") == 0) { type = DO_T; value = NULL; free_word = true; }
             else if (strcmp(word, "for") == 0) { type = FOR_T; value = NULL; free_word = true; }
@@ -171,6 +265,8 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "own") == 0) { type = OWN_T; value = NULL; free_word = true; }
             else if (strcmp(word, "ref") == 0) { type = REF_T; value = NULL; free_word = true; }
             else if (strcmp(word, "const") == 0) { type = CONST_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "float") == 0) { type = FLOAT_KEYWORD_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "double") == 0) { type = DOUBLE_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "true") == 0) {
                 type = BOOL_LIT_T;
                 int* val = malloc(sizeof(int));
@@ -311,7 +407,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 column += 2;
                 goto resize_check;
             } else {
-                // Error with recovery - suggest && instead
+                //error with recovery - suggest && instead
                 SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
                 add_error(g_error_collector, STAGE_LEXER, loc, "single '&' not supported, did you mean '&&'?");
                 i++;
@@ -327,7 +423,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 column += 2;
                 goto resize_check;
             } else {
-                // Error with recovery - suggest || instead
+                //error with recovery - suggest || instead
                 SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
                 add_error(g_error_collector, STAGE_LEXER, loc, "single '|' not supported, did you mean '||'?");
                 i++;
@@ -464,8 +560,12 @@ const char* token_type_name(TokenType type) {
         case BOOL_KEYWORD_T: return "bool";
         case STR_KEYWORD_T: return "str";
         case CHAR_KEYWORD_T: return "char";
+        case FLOAT_KEYWORD_T: return "float";
+        case DOUBLE_KEYWORD_T: return "double";
+        case FLOAT_LIT_T: return "float literal";
         case DEF_KEYWORD_T: return "def";
         case INCLUDE_T: return "include";
+        case EXTERN_T: return "extern";
         case EOF_T: return "EOF";
         case COMMA_T: return ",";
         case DOT_T: return ".";

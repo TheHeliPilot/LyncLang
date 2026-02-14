@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/12/2026.
-//
+// created by bucka on 2/12/2026.
 
 #include "optimizer.h"
 #include "common.h"
@@ -136,7 +134,7 @@ bool constant_folding_stmt(Stmt* s) {
             modified |= fold_expression(&s->as.match_stmt.var);
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
                 MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
-                // For VALUE_PATTERN, fold the expression
+                // for VALUE_PATTERN, fold the expression
                 if (branch->pattern->type == VALUE_PATTERN) {
                     modified |= fold_expression(&branch->pattern->as.value_expr);
                 }
@@ -473,7 +471,7 @@ bool is_small_function(Func* f) {
 
 bool inline_functions(Func** program, int count) {
     stage_trace(STAGE_OPTIMIZER, "Running function inlining...");
-    // TODO: Implement function inlining
+    // tODO: Implement function inlining
     return false;  //no changes yet
 }
 

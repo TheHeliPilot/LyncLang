@@ -1,0 +1,81 @@
+//standard string operations
+
+def concat(s1: string, s2: string): own string {
+    l1: int = length(s1);
+    l2: int = length(s2);
+    res: own string = alloc[l1 + l2 + 1] char;
+
+    for(i: 0 to l1 - 1) {
+        res[i] = s1[i];
+    }
+    for(i: 0 to l2 - 1) {
+        res[l1 + i] = s2[i];
+    }
+    res[l1 + l2] = '\0';
+    return res;
+}
+
+def clone(s: string): own string {
+    l: int = length(s);
+    res: own string = alloc[l + 1] char;
+    for(i: 0 to l - 1) {
+        res[i] = s[i];
+    }
+    res[l] = '\0';
+    return res;
+}
+
+def equals(s1: string, s2: string): bool {
+    l1: int = length(s1);
+    l2: int = length(s2);
+    if (l1 != l2) {
+        return false;
+    }
+    for(i: 0 to l1 - 1) {
+        if (s1[i] != s2[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+def substring(s: string, start: int, len: int): own string {
+    l: int = length(s);
+    if (start < 0 || start >= l || len <= 0 || start + len > l) {
+        return "";
+    }
+    res: own string = alloc[len + 1] char;
+    for(i: 0 to len - 1) {
+        res[i] = s[start + i];
+    }
+    res[len] = '\0';
+    return res;
+}
+
+def to_upper(s: string): own string {
+    l: int = length(s);
+    res: own string = alloc[l + 1] char;
+    for(i: 0 to l - 1) {
+        if (s[i] >= 'a' && s[i] <= 'z') {
+            res[i] = s[i] - 32;
+        } else {
+            res[i] = s[i];
+        }
+    }
+    res[l] = '\0';
+    return res;
+}
+
+def to_lower(s: string): own string {
+    l: int = length(s);
+    res: own string = alloc[l + 1] char;
+    for(i: 0 to l - 1) {
+        if (s[i] >= 'A' && s[i] <= 'Z') {
+            res[i] = s[i] + 32;
+        } else {
+            res[i] = s[i];
+        }
+    }
+    res[l] = '\0';
+    return res;
+}

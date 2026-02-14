@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/14/2026.
-//
+// created by bucka on 2/14/2026.
 
 #include "file_loader.h"
 #include "lexer.h"
@@ -9,16 +7,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// Track already-loaded files to prevent circular includes
+// track already-loaded files to prevent circular includes
 static char* loaded_files[MAX_INCLUDE_DEPTH];
 static int loaded_file_count = 0;
 
-// Reset loaded files tracking (call before processing a new compilation)
+// reset loaded files tracking (call before processing a new compilation)
 static void reset_loaded_files() {
     loaded_file_count = 0;
 }
 
-// Check if a file has already been loaded
+// check if a file has already been loaded
 static bool is_file_loaded(const char* path) {
     for (int i = 0; i < loaded_file_count; i++) {
         if (strcmp(loaded_files[i], path) == 0) return true;
@@ -26,7 +24,7 @@ static bool is_file_loaded(const char* path) {
     return false;
 }
 
-// Mark a file as loaded
+// mark a file as loaded
 static void mark_file_loaded(const char* path) {
     if (loaded_file_count < MAX_INCLUDE_DEPTH) {
         loaded_files[loaded_file_count++] = strdup(path);
@@ -34,14 +32,14 @@ static void mark_file_loaded(const char* path) {
 }
 
 char* get_directory(const char* file_path) {
-    // Find the last / or backslash
+    // find the last / or backslash
     const char* last_sep = nullptr;
     for (const char* p = file_path; *p; p++) {
         if (*p == '/' || *p == '\\') last_sep = p;
     }
 
     if (!last_sep) {
-        // No directory separator, use current directory
+        // no directory separator, use current directory
         return strdup(".");
     }
 
@@ -53,23 +51,23 @@ char* get_directory(const char* file_path) {
 }
 
 char* resolve_module_path(const char* module_name, const char* source_dir) {
-    // Convert dots to path separators: "utils.arrays" -> "utils/arrays.lync"
+    // convert dots to path separators: "utils.arrays" -> "utils/arrays.lync"
     size_t mod_len = strlen(module_name);
-    // Allocate: source_dir + / + module_name (with dots->/) + .lync + null
+    // allocate: source_dir + / + module_name (with dots->/) + .lync + null
     size_t dir_len = strlen(source_dir);
     char* path = malloc(dir_len + 1 + mod_len + 6); // 6 for ".lync\0"
 
-    // Start with source directory
+    // start with source directory
     memcpy(path, source_dir, dir_len);
     path[dir_len] = '/';
 
-    // Copy module name, replacing dots with /
+    // copy module name, replacing dots with /
     size_t out = dir_len + 1;
     for (size_t i = 0; i < mod_len; i++) {
         path[out++] = (module_name[i] == '.') ? '/' : module_name[i];
     }
 
-    // Append .lync
+    // append .lync
     memcpy(path + out, ".lync", 5);
     path[out + 5] = '\0';
 
@@ -85,11 +83,11 @@ Program* load_and_parse_file(const char* file_path, int depth) {
     }
 
     if (is_file_loaded(file_path)) {
-        // Already loaded — not an error, just skip (don't double-include)
+        // already loaded — not an error, just skip (dont double-include)
         return nullptr;
     }
 
-    // Read the file
+    // read the file
     FILE* file = fopen(file_path, "r");
     if (!file) {
         return nullptr; // caller will emit the error with location info
@@ -106,17 +104,17 @@ Program* load_and_parse_file(const char* file_path, int depth) {
 
     mark_file_loaded(file_path);
 
-    // Lex
+    // lex
     int token_count;
     Token* tokens = tokenize(code, &token_count, file_path);
 
-    // Check for lexer errors (they're collected in the global error collector)
+    // check for lexer errors (theyre collected in the global error collector)
     if (has_errors(g_error_collector)) {
         free(code);
         return nullptr;
     }
 
-    // Parse
+    // parse
     Parser parser = {
         .tokens = tokens,
         .count = token_count,
@@ -126,13 +124,13 @@ Program* load_and_parse_file(const char* file_path, int depth) {
 
     Program* prog = parseProgram(&parser);
 
-    // Don't free code — tokens reference it
-    // Process nested includes in this file too
+    // dont free code — tokens reference it
+    // process nested includes in this file too
     if (prog && prog->imports && prog->imports->import_count > 0) {
         char* dir = get_directory(file_path);
         for (int i = 0; i < prog->imports->import_count; i++) {
             IncludeStmt* imp = prog->imports->imports[i];
-            // Skip std.* imports
+            // skip std.* imports
             if (strncmp(imp->module_name, "std.", 4) == 0) continue;
 
             char* nested_path = resolve_module_path(imp->module_name, dir);
@@ -145,19 +143,19 @@ Program* load_and_parse_file(const char* file_path, int depth) {
                 continue;
             }
 
-            // Merge functions from nested include into this program
+            // merge functions from nested include into this program
             for (int j = 0; j < nested->func_count; j++) {
                 bool should_include = false;
 
                 if (imp->type == IMPORT_ALL) {
                     should_include = true;
                 } else {
-                    // IMPORT_SPECIFIC — only include matching function
+                    // iMPORT_SPECIFIC — only include matching function
                     should_include = (strcmp(nested->functions[j]->signature->name, imp->function_name) == 0);
                 }
 
                 if (should_include) {
-                    // Grow the functions array if needed
+                    // grow the functions array if needed
                     int new_count = prog->func_count + 1;
                     prog->functions = realloc(prog->functions, sizeof(Func*) * new_count);
                     prog->functions[prog->func_count] = nested->functions[j];
@@ -165,7 +163,7 @@ Program* load_and_parse_file(const char* file_path, int depth) {
                 }
             }
 
-            // Check if IMPORT_SPECIFIC found its function
+            // check if IMPORT_SPECIFIC found its function
             if (imp->type == IMPORT_SPECIFIC) {
                 bool found = false;
                 for (int j = 0; j < nested->func_count; j++) {
@@ -192,14 +190,14 @@ void process_file_includes(Program* prog, const char* source_file) {
     if (!prog || !prog->imports) return;
 
     reset_loaded_files();
-    mark_file_loaded(source_file); // Don't let the main file include itself
+    mark_file_loaded(source_file); // dont let the main file include itself
 
     char* source_dir = get_directory(source_file);
 
     for (int i = 0; i < prog->imports->import_count; i++) {
         IncludeStmt* imp = prog->imports->imports[i];
 
-        // Skip std.* imports — they're handled by the existing system
+        // skip std.* imports — theyre handled by the existing system
         if (strncmp(imp->module_name, "std.", 4) == 0) continue;
 
         char* file_path = resolve_module_path(imp->module_name, source_dir);
@@ -212,7 +210,7 @@ void process_file_includes(Program* prog, const char* source_file) {
             continue;
         }
 
-        // Merge functions based on import type
+        // merge functions based on import type
         for (int j = 0; j < included->func_count; j++) {
             bool should_include = false;
 
@@ -223,7 +221,7 @@ void process_file_includes(Program* prog, const char* source_file) {
             }
 
             if (should_include) {
-                // Check for duplicate function (same name + param count already exists)
+                // check for duplicate function (same name + param count already exists)
                 bool duplicate = false;
                 for (int k = 0; k < prog->func_count; k++) {
                     if (strcmp(prog->functions[k]->signature->name, included->functions[j]->signature->name) == 0 &&
@@ -245,7 +243,7 @@ void process_file_includes(Program* prog, const char* source_file) {
             }
         }
 
-        // Verify IMPORT_SPECIFIC found its target
+        // verify IMPORT_SPECIFIC found its target
         if (imp->type == IMPORT_SPECIFIC) {
             bool found = false;
             for (int j = 0; j < included->func_count; j++) {

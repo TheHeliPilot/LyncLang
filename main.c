@@ -48,7 +48,7 @@ static char* replace_extension(const char* path, const char* new_ext) {
     size_t len = strlen(path);
     const char* dot = nullptr;
 
-    //find the last '.' that comes after the last path separator
+    //find the last . that comes after the last path separator
     for (size_t i = len; i > 0; i--) {
         if (path[i - 1] == '.' && dot == nullptr) {
             dot = &path[i - 1];
@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
         if (opt_level >= 2) level |= OPT_DEAD_CODE | OPT_PEEPHOLE;
         if (opt_level >= 3) level |= OPT_INLINE;
         if (opt_size) {
-            level &= ~OPT_INLINE;  // Inlining increases size
+            level &= ~OPT_INLINE;  // inlining increases size
         }
 
         optimize_program(program->functions, program->func_count, level);
@@ -317,7 +317,7 @@ int main(int argc, char** argv) {
 #ifdef _WIN32
         snprintf(run_cmd, sizeof(run_cmd), "\"%s\"", exe_file);
 #else
-        //prepend ./ if the path doesn't contain a separator
+        //prepend ./ if the path doesnt contain a separator
         if (strchr(exe_file, '/') == nullptr) {
             snprintf(run_cmd, sizeof(run_cmd), "./%s", exe_file);
         } else {

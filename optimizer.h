@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/12/2026.
-//
+// created by bucka on 2/12/2026.
 
 #ifndef LYNC_OPTIMIZER_H
 #define LYNC_OPTIMIZER_H
@@ -31,4 +29,4 @@ bool is_constant_true(Expr* e);
 bool is_constant_false(Expr* e);
 bool is_small_function(Func* f);
 
-#endif //LYNC_OPTIMIZER_H
+#endif //lYNC_OPTIMIZER_H

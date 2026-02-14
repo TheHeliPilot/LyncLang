@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/9/2026.
-//
+// created by bucka on 2/9/2026.
 
 #ifndef LYNC_ANALYZER_H
 #define LYNC_ANALYZER_H
@@ -70,4 +68,4 @@ TokenType analyze_expr(Scope*, FuncTable*, Expr*, FuncSign* currentFunc);
 void analyze_stmt(Scope*, FuncTable*, Stmt*, FuncSign* currentFunc);
 void analyze_program(Program*);
 
-#endif //LYNC_ANALYZER_H
+#endif //lYNC_ANALYZER_H

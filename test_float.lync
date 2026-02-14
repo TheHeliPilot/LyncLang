@@ -1,0 +1,39 @@
+extern <math.h> {
+    def sqrt(x: double): double;
+    def pow(base: double, exp: double): double;
+}
+
+def main(): int {
+    print("Testing Floats and Doubles...");
+
+    // float literal
+    f: float = 3.14f;
+    print("f (float) = ", f); // print might need update for float? (Generated C printf uses %g usually if generic, or we rely on C default promotion? print uses overloaded C implementation?)
+
+    // double literal
+    d: double = 123.456;
+    print("d (double) = ", d);
+
+    // promotion: int + float -> float
+    res_float: float = 1 + f; 
+    print("1 + f = ", res_float);
+
+    // promotion: float + double -> double
+    res_double: double = f + d;
+    print("f + d = ", res_double);
+    
+    // extern call (int -> double implicit cast in C, checked in analyzer as promotion)
+    // wait, analyzer checks types. 
+    // sqrt takes double. 
+    // analyzer allows int -> double? 
+    // my VAR_DECL_S/ASSIGN_S updates allow it. 
+    // bUT FUNC_CALL_E arg matching needs update too!
+    
+    // i missed FUNC_CALL_E argument matching promotion in analyzer!
+    // i need to update analyzer for that too.
+    
+    print("sqrt(16.0) = ", sqrt(16.0));
+    // print("sqrt(25) = ", sqrt(25)); // this will fail if I didnt update arg matching.
+
+    return 0;
+}

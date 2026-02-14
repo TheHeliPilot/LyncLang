@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/12/2026.
-//
+// created by bucka on 2/12/2026.
 
 #include "codegen.h"
 
@@ -32,7 +30,7 @@ void generate_assembly(Func** program, int count, FILE* out) {
 
         fprintf(out, "\tsubq $32, %%rsp\n");
 
-        // TODO: Actually generate code for the function body
+        // tODO: Actually generate code for the function body
         //haha dont think i will soon
 
         //default implementation - just return 0 for main

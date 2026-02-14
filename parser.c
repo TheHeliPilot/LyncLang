@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/9/2026.
-//
+//created by bucka on 2/9/2026.
 
 #include "parser.h"
 
@@ -45,7 +43,7 @@ Func** parseFunctions(Parser* p, int* num) {
     int count = 0;
 
     while (p->pos < p->count && peek(p, 0)->type == DEF_KEYWORD_T) {
-        consume(p); //consume 'def'
+        consume(p);
         Token* name = expect(p, VAR_T);
         expect(p, L_PAREN_T);
 
@@ -82,6 +80,93 @@ Func** parseFunctions(Parser* p, int* num) {
     return functions;
 }
 
+ExternBlock* parseExternBlock(Parser* p) {
+    consume(p);
+    expect(p, LESS_T);
+    
+    //parse header name (e.g. "math.h") - could be VAR_T, DOT_T, etc.
+    //for simplicity, lets just consume until MORE_T and build a string
+    char header[256] = {0};
+    while(peek(p, 0)->type != MORE_T && peek(p, 0)->type != EOF_T) {
+        Token* t = consume(p);
+        //rudimentary reconstruction of header name
+        if(strlen(header) > 0 && t->type != DOT_T) strcat(header, ""); //simple concat
+        //actually for "sys/types.h" etc we might need better logic, but for "math.h"
+        //we likely get VAR_T DOT_T VAR_T
+        //lets just append the token text if possible, but we dont have text easily for all tokens
+        //for now support simple "math.h"
+        if(t->type == VAR_T) strcat(header, (char*)t->value);
+        else if(t->type == DOT_T) strcat(header, ".");
+        else strcat(header, token_type_name(t->type)); //fallback
+    }
+    expect(p, MORE_T);
+    expect(p, L_BRACE_T);
+
+    ExternBlock* block = malloc(sizeof(ExternBlock));
+    block->header = strdup(header);
+    block->capacity = 4;
+    block->count = 0;
+    block->signs = malloc(sizeof(FuncSign*) * block->capacity);
+
+    while(peek(p, 0)->type != R_BRACE_T && peek(p, 0)->type != EOF_T) {
+        if(peek(p, 0)->type == DEF_KEYWORD_T) {
+             consume(p);
+             Token* nameTok = expect(p, VAR_T);
+             char* name = (char*)nameTok->value;
+             
+             expect(p, L_PAREN_T);
+             int paramCount = 0;
+             FuncParam* params = parseFuncParams(p, &paramCount); //reuse existing param parser
+             expect(p, R_PAREN_T);
+             
+             expect(p, COLON_T);
+             //return type parsing - similar to parseFunc
+             TokenType retType = VOID_KEYWORD_T; //default?
+             Ownership retOwn = OWNERSHIP_NONE;
+             
+             Token* typeTok = peek(p, 0);
+             if(typeTok->type == OWN_T || typeTok->type == REF_T) {
+                 retOwn = (typeTok->type == OWN_T) ? OWNERSHIP_OWN : OWNERSHIP_REF;
+                 consume(p);
+                 //check for nullable ?
+                 if (peek(p, 0)->type == QUESTION_MARK_T) {
+                      consume(p);
+                      //tODO handling nullable return in extern?
+                 }
+             }
+             
+             //primitive types or void
+             if(peek(p, 0)->type == VOID_KEYWORD_T) {
+                 consume(p);
+                 retType = VOID_KEYWORD_T;
+             } else {
+                 Token* retTok = consume(p);
+                 retType = retTok->type; //assumption: its a type keyword
+             }
+             
+             expect(p, SEMICOLON_T);
+
+             FuncSign* sign = malloc(sizeof(FuncSign));
+             sign->name = name;
+             sign->parameters = params;
+             sign->paramNum = paramCount;
+             sign->retType = retType;
+             sign->retOwnership = retOwn;
+             sign->isExtern = true; //iMPORTANT
+
+             if(block->count >= block->capacity) {
+                 block->capacity *= 2;
+                 block->signs = realloc(block->signs, sizeof(FuncSign*) * block->capacity);
+             }
+             block->signs[block->count++] = sign;
+        } else {
+            //error or skip? 
+            consume(p); 
+        }
+    }
+    expect(p, R_BRACE_T);
+    return block;
+}
 Expr* parseExpr(Parser* p) {
     Expr* e = parseAnd(p);
     while (peek(p, 0)->type == OR_T) {
@@ -146,6 +231,15 @@ Expr* parseFactor(Parser* p) {
             Token* t = consume(p);
             return makeBoolLit(TOK_LOC(t), *(int*)t->value);
         }
+        case CHAR_LIT_T: {
+            Token* t = consume(p);
+            Expr* e = malloc(sizeof(Expr));
+            e->type = CHAR_LIT_E;
+            e->loc = TOK_LOC(t);
+            e->as.char_val = (char)*(int*)t->value; 
+            e->is_nullable = false;
+            return e;
+        }
         case STR_LIT_T: {
             Token* t = consume(p);
             return makeStrLit(TOK_LOC(t), (char*)t->value);
@@ -153,6 +247,23 @@ Expr* parseFactor(Parser* p) {
         case NULL_LIT_T: {
             Token* t = consume(p);
             return makeNullLit(TOK_LOC(t));
+        }
+        case FLOAT_LIT_T: {
+            Token* t = consume(p);
+            char* str = (char*)t->value;
+            Expr* e = malloc(sizeof(Expr));
+            e->type = FLOAT_LIT_E;
+            e->loc = TOK_LOC(t);
+            e->is_nullable = false;
+            e->as.double_val = strtod(str, NULL);
+            //set analyzedType hint for analyzer: f suffix = float, else double
+            size_t len = strlen(str);
+            if (len > 0 && (str[len-1] == 'f' || str[len-1] == 'F')) {
+                e->analyzedType = FLOAT_KEYWORD_T;
+            } else {
+                e->analyzedType = DOUBLE_KEYWORD_T;
+            }
+            return e;
         }
         case VAR_T: {
             Token* t = consume(p);
@@ -196,9 +307,9 @@ Expr* parseFactor(Parser* p) {
             return makeUnOp(TOK_LOC(t), NEGATION_T, parseFactor(p));
         }
         case L_PAREN_T: {
-            consume(p);  //eat '('
+            consume(p);
             Expr* expr = parseExpr(p);
-            expect(p, R_PAREN_T);  //eat ')'
+            expect(p, R_PAREN_T);
             return expr;
         }
         case L_BRACE_T: {
@@ -287,12 +398,17 @@ Expr* parseFactor(Parser* p) {
 
             bool isArr = false;
             Expr* arrSizeExpr = NULL;
+            TokenType allocType = VOID_KEYWORD_T; //default if not specified
+
             if(peek(p, 0)->type == L_BRACKET_T){
                 isArr = true;
                 consume(p);
                 arrSizeExpr = parseExpr(p);
                 expect(p, R_BRACKET_T);
-                consume(p); //consume the type token (e.g. int) after [size]
+                
+                //captured allocated type
+                Token* typeTok = consume(p); 
+                allocType = typeTok->type;
             }
 
             Expr* e = isArr ? arrSizeExpr : parseExpr(p);
@@ -303,6 +419,7 @@ Expr* parseFactor(Parser* p) {
             al->is_nullable = false;  //alloc always returns a pointer
             al->as.alloc.initialValue = e;
             al->as.alloc.isArray = isArr;
+            al->as.alloc.type = allocType; //store the type
             return al;
         }
 
@@ -323,17 +440,17 @@ IncludeStmt* parseIncludeStmt(Parser* p) {
     int part_count = 0;
     int part_capacity = 10;
 
-    // Collect all identifiers
+    //collect all identifiers
     parts[part_count++] = expect(p, VAR_T)->value;
 
     while (peek(p, 0)->type == DOT_T) {
-        consume(p);  //consume .
+        consume(p);
 
         if (peek(p, 0)->type == STAR_T) {
             //wildcard: everything so far is the module
             consume(p);
 
-            // Build module name from all parts
+            //build module name from all parts
             char* module = parts[0];
             for (int i = 1; i < part_count; i++) {
                 char* new_module = malloc(strlen(module) + strlen(parts[i]) + 2);
@@ -390,13 +507,27 @@ Program* parseProgram(Parser* p) {
     prog->imports->imports = malloc(sizeof(IncludeStmt*) * prog->imports->import_capacity);
     prog->imports->import_count = 0;
 
-    while (peek(p, 0)->type == INCLUDE_T) {
-        if (prog->imports->import_count >= prog->imports->import_capacity) {
-            prog->imports->import_capacity *= 2;
-            prog->imports->imports = realloc(prog->imports->imports,
-                                             sizeof(IncludeStmt*) * prog->imports->import_capacity);
+    prog->ext_block_count = 0;
+    int ext_cap = 4;
+    prog->externBlocks = malloc(sizeof(ExternBlock*) * ext_cap);
+
+    while (peek(p, 0)->type != EOF_T) {
+        if(peek(p, 0)->type == INCLUDE_T) {
+            if (prog->imports->import_count >= prog->imports->import_capacity) {
+                prog->imports->import_capacity *= 2;
+                prog->imports->imports = realloc(prog->imports->imports,
+                                                 sizeof(IncludeStmt *) * prog->imports->import_capacity);
+            }
+            prog->imports->imports[prog->imports->import_count++] = parseIncludeStmt(p);
+        } else if(peek(p, 0)->type == EXTERN_T) {
+            if (prog->ext_block_count >= ext_cap) {
+                ext_cap *= 2;
+                prog->externBlocks = realloc(prog->externBlocks, sizeof(ExternBlock*) * ext_cap);
+            }
+            prog->externBlocks[prog->ext_block_count++] = parseExternBlock(p);
+        } else {
+            break; 
         }
-        prog->imports->imports[prog->imports->import_count++] = parseIncludeStmt(p);
     }
 
     int funcCount = 0;
@@ -463,7 +594,7 @@ Stmt* parseStatement(Parser* p) {
                 Ownership o = OWNERSHIP_NONE;
                 Token* varTok = consume(p);
                 char *name = varTok->value;
-                expect(p, COLON_T); // :
+                expect(p, COLON_T);
 
                 if (peek(p, 0)->type == OWN_T) {
                     consume(p);
@@ -490,7 +621,7 @@ Stmt* parseStatement(Parser* p) {
                     expect(p, R_BRACKET_T);
                 }
 
-                // Parse element ownership (for [N] own int)
+                //parse element ownership (for [N] own int)
                 Ownership elemOwnership = OWNERSHIP_NONE;
                 if(isArray && peek(p, 0)->type == OWN_T) {
                     consume(p);
@@ -504,14 +635,14 @@ Stmt* parseStatement(Parser* p) {
 
                 Expr *e = NULL;
                 if (peek(p, 0)->type == EQUALS_T) {
-                    consume(p);  // consume '='
+                    consume(p);
                     e = parseExpr(p);
                 } else if (!isArray) {
-                    // Non-array variables must have an initializer
+                    //non-array variables must have an initializer
                     stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 0)),
                                 "variable declaration requires initializer (expected '=')");
                 } else {
-                    // Array without initializer - create VOID expression as placeholder
+                    //array without initializer - create VOID expression as placeholder
                     e = malloc(sizeof(Expr));
                     e->type = VOID_E;
                     e->loc = TOK_LOC(peek(p, 0));
@@ -531,7 +662,7 @@ Stmt* parseStatement(Parser* p) {
                 s->as.var_decl.isArray = isArray;
                 s->as.var_decl.arraySize = arrSize;
             } else if (peek(p, 1)->type == L_BRACKET_T) {
-                // Array element assignment: arr[i] = value
+                //array element assignment: arr[i] = value
                 Token* arrayTok = consume(p);
                 char* arrayName = arrayTok->value;
                 consume(p);
@@ -562,9 +693,9 @@ Stmt* parseStatement(Parser* p) {
                 Expr* e = parseExpr(p);
                 expect(p, SEMICOLON_T);
                 s->type = EXPR_STMT_S;
-                s->loc = e->loc;  // Use expression's location
+                s->loc = e->loc;  //use expressions location
                 s->as.expr_stmt = e;
-            } else if (peek(p, 1)->type == R_BRACKET_T); //for '= T[expr];'
+            } else if (peek(p, 1)->type == R_BRACKET_T); //for = T[expr];
             else stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 1)), "Unexpected token after variable: %s", token_type_name(peek(p, 1)->type));
             return s;
         }
@@ -578,7 +709,7 @@ Stmt* parseStatement(Parser* p) {
 
             Stmt* fe = nullptr;
             if (peek(p, 0)->type == ELSE_T) {
-                consume(p);  // consume 'else'
+                consume(p);
                 fe = parseBlock(p);
             }
 
@@ -813,14 +944,14 @@ Expr* makeNullLit(SourceLocation loc) {
     Expr* e = malloc(sizeof(Expr));
     e->type = NULL_LIT_E;
     e->loc = loc;
-    e->is_nullable = true;  // null is always nullable
+    e->is_nullable = true;  //null is always nullable
     return e;
 }
 Expr* makeVar(SourceLocation loc, char* name) {
     Expr* e = malloc(sizeof(Expr));
     e->type = VAR_E;
     e->loc = loc;
-    e->is_nullable = false;  // will be determined by analyzer
+    e->is_nullable = false;  //will be determined by analyzer
     e->as.var.name = name;
     e->as.var.ownership = OWNERSHIP_NONE;
     e->as.var.isConst = false;
@@ -867,7 +998,7 @@ Expr* makeFuncCall(SourceLocation loc, char* n, Expr** params, int paramC) {
     Expr* e = malloc(sizeof(Expr));
     e->type = FUNC_CALL_E;
     e->loc = loc;
-    e->is_nullable = false;  // will be determined by analyzer for read_* functions
+    e->is_nullable = false;  //will be determined by analyzer for read_* functions
     e->as.func_call.name = n;
     e->as.func_call.params = params;
     e->as.func_call.count = paramC;
@@ -959,7 +1090,7 @@ bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** par
     return strcmp(a->name, name) == 0;
 }
 
-//AST printing functions (only active in trace mode, output to stderr)
+//aST printing functions (only active in trace mode, output to stderr)
 void print_indent(int depth) {
     for (int i = 0; i < depth; i++) {
         fprintf(stderr, "  ");
@@ -1049,7 +1180,7 @@ void print_stmt(Stmt* s, int depth) {
             fprintf(stderr, "Then:\n");
             print_stmt(s->as.if_stmt.trueStmt, depth + 1);
 
-            // Only print else if it exists
+            //only print else if it exists
             if (s->as.if_stmt.falseStmt != NULL) {
                 print_indent(depth);
                 fprintf(stderr, "Else:\n");

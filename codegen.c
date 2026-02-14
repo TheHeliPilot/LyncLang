@@ -1,16 +1,18 @@
-//
-// Created by bucka on 2/9/2026.
-//
+//created by bucka on 2/9/2026.
 
 #include "codegen.h"
+#include <string.h>
 
 char* type_to_c_type(TokenType t) {
     switch (t) {
         case INT_KEYWORD_T: return "int";
         case BOOL_KEYWORD_T: return "bool";
         case CHAR_KEYWORD_T: return "char";
+        case STR_KEYWORD_T: return "char*";
+        case FLOAT_KEYWORD_T: return "float";
+        case DOUBLE_KEYWORD_T: return "double";
         case VOID_KEYWORD_T: return "void";
-        default: return "-???-";
+        default: return "-UNKNOWN-";
     }
 }
 
@@ -27,6 +29,8 @@ void emit_type(TokenType type, FILE* out) {
         case BOOL_KEYWORD_T: fprintf(out, "bool"); break;
         case STR_KEYWORD_T: fprintf(out, "char"); break;
         case CHAR_KEYWORD_T: fprintf(out, "char"); break;
+        case FLOAT_KEYWORD_T: fprintf(out, "float"); break;
+        case DOUBLE_KEYWORD_T: fprintf(out, "double"); break;
         case VOID_KEYWORD_T: fprintf(out, "void"); break;
         default: fprintf(out, "void"); break;
     }
@@ -72,6 +76,10 @@ char* get_mangled_name(FuncSign* sign) {
     if (sign == NULL) {
         strcpy(buffer, "NULL_SIGN");
         return buffer;
+    }
+
+    if (sign->isExtern) {
+        return sign->name;
     }
 
     //read the name pointer without dereferencing the string yet
@@ -161,12 +169,12 @@ void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
     stage_trace(STAGE_CODEGEN, "emit_func: %s", f->signature->name);
 
     if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
-    else fprintf(out, "%s%s", type_to_c_type(f->signature->retType), f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
+    else fprintf(out, "%s%s", type_to_c_type(f->signature->retType), (f->signature->retOwnership != OWNERSHIP_NONE && f->signature->retType != STR_KEYWORD_T) ? "*" : "");
     fprintf(out, " %s(", strcmp(f->signature->name, "main") == 0 ? "main" : get_func_name_from_sign(fstn, f->signature));
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
-        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), f->signature->parameters[i].ownership != OWNERSHIP_NONE ? "*" : "");
+        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), (f->signature->parameters[i].ownership != OWNERSHIP_NONE && f->signature->parameters[i].type != STR_KEYWORD_T) ? "*" : "");
         fprintf(out, " %s", f->signature->parameters[i].name);
     }
     fprintf(out, ")\n");
@@ -210,12 +218,12 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
         fstn->elements = realloc(fstn->elements, sizeof(FuncSignToNameElement) * fstn->height);
     }
 
-    fprintf(out, "%s%s", type_to_c_type(f->signature->retType), f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
+    fprintf(out, "%s%s", type_to_c_type(f->signature->retType), (f->signature->retOwnership != OWNERSHIP_NONE && f->signature->retType != STR_KEYWORD_T) ? "*" : "");
     fprintf(out, " %s(", mangled);
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
-        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), f->signature->parameters[i].ownership != OWNERSHIP_NONE ? "*" : "");
+        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), (f->signature->parameters[i].ownership != OWNERSHIP_NONE && f->signature->parameters[i].type != STR_KEYWORD_T) ? "*" : "");
         fprintf(out, " %s", f->signature->parameters[i].name);
     }
     fprintf(out, ");\n");
@@ -229,6 +237,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
     switch (e->type) {
         case INT_LIT_E:
             fprintf(out, "%d", e->as.int_val);
+            break;
+
+        case FLOAT_LIT_E:
+            fprintf(out, "%g", e->as.double_val);
+            if (e->analyzedType == FLOAT_KEYWORD_T) fprintf(out, "f");
             break;
 
         case BOOL_LIT_E:
@@ -251,13 +264,29 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             break;
         }
 
+        case CHAR_LIT_E: {
+            fprintf(out, "'");
+            char c = e->as.char_val;
+            switch (c) {
+                case '\n': fprintf(out, "\\n"); break;
+                case '\t': fprintf(out, "\\t"); break;
+                case '\r': fprintf(out, "\\r"); break;
+                case '\0': fprintf(out, "\\0"); break;
+                case '\\': fprintf(out, "\\\\"); break;
+                case '\'': fprintf(out, "\\'"); break;
+                default: fprintf(out, "%c", c); break;
+            }
+            fprintf(out, "'");
+            break;
+        }
+
         case NULL_LIT_E: {
             fprintf(out, "NULL");
             break;
         }
 
         case VAR_E:
-            fprintf(out, "%s%s", e->as.var.ownership != OWNERSHIP_NONE ? "*" : "", e->as.var.name);
+            fprintf(out, "%s%s", (e->as.var.ownership != OWNERSHIP_NONE && e->analyzedType != STR_KEYWORD_T) ? "*" : "", e->as.var.name);
             break;
 
         case UN_OP_E: {
@@ -299,6 +328,15 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case FUNC_CALL_E: {
+            //special handling for length() with strings -> strlen()
+            if (strcmp(e->as.func_call.name, "length") == 0) {
+                 fprintf(out, "strlen(");
+                 emit_expr(e->as.func_call.params[0], out, fstn);
+                 fprintf(out, ")");
+                 return;
+            }
+
+
             //handle std.io read_* functions
             if (strcmp(e->as.func_call.name, "read_int") == 0) {
                 fprintf(out, "read_int()");
@@ -330,6 +368,10 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                         fprintf(out, "%%s");
                     } else if (p->analyzedType == STR_KEYWORD_T) {
                         fprintf(out, "%%s");
+                    } else if (p->analyzedType == CHAR_KEYWORD_T) {
+                        fprintf(out, "%%c");
+                    } else if (p->analyzedType == FLOAT_KEYWORD_T || p->analyzedType == DOUBLE_KEYWORD_T) {
+                        fprintf(out, "%%g");
                     }
 
                     if (i < e->as.func_call.count - 1) {
@@ -400,8 +442,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             } else {
                 emit_indent(out, 0);
                 fprintf(out, "return ");
-                emit_expr(e->as.func_ret_expr, out, fstn);
-                fprintf(out, "");
+                if (e->as.func_ret_expr->type == VAR_E && e->as.func_ret_expr->as.var.ownership == OWNERSHIP_OWN) {
+                    fprintf(out, "%s", e->as.func_ret_expr->as.var.name);
+                } else {
+                    emit_expr(e->as.func_ret_expr, out, fstn);
+                }
             }
             break;
         }
@@ -438,8 +483,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             fprintf(out, "]");
             break;
         }
+        
+
     }
 }
+
 
 void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* out, int indent, FuncSignToName* fstn) {
     if (e->type == MATCH_E) {
@@ -455,7 +503,7 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
         }
 
         for (int i = 0; i < e->as.match.branchCount; i++) {
-            if (i == defaultIdx) continue;  // handle wildcard at end
+            if (i == defaultIdx) continue;  //handle wildcard at end
 
             MatchBranchExpr* branch = &e->as.match.branches[i];
 
@@ -499,7 +547,7 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
             fprintf(out, "}\n");
         }
     } else if (e->type == ALLOC_E) {
-        // Reassignment with alloc
+        //reassignment with alloc
         emit_indent(out, indent);
         fprintf(out, "%s = malloc(sizeof(%s));\n", targetVar, type_to_c_type(e->as.alloc.type));
         emit_indent(out, indent);
@@ -527,10 +575,9 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
     stage_trace(STAGE_CODEGEN, "emit_stmt: type=%d, indent=%d", s->type, indent);
 
     switch (s->type) {
-        //inside emit_stmt switch case VAR_DECL_S:
         case VAR_DECL_S:
             if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE && s->as.var_decl.elementOwnership == OWNERSHIP_NONE) {
-                // Case 1: stack array of values - int arr[5]
+                //case 1: stack array of values - int arr[5]
                 emit_indent(out, indent);
                 fprintf(out, "%s %s[",
                         type_to_c_type(s->as.var_decl.varType),
@@ -544,7 +591,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 }
                 fprintf(out, ";\n");
             } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.elementOwnership == OWNERSHIP_NONE) {
-                // Case 3: heap array of values - int* arr = malloc(N * sizeof(int))
+                //case 3: heap array of values - int* arr = malloc(N * sizeof(int))
                 emit_indent(out, indent);
                 fprintf(out, "%s* %s = malloc(sizeof(%s) * ",
                         type_to_c_type(s->as.var_decl.varType),
@@ -553,7 +600,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, ");\n");
             } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE && s->as.var_decl.elementOwnership == OWNERSHIP_OWN) {
-                // Case 4: stack array of owned pointers - int* arr[5]
+                //case 4: stack array of owned pointers - int* arr[5]
                 emit_indent(out, indent);
                 fprintf(out, "%s* %s[",
                         type_to_c_type(s->as.var_decl.varType),
@@ -561,7 +608,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, "];\n");
             } else if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_OWN && s->as.var_decl.elementOwnership == OWNERSHIP_OWN) {
-                // Case 5: heap array of owned pointers - int** arr = malloc(N * sizeof(int*))
+                //case 5: heap array of owned pointers - int** arr = malloc(N * sizeof(int*))
                 emit_indent(out, indent);
                 fprintf(out, "%s** %s = malloc(sizeof(%s*) * ",
                         type_to_c_type(s->as.var_decl.varType),
@@ -570,17 +617,38 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 emit_expr(s->as.var_decl.arraySize, out, fstn);
                 fprintf(out, ");\n");
             } else if (s->as.var_decl.expr->type == ALLOC_E) {
-                // Regular alloc (non-array)
+                //regular alloc (non-array variable)
+                bool isString = (s->as.var_decl.varType == STR_KEYWORD_T);
+                
                 emit_indent(out, indent);
                 fprintf(out, "%s", type_to_c_type(s->as.var_decl.varType));
-                fprintf(out, " %s%s", s->as.var_decl.ownership != OWNERSHIP_NONE ? "*" : "", s->as.var_decl.name);
-                fprintf(out, " = malloc(sizeof(%s));\n", type_to_c_type(s->as.var_decl.varType));
-
-                emit_assign_expr_to_var(s->as.var_decl.expr->as.alloc.initialValue,
-                                        s->as.var_decl.name,
-                                        s->as.var_decl.ownership,
-                                        out,
-                                        indent, fstn);
+                //strings in Lync are char*, and own string is just char* (with ownership semantics), so no extra *
+                fprintf(out, " %s%s", (s->as.var_decl.ownership != OWNERSHIP_NONE && !isString) ? "*" : "", s->as.var_decl.name);
+                
+                if (isString && s->as.var_decl.expr->as.alloc.isArray) {
+                    //own string = alloc[n] char
+                    //char* s = malloc(sizeof(char) * size);
+                    fprintf(out, " = malloc(sizeof(%s) * ", type_to_c_type(s->as.var_decl.expr->as.alloc.type));
+                    emit_expr(s->as.var_decl.expr->as.alloc.initialValue, out, fstn);
+                    fprintf(out, ");\n");
+                } else {
+                     //own int = alloc 42
+                     fprintf(out, " = malloc(sizeof(%s));\n", type_to_c_type(s->as.var_decl.varType));
+                     
+                     if (s->as.var_decl.expr->as.alloc.isArray) {
+                        //allocating an array for a scalar pointer (e.g. string)
+                        emit_indent(out, indent);
+                        fprintf(out, "*%s = malloc(sizeof(%s) * ", s->as.var_decl.name, type_to_c_type(s->as.var_decl.expr->as.alloc.type));
+                         emit_expr(s->as.var_decl.expr->as.alloc.initialValue, out, fstn);
+                        fprintf(out, ");\n");
+                    } else {
+                        emit_assign_expr_to_var(s->as.var_decl.expr->as.alloc.initialValue,
+                                                s->as.var_decl.name,
+                                                s->as.var_decl.ownership,
+                                                out,
+                                                indent, fstn);
+                    }
+                }
             } else {
                 //normal variable
                 emit_indent(out, indent);
@@ -705,7 +773,7 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
 
             bool firstCondition = true;
             for (int i = 0; i < s->as.match_stmt.branchCount; i++) {
-                if (i == wildcardIdx) continue;  // handle wildcard at end
+                if (i == wildcardIdx) continue;  //handle wildcard at end
 
                 MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
 
@@ -756,9 +824,9 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
         }
 
         case FREE_S: {
-            // For arrays of owned pointers, free each element first
-            // We store element ownership info via the analyzed symbol
-            // The codegen needs to check the symbol table, so we pass it via free_stmt
+            //for arrays of owned pointers, free each element first
+            //we store element ownership info via the analyzed symbol
+            //the codegen needs to check the symbol table, so we pass it via free_stmt
             if (s->as.free_stmt.isArrayOfOwned) {
                 emit_indent(out, indent);
                 fprintf(out, "for (int _i = 0; _i < %d; _i++) {\n", s->as.free_stmt.arraySize);
@@ -794,6 +862,11 @@ void generate_code(Program* prog, FILE* output) {
     fprintf(output, "#include <stdbool.h>\n");
     fprintf(output, "#include <string.h>\n");
 
+    //emit extern includes
+    for(int i = 0; i < prog->ext_block_count; ++i) {
+        fprintf(output, "#include <%s>\n", prog->externBlocks[i]->header);
+    }
+
     //add platform-specific headers for read_key if needed
     if (prog->imports && prog->imports->import_count > 0) {
         bool need_read_key = false;
@@ -823,7 +896,7 @@ void generate_code(Program* prog, FILE* output) {
 
     //generate C helper functions based on imports
     if (prog->imports && prog->imports->import_count > 0) {
-        fprintf(output, "// std.io helper functions\n");
+        fprintf(output, "//std.io helper functions\n");
 
         //check which functions are imported
         bool has_wildcard = false;

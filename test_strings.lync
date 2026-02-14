@@ -1,0 +1,10 @@
+def main(): int {
+    s: string = "hello";
+    // test 1: Indexing
+    c: char = s[0];
+    
+    // test 2: Length
+    // len: int = length(s);
+    
+    return 0;
+}

@@ -44,7 +44,8 @@
 - [ ] **Warnings**: Unused variables, unreachable code.
 
 ### 2. Standard Library
-- [ ] **Strings**: Basic `std.string` module.
+- [x] **Strings**: Basic string library (`concat`, `clone`, `substring`, etc.).
+- [x] **Extern C**: `extern <header> { ... }` blocks for C interop.
 - [ ] **File I/O**: Wrapper around C `stdio`.
 - [ ] **Math**: Common math functions.
 

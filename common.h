@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/9/2026.
-//
+// created by bucka on 2/9/2026.
 
 #ifndef LYNC_COMMON_H
 #define LYNC_COMMON_H
@@ -99,4 +97,4 @@ static inline void _stage_error_helper(ErrorCollector* ec, ErrorStage stage, Sou
     stage_trace(stage, fmt, ##__VA_ARGS__); \
 } while(0)
 
-#endif //LYNC_COMMON_H
+#endif //lYNC_COMMON_H

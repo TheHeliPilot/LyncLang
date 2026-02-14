@@ -5,7 +5,7 @@ A systems programming language with manual memory management, compile-time owner
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Language: C](https://img.shields.io/badge/Language-C-gray.svg)
 ![Standard: C23](https://img.shields.io/badge/Standard-C23-green.svg)
-![Version: 0.3.1](https://img.shields.io/badge/Version-0.3.1-orange.svg)
+![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.2-orange.svg)
 
 File extension: `.lync`
 
@@ -56,7 +56,7 @@ Lync is a systems programming language that provides manual memory management wi
 
 1. Download the latest release.
 2. Run `install.bat` as Administrator.
-3. (Optional) Install `lync-language-0.3.1.vsix` in VS Code for syntax highlighting.
+3. (Optional) Install `lync-language-0.3.2.vsix` in VS Code for syntax highlighting.
 
 ### Build from Source
 
@@ -134,6 +134,8 @@ def main(): int {
 | Type | Description | C Equivalent |
 |------|-------------|--------------|
 | `int` | Signed integer | `int` |
+| `float` | 32-bit floating point | `float` |
+| `double` | 64-bit floating point | `double` |
 | `bool` | Boolean (`true` / `false`) | `bool` |
 | `string` | String literal (read-only) | `const char*` |
 | `char` | Single character | `char` |
@@ -373,11 +375,11 @@ free maybe;
 
 | Category | Operators | Types | Result |
 |----------|-----------|-------|--------|
-| Arithmetic | `+` `-` `*` `/` | `int`, `int` | `int` |
+| Arithmetic | `+` `-` `*` `/` | `int`, `float`, `double` | Same as operand |
 | Comparison | `<` `>` `<=` `>=` | `int`, `int` | `bool` |
 | Equality | `==` `!=` | same type | `bool` |
 | Logical | `&&` `\|\|` | `bool`, `bool` | `bool` |
-| Unary | `-` | `int` | `int` |
+| Unary | `-` | `int`, `float`, `double` | Same as operand |
 | Unary | `!` | `bool` | `bool` |
 
 ### Module System
@@ -438,6 +440,33 @@ print("Result:", x + 5);         // Mix literals and expressions
 
 Supports `int`, `bool`, `string`, and `char` types. Type-checked at compile time.
 
+### Extern C Functions
+
+You can declare and use C library functions directly using `extern` blocks. The compiler will include the specified header and allow you to call the functions with Lync type safety.
+
+```c
+extern <math.h> {
+    def sqrt(x: int): int;
+    def pow(base: int, exp: int): int;
+}
+
+extern <stdlib.h> {
+    def rand(): int;
+    def srand(seed: int): void;
+}
+
+def main(): int {
+    print(sqrt(16));  // compiles to sqrt(16) in C
+    return 0;
+}
+```
+
+**Rules:**
+- `extern <header> { ... }` generates `#include <header>` in the output C.
+- Function signatures inside `extern` blocks are just declarations (no body).
+- These functions use their original C names (no name mangling).
+- You can use Lync types in signatures (`string` maps to `char*`, `int` to `int`).
+
 ### Arrays
 
 **Stack Arrays:**
@@ -479,6 +508,25 @@ print("Escape: \n\t\"quoted\"");
 ```
 
 Supported escapes: `\n`, `\t`, `\r`, `\\`, `\"`
+
+### Character Literals
+
+```c
+c: char = 'A';
+newline: char = '\n';
+```
+
+Supported escapes: same as strings, plus `\'`.
+
+### String Mutation
+
+Strings are mutable arrays of characters:
+
+```c
+str: own string = clone("hello");
+str[0] = 'H';
+print(str);  // "Hello"
+```
 
 ### Comments
 
@@ -773,9 +821,20 @@ Written in C (C23 standard) with zero external dependencies.
 
 ### Changelog
 
-#### [0.2.3] - 2026-02-13
+#### [0.3.2] - 2026-02-14
 
 **Added:**
+- **Character Literals**: `'a'`, `'\n'`, `'\t'`, etc.
+- **String Mutation**: `str[i] = 'c'` allowed for mutable strings.
+- **String Library**: `concat`, `clone`, `equals`, `substring`, `to_upper`, `to_lower` (via `LyncLibs/strings.lync`).
+- **Codegen Improvements**: Optimized `own string` to `char*` (removing double indirection).
+
+#### [0.3.1] - 2026-02-13
+**Added:**
+- **File Include System**: `include` directive.
+- **VS Code Extension**: Update 0.3.1.
+
+#### [0.2.3] - 2026-02-13
 - Compile-time bounds checking for constant-sized arrays with constant indices
   - Detects out-of-bounds access: `arr[6]` when array size is 5
   - Detects negative indices: `arr[-1]`

@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/9/2026.
-//
+//created by bucka on 2/9/2026.
 
 #ifndef LYNC_PARSER_H
 #define LYNC_PARSER_H
@@ -11,6 +9,8 @@
 typedef struct Expr Expr;
 typedef struct Stmt Stmt;
 typedef struct Func Func;
+typedef struct Func Func;
+typedef struct ExternBlock ExternBlock;
 
 typedef enum {
     OWNERSHIP_NONE,
@@ -38,6 +38,8 @@ typedef struct {
 
 typedef struct {
     ImportList* imports;
+    ExternBlock** externBlocks;
+    int ext_block_count;
     Func** functions;
     int func_count;
 } Program;
@@ -56,11 +58,19 @@ typedef struct {
     int paramNum;
     TokenType retType;
     Ownership retOwnership;
+    bool isExtern; //nEW: true if function is from extern block
 } FuncSign;
 
 struct Func {
     FuncSign* signature;
     Stmt* body;
+};
+
+struct ExternBlock {
+    char* header;
+    FuncSign** signs;
+    int count;
+    int capacity;
 };
 
 typedef enum {
@@ -94,7 +104,7 @@ typedef struct {
 
 typedef enum {
     //literals
-    INT_LIT_E, BOOL_LIT_E, STR_LIT_E, NULL_LIT_E,
+    INT_LIT_E, BOOL_LIT_E, STR_LIT_E, CHAR_LIT_E, FLOAT_LIT_E, NULL_LIT_E,
 
     //vars
     VAR_E, ARRAY_ACCESS_E,
@@ -126,6 +136,11 @@ struct Expr {
         int int_val;
 
         int bool_val;
+
+        float float_val;
+        double double_val;
+
+        char char_val;
 
         char* str_val;
 
@@ -192,7 +207,7 @@ typedef enum {
     WHILE_S,            //while cond { }
     DO_WHILE_S,         //do { } while cond
     FOR_S,              //for (var: min to max) { }
-    BLOCK_S,            // { stmt; stmt; stmt; }
+    BLOCK_S,            //{ stmt; stmt; stmt; }
     MATCH_S,
     FREE_S,
     EXPR_STMT_S,        //expression as statement
@@ -207,7 +222,7 @@ struct Stmt {
             char* name;
             TokenType varType;
             Ownership ownership;
-            Ownership elementOwnership; // ownership of each element (for [N] own int)
+            Ownership elementOwnership; //ownership of each element (for [N] own int)
             bool isNullable;
             bool isConst;
             bool isArray;
@@ -259,8 +274,8 @@ struct Stmt {
 
         struct {
             char* varName;
-            bool isArrayOfOwned;  // set by analyzer: array has element ownership
-            int arraySize;        // set by analyzer: number of elements to free
+            bool isArrayOfOwned;  //set by analyzer: array has element ownership
+            int arraySize;        //set by analyzer: number of elements to free
         } free_stmt;
 
         struct {
@@ -322,4 +337,4 @@ FuncParam* parseFuncParams(Parser*, int*);
 
 void print_ast(Func**, int);
 
-#endif //LYNC_PARSER_H
+#endif //lYNC_PARSER_H

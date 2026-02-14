@@ -1,6 +1,4 @@
-//
-// Created by bucka on 2/10/2026.
-//
+// created by bucka on 2/10/2026.
 
 #ifndef LYNC_ERROR_H
 #define LYNC_ERROR_H
@@ -44,4 +42,4 @@ bool has_errors(ErrorCollector* ec);
 bool has_warnings(ErrorCollector* ec);
 void print_messages(ErrorCollector* ec);
 
-#endif //LYNC_ERROR_H
+#endif //lYNC_ERROR_H
