@@ -1,3 +1,0 @@
-C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/lync.dir
-C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/bucka/CLionProjects/CMinusMinus/cmake-build-debug/CMakeFiles/rebuild_cache.dir

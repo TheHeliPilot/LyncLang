@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/cottosen/source/repos/LyncLang/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
