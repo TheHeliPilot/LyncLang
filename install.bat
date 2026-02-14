@@ -3,7 +3,7 @@ REM Lync Compiler Installer for Windows
 REM Installs lync.exe to C:\Program Files\Lync and adds it to system PATH
 
 echo ========================================
-echo Lync Compiler Installer v0.2.0
+echo Lync Compiler Installer v0.3.0
 echo ========================================
 echo.
 
@@ -66,8 +66,9 @@ echo %PATH% | findstr /C:"%INSTALL_DIR%" >nul
 if %errorLevel% equ 0 (
     echo Lync is already in system PATH.
 ) else (
-    REM Add to PATH using setx
-    setx /M PATH "%PATH%;%INSTALL_DIR%" >nul
+    REM Read current system PATH from registry (avoids truncation)
+    for /f "tokens=2*" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SYS_PATH=%%B"
+    setx /M PATH "%SYS_PATH%;%INSTALL_DIR%" >nul
     echo Added %INSTALL_DIR% to system PATH
 )
 

@@ -3,7 +3,7 @@ REM Lync Compiler Uninstaller for Windows
 REM Removes lync.exe from C:\Program Files\Lync and removes from system PATH
 
 echo ========================================
-echo Lync Compiler Uninstaller v0.2.0
+echo Lync Compiler Uninstaller v0.3.0
 echo ========================================
 echo.
 
@@ -42,16 +42,15 @@ if exist "%INSTALL_DIR%" (
     echo Installation directory not found
 )
 
-echo.
-echo NOTE: To remove from PATH, you need to manually edit your system PATH:
-echo   1. Press Win + X and select "System"
-echo   2. Click "Advanced system settings"
-echo   3. Click "Environment Variables"
-echo   4. Under "System variables", select "Path" and click "Edit"
-echo   5. Remove the entry: %INSTALL_DIR%
-echo   6. Click OK on all dialogs
-echo.
-echo Or restart your computer to refresh PATH.
+REM Remove from system PATH automatically
+echo Removing Lync from system PATH...
+powershell -Command "$path = [Environment]::GetEnvironmentVariable('Path', 'Machine'); $newPath = ($path -split ';' | Where-Object { $_ -ne '%INSTALL_DIR%' }) -join ';'; [Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')" 2>nul
+if %errorLevel% equ 0 (
+    echo Removed %INSTALL_DIR% from system PATH
+) else (
+    echo NOTE: Could not automatically remove from PATH.
+    echo Please manually remove "%INSTALL_DIR%" from your system PATH.
+)
 echo.
 
 echo ========================================
