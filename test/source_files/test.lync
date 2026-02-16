@@ -1,0 +1,6 @@
+include std.io.*;
+
+def main(): int {
+    print("Enter a float: ");
+    return 0;
+}

@@ -129,6 +129,32 @@ lync/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/build
 .PHONY : lync/fast
 
+#=============================================================================
+# Target rules for targets named test_lexer
+
+# Build rule for target.
+test_lexer: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_lexer
+.PHONY : test_lexer
+
+# fast build rule for target.
+test_lexer/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/build
+.PHONY : test_lexer/fast
+
+#=============================================================================
+# Target rules for targets named test_parser
+
+# Build rule for target.
+test_parser: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_parser
+.PHONY : test_parser
+
+# fast build rule for target.
+test_parser/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/build
+.PHONY : test_parser/fast
+
 src/analyzer.o: src/analyzer.c.o
 .PHONY : src/analyzer.o
 
@@ -207,6 +233,8 @@ src/error.o: src/error.c.o
 # target to build an object file
 src/error.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/error.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/src/error.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/error.c.o
 .PHONY : src/error.c.o
 
 src/error.i: src/error.c.i
@@ -215,6 +243,8 @@ src/error.i: src/error.c.i
 # target to preprocess a source file
 src/error.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/error.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/src/error.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/error.c.i
 .PHONY : src/error.c.i
 
 src/error.s: src/error.c.s
@@ -223,6 +253,8 @@ src/error.s: src/error.c.s
 # target to generate assembly for a file
 src/error.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/error.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/src/error.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/error.c.s
 .PHONY : src/error.c.s
 
 src/file_loader.o: src/file_loader.c.o
@@ -255,6 +287,8 @@ src/lexer.o: src/lexer.c.o
 # target to build an object file
 src/lexer.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/lexer.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/src/lexer.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/lexer.c.o
 .PHONY : src/lexer.c.o
 
 src/lexer.i: src/lexer.c.i
@@ -263,6 +297,8 @@ src/lexer.i: src/lexer.c.i
 # target to preprocess a source file
 src/lexer.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/lexer.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/src/lexer.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/lexer.c.i
 .PHONY : src/lexer.c.i
 
 src/lexer.s: src/lexer.c.s
@@ -271,6 +307,8 @@ src/lexer.s: src/lexer.c.s
 # target to generate assembly for a file
 src/lexer.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/lexer.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/src/lexer.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/lexer.c.s
 .PHONY : src/lexer.c.s
 
 src/main.o: src/main.c.o
@@ -327,6 +365,7 @@ src/parser.o: src/parser.c.o
 # target to build an object file
 src/parser.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/parser.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/parser.c.o
 .PHONY : src/parser.c.o
 
 src/parser.i: src/parser.c.i
@@ -335,6 +374,7 @@ src/parser.i: src/parser.c.i
 # target to preprocess a source file
 src/parser.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/parser.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/parser.c.i
 .PHONY : src/parser.c.i
 
 src/parser.s: src/parser.c.s
@@ -343,7 +383,56 @@ src/parser.s: src/parser.c.s
 # target to generate assembly for a file
 src/parser.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lync.dir/build.make CMakeFiles/lync.dir/src/parser.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/src/parser.c.s
 .PHONY : src/parser.c.s
+
+test/lexer/test_lexer.o: test/lexer/test_lexer.c.o
+.PHONY : test/lexer/test_lexer.o
+
+# target to build an object file
+test/lexer/test_lexer.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/test/lexer/test_lexer.c.o
+.PHONY : test/lexer/test_lexer.c.o
+
+test/lexer/test_lexer.i: test/lexer/test_lexer.c.i
+.PHONY : test/lexer/test_lexer.i
+
+# target to preprocess a source file
+test/lexer/test_lexer.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/test/lexer/test_lexer.c.i
+.PHONY : test/lexer/test_lexer.c.i
+
+test/lexer/test_lexer.s: test/lexer/test_lexer.c.s
+.PHONY : test/lexer/test_lexer.s
+
+# target to generate assembly for a file
+test/lexer/test_lexer.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lexer.dir/build.make CMakeFiles/test_lexer.dir/test/lexer/test_lexer.c.s
+.PHONY : test/lexer/test_lexer.c.s
+
+test/parser/test_parser.o: test/parser/test_parser.c.o
+.PHONY : test/parser/test_parser.o
+
+# target to build an object file
+test/parser/test_parser.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/test/parser/test_parser.c.o
+.PHONY : test/parser/test_parser.c.o
+
+test/parser/test_parser.i: test/parser/test_parser.c.i
+.PHONY : test/parser/test_parser.i
+
+# target to preprocess a source file
+test/parser/test_parser.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/test/parser/test_parser.c.i
+.PHONY : test/parser/test_parser.c.i
+
+test/parser/test_parser.s: test/parser/test_parser.c.s
+.PHONY : test/parser/test_parser.s
+
+# target to generate assembly for a file
+test/parser/test_parser.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_parser.dir/build.make CMakeFiles/test_parser.dir/test/parser/test_parser.c.s
+.PHONY : test/parser/test_parser.c.s
 
 # Help Target
 help:
@@ -354,6 +443,8 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... lync"
+	@echo "... test_lexer"
+	@echo "... test_parser"
 	@echo "... src/analyzer.o"
 	@echo "... src/analyzer.i"
 	@echo "... src/analyzer.s"
@@ -381,6 +472,12 @@ help:
 	@echo "... src/parser.o"
 	@echo "... src/parser.i"
 	@echo "... src/parser.s"
+	@echo "... test/lexer/test_lexer.o"
+	@echo "... test/lexer/test_lexer.i"
+	@echo "... test/lexer/test_lexer.s"
+	@echo "... test/parser/test_parser.o"
+	@echo "... test/parser/test_parser.i"
+	@echo "... test/parser/test_parser.s"
 .PHONY : help
 
 
