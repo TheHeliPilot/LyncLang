@@ -203,7 +203,7 @@ int main() {
           .test_name = "Block Comment with code",
       },
       {
-          .input = "print(\"Negation (bool):\", ! t);",
+          .input = "print(\"Negation (bool):\", !t);",
           .expected_types =
               (TokenType[]){VAR_T, L_PAREN_T, STR_LIT_T, COMMA_T, NEGATION_T,
                             VAR_T, R_PAREN_T, SEMICOLON_T},

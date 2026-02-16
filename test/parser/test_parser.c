@@ -30,6 +30,36 @@ void run_test_file(const char *filepath) {
   buffer[length] = '\0';
   fclose(f);
 
+  const int ERROR_TAG_LEN = 8;
+  const char *ERROR_TAG = "//ERROR:";
+  const int MAX_EXPECTED_ERRORS = 10;
+  int error_count = 0;
+  char *expected_errors[MAX_EXPECTED_ERRORS];
+  char *current_pos = buffer;
+  char *next_newline;
+
+  while (current_pos < buffer + length) {
+    next_newline = strchr(current_pos, '\n');
+    // 2. Determine line boundary (handle the last line if no \n exists)
+    char *line_end = next_newline ? next_newline : (buffer + length);
+    size_t line_len = line_end - current_pos;
+    if (line_len > 0) {
+      if (strncmp(current_pos, ERROR_TAG, ERROR_TAG_LEN) == 0) {
+        if (error_count == MAX_EXPECTED_ERRORS) {
+          printf("Execed MAX_EXPECTED_ERRORS of %d \n", MAX_EXPECTED_ERRORS);
+          exit(1);
+        }
+        char *error_message = current_pos + ERROR_TAG_LEN;
+        expected_errors[error_count++] = error_message;
+      }
+    }
+    if (!next_newline) {
+      break; // We reached the end of the buffer
+    }
+    // move to next line
+    current_pos = next_newline + 1;
+  }
+
   TokenList *tokens = tokenize(buffer, filepath);
 
   if (has_errors(g_error_collector)) {

@@ -1,5 +1,4 @@
-// EXPECT_ERROR
-// Test syntax error - should exit immediately with location
+//ERROR: expected ; but found identifier at token index 12
 def main(): int {
     x: int = 5
     y: int = 10;  // Line above is missing semicolon
