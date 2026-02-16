@@ -47,6 +47,7 @@ void run_test_file(const char *filepath) {
                    .pos = 0};
 
   Program *prog = parseProgram(&parser);
+  print_ast(prog->functions, prog->func_count);
 
   if (has_errors(g_error_collector) || !prog) {
     printf("FAILED (Parser Error)\n");

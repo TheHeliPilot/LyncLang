@@ -5,9 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Global variables required by lexer.c
 ErrorCollector *g_error_collector = NULL;
-bool g_trace_mode = false;
+bool g_trace_mode = true;
 int g_trace_depth = 0;
 
 typedef struct {
@@ -24,6 +23,7 @@ void run_test(LexerTestCase test) {
   g_error_collector = init_error_collector();
 
   TokenList *tokens = tokenize(test.input, "test.lync");
+  token_list_print(tokens);
 
   // lexer adds EOF so we check count == expected_count + 1
   if (tokens->count != test.expected_count + 1) {
@@ -38,7 +38,7 @@ void run_test(LexerTestCase test) {
     Token *t = token_list_at(tokens, i);
     if (t->type != test.expected_types[i]) {
       printf("FAILED\n");
-      printf("  Token %d: Expected %s, got %s\n", i,
+      printf("  Token %d: Expected %s, got %s\n", i + 1,
              token_type_name(test.expected_types[i]), token_type_name(t->type));
       token_list_print(tokens);
       exit(1);
@@ -67,7 +67,6 @@ void run_test(LexerTestCase test) {
 int main() {
   printf("=== Running Lexer Tests ===\n");
 
-  int num_tests = 10;
   LexerTestCase test_cases[] = {
       {
           .input = "123 456",
@@ -121,6 +120,13 @@ int main() {
           .test_name = "Single Line Comment",
       },
       {
+          .input = "// some comments",
+          .expected_types = NULL,
+          .expected_count = 0,
+          .test_name = "Single Line Comment 2",
+      },
+
+      {
           .input = "123 /* multiline \n comment */ 456",
           .expected_types = (TokenType[]){INT_LIT_T, INT_LIT_T},
           .expected_count = 2,
@@ -135,7 +141,78 @@ int main() {
           .expected_count = 11,
           .test_name = "Complex Expression",
       },
+      {
+          .input = "//DUMMY TOP LEVEL COMMENT\n"
+                   "def factorial(n: int): int {\n"
+                   "    if (n <= 1) {\n"
+                   "        return 1;\n"
+                   "    } else {\n"
+                   "        return n * factorial(n - 1);\n"
+                   "    }\n"
+                   "}\n"
+                   "\n"
+                   "def main(): int {\n"
+                   "    x: int = 5;\n"
+                   "    result: int = factorial(x);\n"
+                   "    return 0;\n"
+                   "}\n",
+          .expected_types =
+              (TokenType[]){
+                  DEF_KEYWORD_T, VAR_T,         L_PAREN_T,     VAR_T,
+                  COLON_T,       INT_KEYWORD_T, R_PAREN_T,     COLON_T,
+                  INT_KEYWORD_T, L_BRACE_T,     IF_T,          L_PAREN_T,
+                  VAR_T,         LESS_EQUALS_T, INT_LIT_T,     R_PAREN_T,
+                  L_BRACE_T,     RETURN_T,      INT_LIT_T,     SEMICOLON_T,
+                  R_BRACE_T,     ELSE_T,        L_BRACE_T,     RETURN_T,
+                  VAR_T,         STAR_T,        VAR_T,         L_PAREN_T,
+                  VAR_T,         MINUS_T,       INT_LIT_T,     R_PAREN_T,
+                  SEMICOLON_T,   R_BRACE_T,     R_BRACE_T,     DEF_KEYWORD_T,
+                  VAR_T,         L_PAREN_T,     R_PAREN_T,     COLON_T,
+                  INT_KEYWORD_T, L_BRACE_T,     VAR_T,         COLON_T,
+                  INT_KEYWORD_T, EQUALS_T,      INT_LIT_T,     SEMICOLON_T,
+                  VAR_T,         COLON_T,       INT_KEYWORD_T, EQUALS_T,
+                  VAR_T,         L_PAREN_T,     VAR_T,         R_PAREN_T,
+                  SEMICOLON_T,   RETURN_T,      INT_LIT_T,     SEMICOLON_T,
+                  R_BRACE_T},
+          .expected_count = 61,
+          .test_name = "Functions",
+      },
+      {
+          .input = "1 // comment\r 2",
+          .expected_types = (TokenType[]){INT_LIT_T, INT_LIT_T},
+          .expected_count = 2,
+          .test_name = "Single Line Comment CR",
+      },
+      {
+          .input = "1 // comment\r\n 2",
+          .expected_types = (TokenType[]){INT_LIT_T, INT_LIT_T},
+          .expected_count = 2,
+          .test_name = "Single Line Comment CRLF",
+      },
+      {
+          .input = "/* comment */",
+          .expected_types = (TokenType[]){},
+          .expected_count = 0,
+          .test_name = "Block Comment Simple",
+      },
+      {
+          .input = "/* comment */ x: int = 5;",
+          .expected_types = (TokenType[]){VAR_T, COLON_T, INT_KEYWORD_T,
+                                          EQUALS_T, INT_LIT_T, SEMICOLON_T},
+          .expected_count = 6,
+          .test_name = "Block Comment with code",
+      },
+      {
+          .input = "print(\"Negation (bool):\", ! t);",
+          .expected_types =
+              (TokenType[]){VAR_T, L_PAREN_T, STR_LIT_T, COMMA_T, NEGATION_T,
+                            VAR_T, R_PAREN_T, SEMICOLON_T},
+          .expected_count = 8,
+          .test_name = "Print expression",
+      },
+
   };
+  const int num_tests = 17;
 
   for (int i = 0; i < num_tests; i++) {
     run_test(test_cases[i]);

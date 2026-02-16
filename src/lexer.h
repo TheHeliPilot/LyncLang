@@ -54,7 +54,6 @@ typedef enum {
   R_BRACKET_T,
 
   // control flow keywords
-
   IF_T,
   ELSE_T,
   WHILE_T,

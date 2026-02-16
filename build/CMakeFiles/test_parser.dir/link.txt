@@ -1,1 +1,1 @@
-/usr/bin/cc -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_parser.dir/link.d CMakeFiles/test_parser.dir/test/parser/test_parser.c.o CMakeFiles/test_parser.dir/src/lexer.c.o CMakeFiles/test_parser.dir/src/parser.c.o CMakeFiles/test_parser.dir/src/error.c.o -o test_parser
+/usr/bin/cc -g -Wl,--dependency-file=CMakeFiles/test_parser.dir/link.d CMakeFiles/test_parser.dir/test/parser/test_parser.c.o CMakeFiles/test_parser.dir/src/lexer.c.o CMakeFiles/test_parser.dir/src/parser.c.o CMakeFiles/test_parser.dir/src/error.c.o -o test_parser

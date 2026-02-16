@@ -6,5 +6,5 @@ C_DEFINES =
 
 C_INCLUDES = 
 
-C_FLAGS = -O3 -DNDEBUG -std=gnu2x
+C_FLAGS = -g -std=gnu2x
 

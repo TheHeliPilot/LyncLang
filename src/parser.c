@@ -1,7 +1,7 @@
 // created by bucka on 2/9/2026.
-
 #include "parser.h"
 #include "lexer.h"
+#include <string.h>
 
 #define TOK_LOC(tok)                                                           \
   ((SourceLocation){.line = (tok)->line,                                       \
@@ -69,7 +69,7 @@ Func **parseFunctions(Parser *p, int *num) {
     Token *ret = consume(p);
     Stmt *body = parseBlock(p);
 
-    assert(name->value.as_string);
+    assert(name->value.as_string != NULL);
     functions[count++] =
         makeFunc(name->value.as_string, params, pCount, ret->type, o, body);
 
@@ -100,7 +100,7 @@ ExternBlock *parseExternBlock(Parser *p) {
     // if possible, but we dont have text easily for all tokens for now support
     // simple "math.h"
     if (t->type == VAR_T) {
-      assert(t->value.as_string);
+      assert(t->value.as_string != NULL);
       strcat(header, t->value.as_string);
 
     } else if (t->type == DOT_T)
@@ -121,7 +121,7 @@ ExternBlock *parseExternBlock(Parser *p) {
     if (peek(p, 0)->type == DEF_KEYWORD_T) {
       consume(p);
       Token *nameTok = expect(p, VAR_T);
-      assert(nameTok->value.as_string);
+      assert(nameTok->value.as_string != NULL);
       char *name = (char *)nameTok->value.as_string;
 
       expect(p, L_PAREN_T);
@@ -237,12 +237,10 @@ Expr *parseFactor(Parser *p) {
   switch (tok->type) {
   case INT_LIT_T: {
     Token *t = consume(p);
-    assert(t->value.as_int);
     return makeIntLit(TOK_LOC(t), (int)t->value.as_int);
   }
   case BOOL_LIT_T: {
     Token *t = consume(p);
-    assert(t->value.as_int);
     return makeBoolLit(TOK_LOC(t), (int)t->value.as_int);
   }
   case CHAR_LIT_T: {
@@ -250,14 +248,13 @@ Expr *parseFactor(Parser *p) {
     Expr *e = malloc(sizeof(Expr));
     e->type = CHAR_LIT_E;
     e->loc = TOK_LOC(t);
-    assert(t->value.as_char);
     e->as.char_val = t->value.as_char;
     e->is_nullable = false;
     return e;
   }
   case STR_LIT_T: {
     Token *t = consume(p);
-    assert(t->value.as_string);
+    assert(t->value.as_string != NULL);
     return makeStrLit(TOK_LOC(t), t->value.as_string);
   }
   case NULL_LIT_T: {
@@ -266,7 +263,7 @@ Expr *parseFactor(Parser *p) {
   }
   case FLOAT_LIT_T: {
     Token *t = consume(p);
-    assert(t->value.as_string);
+    assert(t->value.as_string != NULL);
     char *str = t->value.as_string;
     Expr *e = malloc(sizeof(Expr));
     e->type = FLOAT_LIT_E;
@@ -299,16 +296,16 @@ Expr *parseFactor(Parser *p) {
         }
       }
       expect(p, R_PAREN_T);
-      assert(t->value.as_string);
+      assert(t->value.as_string != NULL);
       return makeFuncCall(TOK_LOC(t), t->value.as_string, args, count);
     } else if (peek(p, 0)->type == L_BRACKET_T) {
-      assert(t->value.as_string);
+      assert(t->value.as_string != NULL);
       consume(p);
       Expr *e = parseExpr(p);
       expect(p, R_BRACKET_T);
       return makeArrAccess(TOK_LOC(t), t->value.as_string, e);
     }
-    assert(t->value.as_string);
+    assert(t->value.as_string != NULL);
     return makeVar(TOK_LOC(t), (char *)t->value.as_string);
   }
   case UNDERSCORE_T: {
@@ -465,7 +462,7 @@ IncludeStmt *parseIncludeStmt(Parser *p) {
 
   // collect all identifiers
   Token *t = expect(p, VAR_T);
-  assert(t->value.as_string);
+  assert(t->value.as_string != NULL);
   parts[part_count++] = t->value.as_string;
 
   while (peek(p, 0)->type == DOT_T) {
@@ -495,7 +492,7 @@ IncludeStmt *parseIncludeStmt(Parser *p) {
         parts = realloc(parts, sizeof(char *) * part_capacity);
       }
       Token *t = consume(p);
-      assert(t->value.as_string);
+      assert(t->value.as_string != NULL);
       parts[part_count++] = t->value.as_string;
     } else {
       stage_fatal(STAGE_PARSER, stmt->loc,
@@ -627,7 +624,7 @@ Stmt *parseStatement(Parser *p) {
       Ownership o = OWNERSHIP_NONE;
       Token *varTok = consume(p);
 
-      assert(varTok->value.as_string);
+      assert(varTok->value.as_string != NULL);
       char *name = varTok->value.as_string;
       expect(p, COLON_T);
 
@@ -700,7 +697,7 @@ Stmt *parseStatement(Parser *p) {
     } else if (peek(p, 1)->type == L_BRACKET_T) {
       // array element assignment: arr[i] = value
       Token *arrayTok = consume(p);
-      assert(arrayTok->value.as_string);
+      assert(arrayTok->value.as_string != NULL);
       char *arrayName = arrayTok->value.as_string;
       consume(p);
       Expr *index = parseExpr(p);
@@ -716,7 +713,7 @@ Stmt *parseStatement(Parser *p) {
       s->as.array_elem_assign.value = value;
     } else if (peek(p, 1)->type == EQUALS_T) {
       Token *varTok = consume(p);
-      assert(varTok->value.as_string);
+      assert(varTok->value.as_string != NULL);
       char *name = varTok->value.as_string;
       expect(p, EQUALS_T);
       Expr *e = parseExpr(p);
@@ -797,7 +794,7 @@ Stmt *parseStatement(Parser *p) {
     expect(p, L_PAREN_T);
 
     Token *nameTok = consume(p);
-    assert(nameTok->value.as_string);
+    assert(nameTok->value.as_string != NULL);
     char *name = nameTok->value.as_string;
     expect(p, COLON_T);
     Expr *minE = parseExpr(p);
@@ -867,7 +864,7 @@ Stmt *parseStatement(Parser *p) {
     Stmt *s = malloc(sizeof(Stmt));
     s->type = FREE_S;
     s->loc = TOK_LOC(freeTok);
-    assert(var->value.as_string);
+    assert(var->value.as_string != NULL);
     s->as.free_stmt.varName = var->value.as_string;
     expect(p, SEMICOLON_T);
     return s;
@@ -952,7 +949,7 @@ FuncParam *parseFuncParams(Parser *p, int *count) {
     }
 
     Token *type = consume(p);
-    assert(t->value.as_string);
+    assert(t->value.as_string != NULL);
     FuncParam fp = (FuncParam){.type = type->type,
                                .name = t->value.as_string,
                                .ownership = o,

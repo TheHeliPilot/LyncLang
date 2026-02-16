@@ -1,3 +1,4 @@
+// EXPECT_ERROR
 // Test syntax error - should exit immediately with location
 def main(): int {
     x: int = 5
