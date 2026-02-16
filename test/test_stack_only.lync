@@ -1,4 +1,0 @@
-def main(): int {
-    arr1: [2] int = {1, 2};
-    return 0;
-}

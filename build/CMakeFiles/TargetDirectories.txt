@@ -1,3 +1,0 @@
-/home/cottosen/source/repos/LyncLang/build/CMakeFiles/lync.dir
-/home/cottosen/source/repos/LyncLang/build/CMakeFiles/edit_cache.dir
-/home/cottosen/source/repos/LyncLang/build/CMakeFiles/rebuild_cache.dir

@@ -1,4 +1,4 @@
-//created by bucka on 2/9/2026.
+// created by bucka on 2/9/2026.
 
 #ifndef LYNC_PARSER_H
 #define LYNC_PARSER_H
@@ -13,328 +13,340 @@ typedef struct Func Func;
 typedef struct ExternBlock ExternBlock;
 
 typedef enum {
-    OWNERSHIP_NONE,
-    OWNERSHIP_OWN,
-    OWNERSHIP_REF,
+  OWNERSHIP_NONE,
+  OWNERSHIP_OWN,
+  OWNERSHIP_REF,
 } Ownership;
 
 typedef enum {
-    IMPORT_ALL,
-    IMPORT_SPECIFIC,
+  IMPORT_ALL,
+  IMPORT_SPECIFIC,
 } ImportType;
 
 typedef struct {
-    char* module_name;
-    ImportType type;
-    char* function_name;
-    SourceLocation loc;
+  char *module_name;
+  ImportType type;
+  char *function_name;
+  SourceLocation loc;
 } IncludeStmt;
 
 typedef struct {
-    IncludeStmt** imports;
-    int import_count;
-    int import_capacity;
+  IncludeStmt **imports;
+  int import_count;
+  int import_capacity;
 } ImportList;
 
 typedef struct {
-    ImportList* imports;
-    ExternBlock** externBlocks;
-    int ext_block_count;
-    Func** functions;
-    int func_count;
+  ImportList *imports;
+  ExternBlock **externBlocks;
+  int ext_block_count;
+  Func **functions;
+  int func_count;
 } Program;
 
 typedef struct {
-    TokenType type;
-    char* name;
-    Ownership ownership;
-    bool isNullable;
-    bool isConst;
+  TokenType type;
+  char *name;
+  Ownership ownership;
+  bool isNullable;
+  bool isConst;
 } FuncParam;
 
 typedef struct {
-    char* name;
-    FuncParam* parameters;
-    int paramNum;
-    TokenType retType;
-    Ownership retOwnership;
-    bool isExtern; //nEW: true if function is from extern block
+  char *name;
+  FuncParam *parameters;
+  int paramNum;
+  TokenType retType;
+  Ownership retOwnership;
+  bool isExtern; // nEW: true if function is from extern block
 } FuncSign;
 
 struct Func {
-    FuncSign* signature;
-    Stmt* body;
+  FuncSign *signature;
+  Stmt *body;
 };
 
 struct ExternBlock {
-    char* header;
-    FuncSign** signs;
-    int count;
-    int capacity;
+  char *header;
+  FuncSign **signs;
+  int count;
+  int capacity;
 };
 
 typedef enum {
-    NULL_PATTERN,      //null
-    SOME_PATTERN,      //some(binding_name)
-    WILDCARD_PATTERN,  //_
-    VALUE_PATTERN,     //any expression (for non-nullable matches)
+  NULL_PATTERN,     // null
+  SOME_PATTERN,     // some(binding_name)
+  WILDCARD_PATTERN, //_
+  VALUE_PATTERN,    // any expression (for non-nullable matches)
 } PatternType;
 
 typedef struct Pattern {
-    PatternType type;
-    SourceLocation loc;
-    union {
-        char* binding_name;  //for SOME_PATTERN
-        Expr* value_expr;    //for VALUE_PATTERN
-    } as;
+  PatternType type;
+  SourceLocation loc;
+  union {
+    char *binding_name; // for SOME_PATTERN
+    Expr *value_expr;   // for VALUE_PATTERN
+  } as;
 } Pattern;
 
 typedef struct {
-    Pattern* pattern;
-    Expr* caseRet;
-    TokenType analyzed_type; //filled by analyzer
+  Pattern *pattern;
+  Expr *caseRet;
+  TokenType analyzed_type; // filled by analyzer
 } MatchBranchExpr;
 
 typedef struct {
-    Pattern* pattern;
-    Stmt** stmts;
-    int stmtCount;
-    TokenType analyzed_type;    //filled by analyzer
+  Pattern *pattern;
+  Stmt **stmts;
+  int stmtCount;
+  TokenType analyzed_type; // filled by analyzer
 } MatchBranchStmt;
 
 typedef enum {
-    //literals
-    INT_LIT_E, BOOL_LIT_E, STR_LIT_E, CHAR_LIT_E, FLOAT_LIT_E, NULL_LIT_E,
+  // literals
+  INT_LIT_E,
+  BOOL_LIT_E,
+  STR_LIT_E,
+  CHAR_LIT_E,
+  FLOAT_LIT_E,
+  NULL_LIT_E,
 
-    //vars
-    VAR_E, ARRAY_ACCESS_E,
+  // vars
+  VAR_E,
+  ARRAY_ACCESS_E,
 
-    //funcs
-    FUNC_CALL_E, FUNC_RET_E,
+  // funcs
+  FUNC_CALL_E,
+  FUNC_RET_E,
 
-    //other
-    MATCH_E, VOID_E, ARRAY_DECL_E,
+  // other
+  MATCH_E,
+  VOID_E,
+  ARRAY_DECL_E,
 
-    //mem
-    ALLOC_E, ALLOC_ARR_E,
+  // mem
+  ALLOC_E,
+  ALLOC_ARR_E,
 
-    //match
-    SOME_E,
+  // match
+  SOME_E,
 
-    //operations
-    UN_OP_E, BIN_OP_E,
+  // operations
+  UN_OP_E,
+  BIN_OP_E,
 
 } ExprType;
 
 struct Expr {
-    ExprType type;
-    SourceLocation loc;
-    TokenType analyzedType;  //filled in by analyzer
-    bool is_nullable;        //filled in by analyzer for nullable return types
+  ExprType type;
+  SourceLocation loc;
+  TokenType analyzedType; // filled in by analyzer
+  bool is_nullable;       // filled in by analyzer for nullable return types
 
-    union {
-        int int_val;
+  union {
+    int int_val;
 
-        int bool_val;
+    int bool_val;
 
-        float float_val;
-        double double_val;
+    float float_val;
+    double double_val;
 
-        char char_val;
+    char char_val;
 
-        char* str_val;
+    char *str_val;
 
-        struct {
-            char* name;
-            Ownership ownership;
-            bool isConst;
-        } var;
+    struct {
+      char *name;
+      Ownership ownership;
+      bool isConst;
+    } var;
 
-        struct {
-            char* arrayName;
-            Expr* index;
-        } array_access;
+    struct {
+      char *arrayName;
+      Expr *index;
+    } array_access;
 
-        struct {
-            TokenType op;
-            struct Expr* expr;
-        } un_op;
+    struct {
+      TokenType op;
+      struct Expr *expr;
+    } un_op;
 
-        struct {
-            struct Expr* exprL;
-            TokenType op;
-            struct Expr* exprR;
-        } bin_op;
+    struct {
+      struct Expr *exprL;
+      TokenType op;
+      struct Expr *exprR;
+    } bin_op;
 
-        struct {
-            char* name;
-            Expr** params;
-            int count;
-            FuncSign* resolved_sign;
-        } func_call;
+    struct {
+      char *name;
+      Expr **params;
+      int count;
+      FuncSign *resolved_sign;
+    } func_call;
 
-        struct {
-            Expr** values;
-            int count;
-            TokenType resolvedType;
-        } arr_decl;
+    struct {
+      Expr **values;
+      int count;
+      TokenType resolvedType;
+    } arr_decl;
 
-        Expr* func_ret_expr;
+    Expr *func_ret_expr;
 
-        struct {
-            Expr* initialValue;
-            TokenType type;
-            bool isArray;
-        } alloc;
+    struct {
+      Expr *initialValue;
+      TokenType type;
+      bool isArray;
+    } alloc;
 
-        struct {
-            Expr* var;
-            MatchBranchExpr* branches;
-            int branchCount;
-        } match;
+    struct {
+      Expr *var;
+      MatchBranchExpr *branches;
+      int branchCount;
+    } match;
 
-        struct {
-            Expr* var;
-        } some;
-    } as;
+    struct {
+      Expr *var;
+    } some;
+  } as;
 };
 
 typedef enum {
-    VAR_DECL_S,         //x: int = 5;
-    ASSIGN_S,           //x = 5;
-    ARRAY_ELEM_ASSIGN_S, //arr[i] = value;
-    IF_S,               //if cond { } else { }
-    WHILE_S,            //while cond { }
-    DO_WHILE_S,         //do { } while cond
-    FOR_S,              //for (var: min to max) { }
-    BLOCK_S,            //{ stmt; stmt; stmt; }
-    MATCH_S,
-    FREE_S,
-    EXPR_STMT_S,        //expression as statement
+  VAR_DECL_S,          // x: int = 5;
+  ASSIGN_S,            // x = 5;
+  ARRAY_ELEM_ASSIGN_S, // arr[i] = value;
+  IF_S,                // if cond { } else { }
+  WHILE_S,             // while cond { }
+  DO_WHILE_S,          // do { } while cond
+  FOR_S,               // for (var: min to max) { }
+  BLOCK_S,             //{ stmt; stmt; stmt; }
+  MATCH_S,
+  FREE_S,
+  EXPR_STMT_S, // expression as statement
 } StmtType;
 
 struct Stmt {
-    StmtType type;
-    SourceLocation loc;
+  StmtType type;
+  SourceLocation loc;
 
-    union {
-        struct {
-            char* name;
-            TokenType varType;
-            Ownership ownership;
-            Ownership elementOwnership; //ownership of each element (for [N] own int)
-            bool isNullable;
-            bool isConst;
-            bool isArray;
-            Expr* arraySize;
-            Expr* expr;
-        } var_decl;
+  union {
+    struct {
+      char *name;
+      TokenType varType;
+      Ownership ownership;
+      Ownership elementOwnership; // ownership of each element (for [N] own int)
+      bool isNullable;
+      bool isConst;
+      bool isArray;
+      Expr *arraySize;
+      Expr *expr;
+    } var_decl;
 
-        struct {
-            char* name;
-            Expr* expr;
-            Ownership ownership;
-            bool isArray;
-            int arraySize;
-        } var_assign;
+    struct {
+      char *name;
+      Expr *expr;
+      Ownership ownership;
+      bool isArray;
+      int arraySize;
+    } var_assign;
 
-        struct {
-            Expr* cond;
-            Stmt* trueStmt;
-            Stmt* falseStmt;
-        } if_stmt;
+    struct {
+      Expr *cond;
+      Stmt *trueStmt;
+      Stmt *falseStmt;
+    } if_stmt;
 
-        struct {
-            Expr* cond;
-            Stmt* body;
-        } while_stmt;
+    struct {
+      Expr *cond;
+      Stmt *body;
+    } while_stmt;
 
-        struct {
-            Expr* cond;
-            Stmt* body;
-        } do_while_stmt;
+    struct {
+      Expr *cond;
+      Stmt *body;
+    } do_while_stmt;
 
-        struct {
-            char* varName;
-            Expr* min;
-            Expr* max;
-            Stmt* body;
-        } for_stmt;
+    struct {
+      char *varName;
+      Expr *min;
+      Expr *max;
+      Stmt *body;
+    } for_stmt;
 
-        struct {
-            Stmt** stmts;
-            int count;
-        } block_stmt;
+    struct {
+      Stmt **stmts;
+      int count;
+    } block_stmt;
 
-        struct {
-            Expr* var;
-            MatchBranchStmt* branches;
-            int branchCount;
-        } match_stmt;
+    struct {
+      Expr *var;
+      MatchBranchStmt *branches;
+      int branchCount;
+    } match_stmt;
 
-        struct {
-            char* varName;
-            bool isArrayOfOwned;  //set by analyzer: array has element ownership
-            int arraySize;        //set by analyzer: number of elements to free
-        } free_stmt;
+    struct {
+      char *varName;
+      bool isArrayOfOwned; // set by analyzer: array has element ownership
+      int arraySize;       // set by analyzer: number of elements to free
+    } free_stmt;
 
-        struct {
-            char* arrayName;
-            Expr* index;
-            Expr* value;
-        } array_elem_assign;
+    struct {
+      char *arrayName;
+      Expr *index;
+      Expr *value;
+    } array_elem_assign;
 
-        Expr* expr_stmt;
+    Expr *expr_stmt;
 
-    } as;
+  } as;
 };
 
 typedef struct {
-    Token* tokens;
-    int count;
-    int size;
-    int pos;
+  Token *tokens;
+  size_t count;
+  size_t size;
+  size_t pos;
 } Parser;
 
-Token* peek(Parser*, int);
-Token* consume(Parser*);
-Token* expect(Parser*, TokenType);
+Token *peek(Parser *, int);
+Token *consume(Parser *);
+Token *expect(Parser *, TokenType);
 
-Expr* makeIntLit(SourceLocation, int);
-Expr* makeBoolLit(SourceLocation, bool);
-Expr* makeStrLit(SourceLocation, char*);
-Expr* makeNullLit(SourceLocation);
-Expr* makeVar(SourceLocation, char*);
-Expr* makeArrAccess(SourceLocation, char*, Expr*);
-Expr* makeFuncCall(SourceLocation, char*, Expr**, int);
-Expr* makeArrDecl(SourceLocation, Expr**, int);
-Expr* makeUnOp(SourceLocation, TokenType, Expr*);
-Expr* makeBinOp(SourceLocation, Expr*, TokenType, Expr*);
+Expr *makeIntLit(SourceLocation, int);
+Expr *makeBoolLit(SourceLocation, bool);
+Expr *makeStrLit(SourceLocation, char *);
+Expr *makeNullLit(SourceLocation);
+Expr *makeVar(SourceLocation, char *);
+Expr *makeArrAccess(SourceLocation, char *, Expr *);
+Expr *makeFuncCall(SourceLocation, char *, Expr **, int);
+Expr *makeArrDecl(SourceLocation, Expr **, int);
+Expr *makeUnOp(SourceLocation, TokenType, Expr *);
+Expr *makeBinOp(SourceLocation, Expr *, TokenType, Expr *);
 
-Stmt* makeVarDecl(SourceLocation, char*, TokenType, Expr*);
-Stmt* makeAssign(SourceLocation, char*, Expr*);
-Stmt* makeIf(SourceLocation, Expr*, Stmt*, Stmt*);
-Stmt* makeWhile(SourceLocation, Expr*, Stmt*);
-Stmt* makeBlock(SourceLocation, Stmt**, int);
-Stmt* makeExprStmt(SourceLocation, Expr*);
+Stmt *makeVarDecl(SourceLocation, char *, TokenType, Expr *);
+Stmt *makeAssign(SourceLocation, char *, Expr *);
+Stmt *makeIf(SourceLocation, Expr *, Stmt *, Stmt *);
+Stmt *makeWhile(SourceLocation, Expr *, Stmt *);
+Stmt *makeBlock(SourceLocation, Stmt **, int);
+Stmt *makeExprStmt(SourceLocation, Expr *);
 
-Func* makeFunc(char*, FuncParam*, int, TokenType, Ownership, Stmt*);
+Func *makeFunc(char *, FuncParam *, int, TokenType, Ownership, Stmt *);
 bool check_func_sign(FuncSign *a, FuncSign *b);
-bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters);
+bool check_func_sign_unwrapped(FuncSign *a, char *name, int paramNum,
+                               Expr **parameters);
 
-Program* parseProgram(Parser*);
-Stmt* parseStatement(Parser*);
-Stmt* parseBlock(Parser*);
+Program *parseProgram(Parser *);
+Stmt *parseStatement(Parser *);
+Stmt *parseBlock(Parser *);
 
-Expr* parseExpr(Parser*);
-Expr* parseAnd(Parser*);
-Expr* parseComparison(Parser*);
-Expr* parseAdd(Parser*);
-Expr* parseTerm(Parser*);
-Expr* parseFactor(Parser*);
-Func** parseFunctions(Parser* p, int*);
-FuncParam* parseFuncParams(Parser*, int*);
+Expr *parseExpr(Parser *);
+Expr *parseAnd(Parser *);
+Expr *parseComparison(Parser *);
+Expr *parseAdd(Parser *);
+Expr *parseTerm(Parser *);
+Expr *parseFactor(Parser *);
+Func **parseFunctions(Parser *p, int *);
+FuncParam *parseFuncParams(Parser *, int *);
 
-void print_ast(Func**, int);
+void print_ast(Func **, int);
 
-#endif //lYNC_PARSER_H
+#endif // lYNC_PARSER_H

@@ -1,4 +1,7 @@
-// Test match expression errors
+//ERROR: match branch 1 returns bool but previous branches return int
+//ERROR: match pattern type int doesn't match target type bool
+//ERROR: match pattern type int doesn't match target type bool
+
 def main(): int {
     x: int = 5;
 

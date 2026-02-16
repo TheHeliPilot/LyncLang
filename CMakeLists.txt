@@ -26,3 +26,25 @@ add_executable(lync src/main.c
         src/file_loader.c
         src/file_loader.h
 )
+
+
+add_executable(test_lexer 
+        test/lexer/test_lexer.c 
+        src/lexer.c 
+        src/lexer.h
+        src/error.c
+        src/error.h
+        src/common.h
+)
+
+add_executable(test_parser
+        test/parser/test_parser.c
+        src/lexer.c
+        src/lexer.h
+        src/parser.c
+        src/parser.h
+        src/error.c
+        src/error.h
+        src/common.h
+)
+
