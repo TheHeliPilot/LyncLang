@@ -1,1 +1,0 @@
-/usr/bin/cc -g -Wl,--dependency-file=CMakeFiles/test_lexer.dir/link.d CMakeFiles/test_lexer.dir/test/lexer/test_lexer.c.o CMakeFiles/test_lexer.dir/src/lexer.c.o CMakeFiles/test_lexer.dir/src/error.c.o -o test_lexer
