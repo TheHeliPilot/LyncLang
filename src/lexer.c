@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern ErrorCollector *g_error_collector;
-extern bool g_trace_mode;
+/* extern ErrorCollector *g_error_collector; */
+/* extern bool g_trace_mode; */
 
 typedef struct {
   const char *name;
@@ -96,7 +96,7 @@ void token_list_print(TokenList *l) {
   for (size_t i = 0; i < l->count; i++) {
     Token *t = token_list_at(l, i);
 
-    fprintf(stderr, "[%3zu] [%s:%d:%d] ", i, t->filename, t->line, t->column);
+    fprintf(stderr, "[%3zu] [%s:%ld:%ld] ", i, t->filename, t->line, t->column);
     fprintf(stderr, "%-15s", token_type_name(t->type));
 
     switch (t->type) {
@@ -145,14 +145,14 @@ void token_list_free(TokenList *l) {
 TokenList *tokenize(char *code, const char *filename) {
   TokenList *token_list = token_list_create();
 
-  int line = 1;
-  int column = 1;
+  size_t line = 1;
+  size_t column = 1;
 
-  int i = 0;
+  size_t i = 0;
 
   while (code[i] != '\0') {
     char c = code[i];
-    int start_col = column; // save column at start of token
+    size_t start_col = column; // save column at start of token
 
     if (c == '\n') {
       line++;
@@ -169,7 +169,7 @@ TokenList *tokenize(char *code, const char *filename) {
 
     // number literals (int or float/double)
     if (code[i] >= '0' && code[i] <= '9') {
-      int num_start = i;
+      size_t num_start = i;
       bool is_float = false;
 
       // consume integer part
@@ -196,7 +196,7 @@ TokenList *tokenize(char *code, const char *filename) {
       }
 
       if (is_float) {
-        int len = i - num_start;
+        size_t len = i - num_start;
         char *float_str = malloc(len + 1);
         strncpy(float_str, &code[num_start], len);
         float_str[len] = '\0';
@@ -209,7 +209,7 @@ TokenList *tokenize(char *code, const char *filename) {
       } else {
         // parse as integer
         int num = 0;
-        for (int j = num_start; j < i; j++) {
+        for (size_t j = num_start; j < i; j++) {
           num = num * 10 + (code[j] - '0');
         }
         token_list_append(token_list, (Token){.type = INT_LIT_T,
@@ -226,8 +226,8 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '"') {
       i++; // skip opening quote
       column++;
-      int str_start = i;
-      int str_len = 0;
+      size_t str_start = i;
+      size_t str_len = 0;
 
       // find closing quote and calculate length
       while (code[i] != '"' && code[i] != '\0' && code[i] != '\n') {
@@ -251,7 +251,7 @@ TokenList *tokenize(char *code, const char *filename) {
 
       char *str = malloc(str_len + 1);
       int str_i = 0;
-      int j = str_start;
+      size_t j = str_start;
 
       while (j < i) {
         if (code[j] == '\\' && j + 1 < i) {
@@ -353,7 +353,7 @@ TokenList *tokenize(char *code, const char *filename) {
 
     if (isalpha(code[i]) || code[i] == '_') {
       const char *start_ptr = &code[i];
-      int start_col = column;
+      size_t start_col = column;
       int len = 0;
 
       // Consume the identifier/keyword
@@ -380,7 +380,7 @@ TokenList *tokenize(char *code, const char *filename) {
         if (t.type == BOOL_LIT_T) {
           t.value.as_bool = (start_ptr[0] == 't');
         } else {
-          t.value.as_ptr = NULL;
+          t.value.as_null = NULL;
         }
       } else {
         // variable/identifier
@@ -421,7 +421,7 @@ TokenList *tokenize(char *code, const char *filename) {
         continue;
       } else {
         token_list_append(token_list, (Token){.type = SLASH_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -435,7 +435,7 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '=') {
       if (code[i + 1] == '=') {
         token_list_append(token_list, (Token){.type = DOUBLE_EQUALS_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -443,7 +443,7 @@ TokenList *tokenize(char *code, const char *filename) {
         column += 2;
       } else {
         token_list_append(token_list, (Token){.type = EQUALS_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -456,7 +456,7 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '!') {
       if (code[i + 1] == '=') {
         token_list_append(token_list, (Token){.type = NOT_EQUALS_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -464,7 +464,7 @@ TokenList *tokenize(char *code, const char *filename) {
         column += 2;
       } else {
         token_list_append(token_list, (Token){.type = NEGATION_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -477,7 +477,7 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '<') {
       if (code[i + 1] == '=') {
         token_list_append(token_list, (Token){.type = LESS_EQUALS_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -485,7 +485,7 @@ TokenList *tokenize(char *code, const char *filename) {
         column += 2;
       } else {
         token_list_append(token_list, (Token){.type = LESS_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -498,7 +498,7 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '>') {
       if (code[i + 1] == '=') {
         token_list_append(token_list, (Token){.type = MORE_EQUALS_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -507,7 +507,7 @@ TokenList *tokenize(char *code, const char *filename) {
         column += 2;
       } else {
         token_list_append(token_list, (Token){.type = MORE_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -520,7 +520,7 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '&') {
       if (code[i + 1] == '&') {
         token_list_append(token_list, (Token){.type = AND_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -542,7 +542,7 @@ TokenList *tokenize(char *code, const char *filename) {
     if (c == '|') {
       if (code[i + 1] == '|') {
         token_list_append(token_list, (Token){.type = OR_T,
-                                              .value.as_ptr = NULL,
+                                              .value.as_null = NULL,
                                               .line = line,
                                               .column = start_col,
                                               .filename = filename});
@@ -618,7 +618,7 @@ TokenList *tokenize(char *code, const char *filename) {
 
     if (found) {
       token_list_append(token_list, (Token){.type = single_char_type,
-                                            .value.as_ptr = NULL,
+                                            .value.as_null = NULL,
                                             .line = line,
                                             .column = start_col,
                                             .filename = filename});
@@ -639,7 +639,7 @@ TokenList *tokenize(char *code, const char *filename) {
   token_list_append(token_list,
 
                     (Token){.type = EOF_T,
-                            .value.as_ptr = NULL,
+                            .value.as_null = NULL,
                             .line = line,
                             .column = column,
                             .filename = filename});

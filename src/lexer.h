@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include <assert.h>
+#include <string.h>
 
 typedef enum {
   // literals
@@ -97,18 +98,10 @@ typedef enum {
   EOF_T,
 } TokenType;
 
-// typedef struct {
-//   TokenType type;
-//   void *value;
-//   int line;
-//   int column;
-//   const char *filename;
-// } Token;
-
 typedef struct {
   TokenType type;
-  int line;
-  int column;
+  size_t line;
+  size_t column;
   const char *filename;
 
   union {
@@ -117,7 +110,7 @@ typedef struct {
     char as_char;
     bool as_bool;
     char *as_string;
-    void *as_ptr;
+    void *as_null;
   } value;
 } Token;
 
