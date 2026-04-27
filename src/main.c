@@ -6,6 +6,7 @@
 #include "analyzer.h"
 #include "optimizer.h"
 #include "file_loader.h"
+#include "plugin.h"
 
 #ifdef _WIN32
 #include <process.h>
@@ -98,6 +99,26 @@ int main(int argc, char** argv) {
     int opt_level = 0;
     bool opt_size = false;
 
+    // Collect --plugin=path arguments. Loaded after we have an output FILE
+    // so the LyncContext can be passed to hooks; the path list is just
+    // stored for now.
+    const char* plugin_paths[16];
+    int         plugin_path_count = 0;
+
+    // --target=exe (default) or --target=dll. DLL skips main, passes
+    // -shared to the C compiler, and outputs .dll/.so/.dylib.
+    bool target_is_dll = false;
+
+    // --include=path repeated; passed as -I to the C compiler. Lets DLL
+    // builds pull in the host's project_api.h without baking the path.
+    const char* include_paths[16];
+    int         include_path_count = 0;
+
+    // --prelude=path: a .lync file prepended to every input file before
+    // parsing. Used to ship API extern blocks (e.g. zues_api.lync) so users
+    // don't repeat the same boilerplate in every project source.
+    const char* prelude_path = nullptr;
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "run") == 0 && !input_file && !run_mode) {
             run_mode = true;
@@ -111,6 +132,35 @@ int main(int argc, char** argv) {
             emit_asm = true;
         } else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
             exe_output = argv[++i];
+        } else if (strncmp(argv[i], "--plugin=", 9) == 0) {
+            if (plugin_path_count < 16) {
+                plugin_paths[plugin_path_count++] = argv[i] + 9;
+            }
+        } else if (strncmp(argv[i], "--target=", 9) == 0) {
+            const char* t = argv[i] + 9;
+            if (strcmp(t, "dll") == 0 || strcmp(t, "shared") == 0) {
+                target_is_dll = true;
+            } else if (strcmp(t, "exe") == 0) {
+                target_is_dll = false;
+            } else {
+                fprintf(stderr, "Unknown --target value: '%s' (expected exe|dll)\n", t);
+                return 1;
+            }
+        } else if (strncmp(argv[i], "--include=", 10) == 0) {
+            if (include_path_count < 16) {
+                include_paths[include_path_count++] = argv[i] + 10;
+            }
+        } else if (strcmp(argv[i], "-I") == 0 && i + 1 < argc) {
+            if (include_path_count < 16) {
+                include_paths[include_path_count++] = argv[++i];
+            }
+        } else if (strncmp(argv[i], "--prelude=", 10) == 0) {
+            prelude_path = argv[i] + 10;
+        } else if (strncmp(argv[i], "--stdlib=", 9) == 0) {
+            // Where to look for std.<module>.lync files. If unset, the file
+            // loader falls back to a directory next to lync.exe.
+            extern void file_loader_set_stdlib_dir(const char*);
+            file_loader_set_stdlib_dir(argv[i] + 9);
         }
 
         else if (strcmp(argv[i], "-O0") == 0) opt_level = 0;
@@ -133,13 +183,21 @@ int main(int argc, char** argv) {
 
     if (!input_file) input_file = "../test.lync";
 
-    //compute output paths
+    //compute output paths. DLL target uses the platform's shared-library
+    //extension; exe target uses EXE_EXT.
     char* c_file = replace_extension(input_file, ".c");
     char* exe_file;
     if (exe_output) {
         exe_file = strdup(exe_output);
     } else {
-        exe_file = replace_extension(input_file, EXE_EXT);
+#if defined(_WIN32)
+        const char* default_ext = target_is_dll ? ".dll" : EXE_EXT;
+#elif defined(__APPLE__)
+        const char* default_ext = target_is_dll ? ".dylib" : EXE_EXT;
+#else
+        const char* default_ext = target_is_dll ? ".so"   : EXE_EXT;
+#endif
+        exe_file = replace_extension(input_file, default_ext);
     }
 
     //find a C compiler
@@ -156,12 +214,40 @@ int main(int argc, char** argv) {
     g_error_collector = init_error_collector();
     if (no_color) g_error_collector->use_color = false;
 
+    // Optional prelude. Read it once + prepend to the input. Same lexer
+    // pass handles the combined source — line numbers in errors will be
+    // the combined-buffer offsets, but the prelude is meant to be
+    // boilerplate the user never edits, so the offset cost is acceptable.
+    char*  prelude_buf  = nullptr;
+    long   prelude_size = 0;
+    if (prelude_path) {
+        FILE* pf = fopen(prelude_path, "r");
+        if (!pf) {
+            fprintf(stderr, "Error: cannot open prelude '%s'\n", prelude_path);
+            free(c_file);
+            free(exe_file);
+            return 1;
+        }
+        fseek(pf, 0, SEEK_END);
+        prelude_size = ftell(pf);
+        fseek(pf, 0, SEEK_SET);
+        prelude_buf = malloc(prelude_size + 2);
+        size_t pr = fread(prelude_buf, 1, prelude_size, pf);
+        prelude_buf[pr] = '\n';
+        prelude_buf[pr + 1] = '\0';
+        fclose(pf);
+        prelude_size = (long)(pr + 1);
+        stage_trace(STAGE_LEXER, "loaded prelude '%s' (%ld bytes)",
+                    prelude_path, prelude_size);
+    }
+
     //read input file
     FILE* file = fopen(input_file, "r");
     if (file == NULL) {
         fprintf(stderr, "Error: Could not open '%s'\n", input_file);
         free(c_file);
         free(exe_file);
+        free(prelude_buf);
         return 1;
     }
 
@@ -169,10 +255,26 @@ int main(int argc, char** argv) {
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* code = malloc(file_size + 1);
-    size_t bytes_read = fread(code, 1, file_size, file);
-    code[bytes_read] = '\0';
+    char* user_code = malloc(file_size + 1);
+    size_t bytes_read = fread(user_code, 1, file_size, file);
+    user_code[bytes_read] = '\0';
     fclose(file);
+
+    // Concat prelude + user source. The prelude is fully tokenised first,
+    // so any extern decls / includes in it land before the user's code in
+    // the AST — exactly like the user typed them at the top of their file.
+    char* code;
+    if (prelude_buf) {
+        code = malloc(prelude_size + bytes_read + 1);
+        memcpy(code, prelude_buf, prelude_size);
+        memcpy(code + prelude_size, user_code, bytes_read);
+        code[prelude_size + bytes_read] = '\0';
+        free(user_code);
+        free(prelude_buf);
+        prelude_buf = nullptr;
+    } else {
+        code = user_code;
+    }
 
     //--- lexer ---
     stage_trace_enter(STAGE_LEXER, "starting lexical analysis");
@@ -230,6 +332,68 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // ---- Plugin pre-analyze pass (v2) -----------------------------------
+    // Load plugins early so they can synthesize Lync decls (extern blocks,
+    // helpers) BEFORE the analyzer runs. The plugin context's output file
+    // is set later, when codegen opens it. Any post-analysis dispatch_decls
+    // call below uses the same context.
+    LyncContext* plugin_ctx = NULL;
+    if (plugin_path_count > 0) {
+        for (int i = 0; i < plugin_path_count; ++i) plugin_load(plugin_paths[i]);
+        plugin_ctx = plugin_context_create(NULL);
+        plugin_dispatch_load(plugin_ctx);
+        plugin_dispatch_decls_pre_analyze(plugin_ctx, program);
+
+        // Pull whatever lync source the plugins emitted. Parse it as a
+        // standalone fragment; merge its extern blocks + functions into
+        // the user program so the analyzer sees them as if hand-written.
+        char* synth = plugin_context_take_lync_decls(plugin_ctx);
+        if (synth && *synth) {
+            stage_trace_enter(STAGE_PARSER, "parsing plugin-synthesized Lync decls");
+            int synth_token_count;
+            Token* synth_tokens = tokenize(synth, &synth_token_count, "<plugin-synth>");
+            if (!has_errors(g_error_collector)) {
+                Parser synth_parser = {
+                    .tokens = synth_tokens,
+                    .count  = synth_token_count,
+                    .size   = synth_token_count,
+                    .pos    = 0
+                };
+                Program* synth_prog = parseProgram(&synth_parser);
+                if (!has_errors(g_error_collector) && synth_prog) {
+                    // Merge extern blocks. Functions / structs from synth
+                    // would also work via the same realloc pattern but
+                    // the v2 use case is extern decls only.
+                    for (int i = 0; i < synth_prog->ext_block_count; ++i) {
+                        int new_count = program->ext_block_count + 1;
+                        program->externBlocks = realloc(program->externBlocks,
+                                                        sizeof(ExternBlock*) * new_count);
+                        program->externBlocks[program->ext_block_count] =
+                            synth_prog->externBlocks[i];
+                        program->ext_block_count = new_count;
+                    }
+                    // Functions too (in case a plugin emits helper fns).
+                    for (int i = 0; i < synth_prog->func_count; ++i) {
+                        int new_count = program->func_count + 1;
+                        program->functions = realloc(program->functions,
+                                                     sizeof(Func*) * new_count);
+                        program->functions[program->func_count] =
+                            synth_prog->functions[i];
+                        program->func_count = new_count;
+                    }
+                }
+            }
+            stage_trace_exit(STAGE_PARSER, "plugin-synth parse done");
+            free(synth);
+        }
+        if (has_errors(g_error_collector)) {
+            print_messages(g_error_collector);
+            free_error_collector(g_error_collector);
+            free(code); free(c_file); free(exe_file);
+            return 1;
+        }
+    }
+
     //--- analyzer ---
     stage_trace_enter(STAGE_ANALYZER, "starting semantic analysis");
     analyze_program(program);
@@ -277,7 +441,25 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // ---- Plugin hooks: post-analysis C codegen pass ----
+    // Plugins were loaded earlier (so their pre-analyze hooks could
+    // synthesize Lync decls). Now bind the output FILE* and dispatch the
+    // C-emission walk. Buffers flush after generate_code so plugin code
+    // lands at the END of the .c file, never interleaved with user code.
+    if (plugin_ctx) {
+        plugin_context_set_output(plugin_ctx, output);
+        plugin_dispatch_decls(plugin_ctx, program);
+    }
+
     generate_code(program, output);
+
+    if (plugin_ctx) {
+        plugin_dispatch_finalize(plugin_ctx);
+        plugin_dispatch_unload(plugin_ctx);
+        plugin_context_destroy(plugin_ctx);
+        plugin_shutdown();
+    }
+
     fclose(output);
     stage_trace_exit(STAGE_CODEGEN, "wrote %s", c_file);
 
@@ -285,8 +467,27 @@ int main(int argc, char** argv) {
     print_messages(g_error_collector);
 
     stage_trace_enter(STAGE_CODEGEN, "invoking C backend");
-    char cmd[2048];
-    snprintf(cmd, sizeof(cmd), "%s \"%s\" -o \"%s\"", compiler, c_file, exe_file);
+    char cmd[4096];
+    int  off = 0;
+    off += snprintf(cmd + off, sizeof(cmd) - off,
+                    "%s \"%s\"", compiler, c_file);
+
+    // Include paths from --include= / -I flags. Forwarded as -I path so
+    // the C compiler can find host headers (e.g. zues/project_api.h when
+    // compiling a Zues project DLL).
+    for (int i = 0; i < include_path_count && off < (int)sizeof(cmd) - 256; ++i) {
+        off += snprintf(cmd + off, sizeof(cmd) - off,
+                        " -I \"%s\"", include_paths[i]);
+    }
+
+    if (target_is_dll) {
+        // -shared works for both clang and gcc on Windows + POSIX.
+        // (cl /LD would need separate handling; we don't auto-detect cl yet.)
+        off += snprintf(cmd + off, sizeof(cmd) - off, " -shared");
+    }
+
+    off += snprintf(cmd + off, sizeof(cmd) - off,
+                    " -o \"%s\"", exe_file);
     stage_trace(STAGE_CODEGEN, "running: %s", cmd);
 
     int cc_result = system(cmd);
@@ -311,6 +512,10 @@ int main(int argc, char** argv) {
     //--- success or run ---
     int exit_code = 0;
 
+    if (target_is_dll && run_mode) {
+        fprintf(stderr, "warning: 'run' has no effect with --target=dll; ignoring.\n");
+        run_mode = false;
+    }
     if (run_mode) {
         //run the compiled executable
         char run_cmd[2048];

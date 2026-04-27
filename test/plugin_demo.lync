@@ -1,0 +1,27 @@
+// Lync v0.4 — plugin dispatch test.
+// Compile with:
+//   lync plugin_demo.lync --plugin=C:/tmp/lync_plugin/echo_plugin.dll --emit-c
+
+[component]
+Position: struct {
+    x: float,
+    y: float
+}
+
+[component]
+[echo]
+Velocity: struct {
+    vx: float,
+    vy: float
+}
+
+[echo]
+[priority(10)]
+def my_system(): int {
+    return 0;
+}
+
+def main(): int {
+    print("plugin demo");
+    return 0;
+}

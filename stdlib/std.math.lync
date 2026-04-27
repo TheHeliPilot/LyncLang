@@ -1,0 +1,90 @@
+// =============================================================================
+// std.math — Math primitives for the Lync standard library.
+//
+// Provides generic min/max/clamp/abs/lerp helpers and libc-backed float math.
+// Constants are exposed as zero-argument functions.
+//
+// Import entire module:   using std.math.*;
+// Import single binding:  using std.math.sqrt;
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// libc wrappers (float arithmetic via <math.h>)
+// ---------------------------------------------------------------------------
+
+extern <math.h> {
+    // Square root of x.
+    def sqrt(x: float): float;
+
+    // Largest integer value not greater than x.
+    def floor(x: float): float;
+
+    // Smallest integer value not less than x.
+    def ceil(x: float): float;
+
+    // x raised to the power y.
+    def pow(x: float, y: float): float;
+
+    // Sine of x (radians).
+    def sin(x: float): float;
+
+    // Cosine of x (radians).
+    def cos(x: float): float;
+}
+
+// ---------------------------------------------------------------------------
+// Constants (returned as functions; Lync has no top-level const declarations)
+// ---------------------------------------------------------------------------
+
+// Ratio of a circle's circumference to its diameter (~3.14159265358979).
+def pi(): float { return 3.14159265358979; }
+
+// Base of the natural logarithm (~2.71828182845905).
+def e(): float { return 2.71828182845905; }
+
+// Positive infinity (IEEE 754 float).
+def inf(): float { return 1.0 / 0.0; }
+
+// ---------------------------------------------------------------------------
+// Generic helpers (duck-typed, monomorphised at compile time)
+// ---------------------------------------------------------------------------
+
+// Returns the smaller of a and b.
+def min<T>(a: T, b: T): T {
+    if (a < b) {
+        return a;
+    }
+    return b;
+}
+
+// Returns the larger of a and b.
+def max<T>(a: T, b: T): T {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}
+
+// Clamps v to the inclusive range [lo, hi].
+def clamp<T>(v: T, lo: T, hi: T): T {
+    if (v < lo) {
+        return lo;
+    }
+    if (v > hi) {
+        return hi;
+    }
+    return v;
+}
+
+// Returns the absolute value of v.
+def abs<T>(v: T): T {
+    if (v < 0) {
+        return 0 - v;
+    }
+    return v;
+}
+
+// Linear interpolation: a + (b - a) * t.  t is always float.
+def lerp<T>(a: T, b: T, t: float): T {
+    return a + (b - a) * t;
+}

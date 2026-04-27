@@ -11,6 +11,40 @@ typedef struct Stmt Stmt;
 typedef struct Func Func;
 typedef struct Func Func;
 typedef struct ExternBlock ExternBlock;
+typedef struct StructDecl StructDecl;
+typedef struct Attribute Attribute;
+typedef struct AttributeList AttributeList;
+
+// One literal-typed attribute argument. For v1 we accept int/bool/string
+// literals only — positional, no named args yet. Richer expressions come
+// when we wire `comptime` evaluation; v1 is intentionally simple so plugin
+// authors don't have to evaluate Lync expressions.
+typedef enum {
+    ATTR_ARG_INT,
+    ATTR_ARG_BOOL,
+    ATTR_ARG_STRING,
+} AttrArgKind;
+
+typedef struct {
+    AttrArgKind kind;
+    int    int_val;     // for INT, BOOL
+    char*  str_val;     // for STRING
+} AttrArg;
+
+// `[name]`, `[name(arg1, arg2, ...)]`. Stored as metadata on StructDecl
+// and Func — Lync core doesn't interpret the name; plugins do.
+struct Attribute {
+    char*           name;
+    AttrArg*        args;
+    int             arg_count;
+    SourceLocation  loc;
+};
+
+struct AttributeList {
+    Attribute** items;
+    int         count;
+    int         capacity;
+};
 
 typedef enum {
     OWNERSHIP_NONE,
@@ -36,34 +70,108 @@ typedef struct {
     int import_capacity;
 } ImportList;
 
+// Struct field. `type` carries the primitive (INT_KEYWORD_T, FLOAT_KEYWORD_T,
+// ...) for built-ins. When the field's type is another struct, `type` is
+// VAR_T and `type_name` is the struct's name. Same convention is used on
+// var_decl + Symbol so the analyzer/codegen can route uniformly.
+typedef struct {
+    char*        name;
+    TokenType    type;
+    char*        type_name;     // non-NULL only when type == VAR_T
+} StructField;
+
+// ----------------------------------------------------------------------------
+// Template support.
+//
+// Lync templates are C++-style: pure compile-time monomorphisation, no runtime
+// cost, body duck-typed at instantiation. A function or struct decl that
+// carries a non-NULL `type_params` is a template — the analyzer never sees the
+// template directly. Instead, after parsing, an instantiation pass walks the
+// "pending" queue (filled at parse time when the parser sees use sites like
+// `Foo<int>` or `bar<int>(...)`), clones the template AST, substitutes type
+// params, and registers the resulting concrete decl under a mangled name
+// (`Foo__int`, `bar__int`).
+// ----------------------------------------------------------------------------
+typedef struct {
+    char** names;     // e.g. ["T", "U"]
+    int    count;
+} TypeParamList;
+
+// One concrete type argument used at a template use site.
+typedef struct {
+    TokenType type;        // INT_KEYWORD_T, FLOAT_KEYWORD_T, ..., or VAR_T
+    char*     type_name;   // when type == VAR_T (a struct name)
+} TypeArg;
+
+typedef struct {
+    TypeArg* args;
+    int      count;
+} TypeArgList;
+
+// Pending template instantiation request, queued at parse time and drained
+// after parseProgram completes.
+typedef struct {
+    char*           template_name;   // unmangled, e.g. "List"
+    TypeArgList*    type_args;       // owned
+    char*           mangled_name;    // owned, e.g. "List__int"
+    SourceLocation  use_loc;         // for "instantiated from <here>" notes
+    int             kind;            // 0 = function, 1 = struct
+} PendingInstantiation;
+
+struct StructDecl {
+    char*            name;
+    StructField*     fields;
+    int              field_count;
+    AttributeList*   attrs;          // attached `[...]` attributes (may be NULL)
+    SourceLocation   loc;
+    TypeParamList*   type_params;    // NULL = concrete struct; non-NULL = template
+};
+
 typedef struct {
     ImportList* imports;
     ExternBlock** externBlocks;
     int ext_block_count;
-    Func** functions;
+    StructDecl** structs;       // user-defined struct types (concrete + monomorphised)
+    int struct_count;
+    Func** functions;           // concrete + monomorphised functions
     int func_count;
+
+    // Template support (see comment above TypeParamList).
+    PendingInstantiation** pending;     // queued at parse time
+    int pending_count;
+    int pending_capacity;
+    char** instantiated_names;          // mangled names already realized (memo)
+    int    instantiated_count;
+    int    instantiated_capacity;
 } Program;
 
 typedef struct {
     TokenType type;
     char* name;
+    char* type_name;            // non-NULL when type == VAR_T (struct type)
+    struct FuncSign* fn_sig;    // non-NULL when type == FN_T (function pointer)
     Ownership ownership;
     bool isNullable;
     bool isConst;
 } FuncParam;
 
-typedef struct {
-    char* name;
+typedef struct FuncSign FuncSign;
+struct FuncSign {
+    char* name;                  // NULL for anonymous fn-type sigs
     FuncParam* parameters;
     int paramNum;
     TokenType retType;
+    char* retTypeName;           // non-NULL when retType == VAR_T (struct return)
     Ownership retOwnership;
-    bool isExtern; //nEW: true if function is from extern block
-} FuncSign;
+    bool isExtern;
+    bool retNullable;            // when true, callers must treat the result as nullable
+};
 
 struct Func {
-    FuncSign* signature;
-    Stmt* body;
+    FuncSign*      signature;
+    Stmt*          body;
+    AttributeList* attrs;            // attached `[...]` attributes (may be NULL)
+    TypeParamList* type_params;      // NULL = concrete function; non-NULL = template
 };
 
 struct ExternBlock {
@@ -124,12 +232,17 @@ typedef enum {
     //operations
     UN_OP_E, BIN_OP_E,
 
+    //structs
+    STRUCT_LIT_E,    //Name { field: value, ... }
+    FIELD_ACCESS_E,  //expr.field
 } ExprType;
 
 struct Expr {
     ExprType type;
     SourceLocation loc;
     TokenType analyzedType;  //filled in by analyzer
+    char* analyzed_type_name; //filled in by analyzer when analyzedType == VAR_T (struct)
+    FuncSign* analyzed_fn_sig; //filled in by analyzer when expression is a function reference
     bool is_nullable;        //filled in by analyzer for nullable return types
 
     union {
@@ -196,6 +309,26 @@ struct Expr {
         struct {
             Expr* var;
         } some;
+
+        // Struct literal: `Name { f1: v1, f2: v2, ... }`. Field order in
+        // the source doesn't have to match struct decl order — codegen
+        // emits designated initializers by name so it's robust to that.
+        struct {
+            char*  type_name;        // e.g. "Position"
+            char** field_names;      // length = field_count
+            Expr** field_values;
+            int    field_count;
+        } struct_lit;
+
+        // Field access: `target.field_name`. Chains naturally (a.b.c parses
+        // as ((a.b).c)). Codegen handles the C `.` directly.
+        struct {
+            Expr* target;
+            char* field_name;
+            // Resolved by analyzer:
+            TokenType field_type;
+            char*     field_type_name;   // for nested struct fields
+        } field_access;
     } as;
 };
 
@@ -203,6 +336,7 @@ typedef enum {
     VAR_DECL_S,         //x: int = 5;
     ASSIGN_S,           //x = 5;
     ARRAY_ELEM_ASSIGN_S, //arr[i] = value;
+    FIELD_ASSIGN_S,      //target.field = value;
     IF_S,               //if cond { } else { }
     WHILE_S,            //while cond { }
     DO_WHILE_S,         //do { } while cond
@@ -221,6 +355,8 @@ struct Stmt {
         struct {
             char* name;
             TokenType varType;
+            char* typeName;             // non-NULL when varType == VAR_T (struct type)
+            FuncSign* fnSig;            // non-NULL when varType == FN_T (function pointer)
             Ownership ownership;
             Ownership elementOwnership; //ownership of each element (for [N] own int)
             bool isNullable;
@@ -284,6 +420,13 @@ struct Stmt {
             Expr* value;
         } array_elem_assign;
 
+        // target.field = value;   target is any expression (chained access ok)
+        struct {
+            Expr* target;
+            char* field_name;
+            Expr* value;
+        } field_assign;
+
         Expr* expr_stmt;
 
     } as;
@@ -323,6 +466,18 @@ bool check_func_sign(FuncSign *a, FuncSign *b);
 bool check_func_sign_unwrapped(FuncSign* a, char* name, int paramNum, Expr** parameters);
 
 Program* parseProgram(Parser*);
+
+// ---- template.c surface ---------------------------------------------------
+char* tpl_mangle(const char* base_name, const TypeArgList* args);
+bool  tpl_already_instantiated(const Program* p, const char* mangled);
+void  tpl_push_pending(Program* p, const char* template_name,
+                       TypeArgList* args, const char* mangled,
+                       SourceLocation loc, int kind);
+// Realize queued template instantiations. With strict=true, missing
+// templates produce a parse error and the pending entry is dropped. With
+// strict=false, unresolved pendings are kept so a later strict drain (after
+// stdlib / file merging) can retry them.
+void  tpl_drain_pending(Program* p, bool strict);
 Stmt* parseStatement(Parser*);
 Stmt* parseBlock(Parser*);
 

@@ -5,8 +5,74 @@
 //forward declaration
 void check_function_cleanup(Scope* scope);
 
+// Implicit numeric conversions follow C#'s "widening only" rule:
+//   char -> int -> float -> double
+// Going wider (lower rank to higher) is implicit. Going narrower
+// (double -> float, double -> int, float -> int) requires an explicit
+// suffix (1.5f) or cast — the user has to acknowledge precision loss.
+// This matches every game-dev's mental model from C++/C#/Unity.
+static int type_rank(TokenType t) {
+    switch (t) {
+        case CHAR_KEYWORD_T:   return 1;
+        case INT_KEYWORD_T:    return 2;
+        case FLOAT_KEYWORD_T:  return 3;
+        case DOUBLE_KEYWORD_T: return 4;
+        default:               return 0;   // not numeric
+    }
+}
+static bool numeric_compatible(TokenType to, TokenType from) {
+    if (to == from) return true;
+    const int rt = type_rank(to);
+    const int rf = type_rank(from);
+    if (rt == 0 || rf == 0) return false;   // either side not numeric
+    return rf <= rt;                         // widening only
+}
+
 //global import registry (will be initialized in analyze_program)
 static ImportRegistry* g_import_registry = nullptr;
+
+// Global struct table — set up at the start of analyze_program from the
+// program's collected struct decls. Used by VAR_DECL_S (validate struct
+// type), FIELD_ACCESS_E (resolve field type), FIELD_ASSIGN_S (validate
+// LHS resolves to a struct type and that the field exists).
+static StructTable* g_struct_table = nullptr;
+
+StructTable* make_struct_table() {
+    StructTable* t = malloc(sizeof(StructTable));
+    t->capacity = 8;
+    t->count    = 0;
+    t->decls    = malloc(sizeof(StructDecl*) * t->capacity);
+    return t;
+}
+
+void register_struct(StructTable* t, StructDecl* d) {
+    if (lookup_struct(t, d->name)) {
+        stage_error(STAGE_ANALYZER, d->loc,
+                    "struct '%s' already declared", d->name);
+        return;
+    }
+    if (t->count >= t->capacity) {
+        t->capacity *= 2;
+        t->decls = realloc(t->decls, sizeof(StructDecl*) * t->capacity);
+    }
+    t->decls[t->count++] = d;
+}
+
+StructDecl* lookup_struct(StructTable* t, const char* name) {
+    if (!t || !name) return nullptr;
+    for (int i = 0; i < t->count; ++i) {
+        if (strcmp(t->decls[i]->name, name) == 0) return t->decls[i];
+    }
+    return nullptr;
+}
+
+StructField* lookup_field(StructDecl* d, const char* field_name) {
+    if (!d || !field_name) return nullptr;
+    for (int i = 0; i < d->field_count; ++i) {
+        if (strcmp(d->fields[i].name, field_name) == 0) return &d->fields[i];
+    }
+    return nullptr;
+}
 
 ImportRegistry* make_import_registry() {
     ImportRegistry* reg = malloc(sizeof(ImportRegistry));
@@ -37,8 +103,21 @@ void register_import(ImportRegistry* reg, IncludeStmt* stmt) {
         }
     }
 
+    // std.io is the inline-codegen builtin (printf/read_int/etc.). Other
+    // std.* modules are loaded as regular files from the stdlib directory by
+    // file_loader; their functions appear as ordinary defs by the time we
+    // run, so registration here just records the wildcard for is_imported().
     if (strcmp(stmt->module_name, "std.io") != 0) {
-        stage_warning(STAGE_ANALYZER, stmt->loc, "unknown standard module '%s' (only std.io is supported)", stmt->module_name);
+        if (stmt->type == IMPORT_ALL) {
+            stage_trace(STAGE_ANALYZER, "registered wildcard import: %s.*", stmt->module_name);
+        } else {
+            if (reg->count >= reg->capacity) {
+                reg->capacity *= 2;
+                reg->imported_functions = realloc(reg->imported_functions, sizeof(char*) * reg->capacity);
+            }
+            reg->imported_functions[reg->count++] = stmt->function_name;
+            stage_trace(STAGE_ANALYZER, "registered import: %s.%s", stmt->module_name, stmt->function_name);
+        }
         return;
     }
 
@@ -93,6 +172,20 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool
                         "variable '%s' already declared in this scope", name);
     }
 
+    // Shadow detection (Rider/CLion-style). If `name` exists in any
+    // ENCLOSING scope, emit a warning so the user can rename. Same scope
+    // is rejected as a hard error above; this only fires for outer-scope
+    // hits. Skips parameter names (parent == NULL means top-level which
+    // we never want to warn about either).
+    if (scope->parent) {
+        Symbol* outer = lookup(scope->parent, name);
+        if (outer) {
+            stage_warning(STAGE_ANALYZER, NO_LOC,
+                "'%s' shadows a name from an outer scope - consider renaming",
+                name);
+        }
+    }
+
     stage_trace(STAGE_ANALYZER, "declare %s : %s%s%s",
                 name, isNullable ? "nullable " : "", isArray ? "array " : "", token_type_name(type));
 
@@ -106,6 +199,8 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool
             (Symbol){
                     .type = type,
                     .name = name,
+                    .type_name = nullptr,   // struct callers set after declare()
+                    .fn_sig = nullptr,      // fn-pointer callers set after declare()
                     .ownership = ownership,
                     .is_nullable = isNullable,
                     .is_const = isConst,
@@ -176,6 +271,16 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
         case VAR_E: {
             Symbol* sym = lookup(scope, e->as.var.name);
             if (sym == nullptr) {
+                // Not a variable — try resolving as a function name. This
+                // is how `my_func` becomes a function pointer value when
+                // used in expression position (e.g. as a callback arg).
+                FuncSign* fs = lookup_func_name(funcTable, e->as.var.name);
+                if (fs) {
+                    e->analyzed_fn_sig    = fs;
+                    e->analyzed_type_name = NULL;
+                    result = FN_T;
+                    break;
+                }
                 //check if trying to use print as a variable (give better error message)
                 if (strcmp(e->as.var.name, "print") == 0) {
                     stage_error(STAGE_ANALYZER, e->loc, "'print' is a built-in function, not a variable (use print(...) to call it)");
@@ -209,7 +314,49 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
 
             e->as.var.ownership = sym->ownership;
             e->as.var.isConst = sym->is_const;
+            // Propagate the struct's type name through analyzedType machinery
+            // so chained field access (a.b.c) can resolve b's type from a.
+            e->analyzed_type_name = sym->type_name;
             result = sym->type;
+            break;
+        }
+
+        case FIELD_ACCESS_E: {
+            // First analyze the target — could be a Var, another field
+            // access (chained), etc. Result tells us what struct type the
+            // target evaluates to.
+            TokenType targetType = analyze_expr(scope, funcTable,
+                                                 e->as.field_access.target,
+                                                 currentFunc);
+            if (targetType != VAR_T) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                            "field access requires struct type, got '%s'",
+                            token_type_name(targetType));
+                result = INT_KEYWORD_T;
+                break;
+            }
+            const char* type_name =
+                e->as.field_access.target->analyzed_type_name;
+            StructDecl* sd = lookup_struct(g_struct_table, type_name);
+            if (!sd) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                            "unknown struct type '%s' on field access",
+                            type_name ? type_name : "(unnamed)");
+                result = INT_KEYWORD_T;
+                break;
+            }
+            StructField* fld = lookup_field(sd, e->as.field_access.field_name);
+            if (!fld) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                            "struct '%s' has no field '%s'",
+                            sd->name, e->as.field_access.field_name);
+                result = INT_KEYWORD_T;
+                break;
+            }
+            e->as.field_access.field_type      = fld->type;
+            e->as.field_access.field_type_name = fld->type_name;
+            e->analyzed_type_name              = fld->type_name;
+            result = fld->type;
             break;
         }
 
@@ -283,7 +430,7 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             TokenType right = analyze_expr(scope, funcTable, e->as.bin_op.exprR, currentFunc);
 
             //arithmetic: int/char/float/double
-            if (op == PLUS_T || op == MINUS_T || op == STAR_T || op == SLASH_T) {
+            if (op == PLUS_T || op == MINUS_T || op == STAR_T || op == SLASH_T || op == PERCENT_T) {
                 bool isNumL = (left == INT_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
                 bool isNumR = (right == INT_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
 
@@ -466,6 +613,18 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             }
 
             if (matchCount == 0) {
+                // No global function matched. Try resolving as a fn-typed
+                // local variable (call through function pointer).
+                Symbol* fp_sym = lookup(scope, e->as.func_call.name);
+                if (fp_sym && fp_sym->type == FN_T && fp_sym->fn_sig &&
+                    fp_sym->fn_sig->paramNum == e->as.func_call.count) {
+                    e->as.func_call.resolved_sign = fp_sym->fn_sig;
+                    result = fp_sym->fn_sig->retType;
+                    free(argTypes);
+                    free(matches);
+                    break;
+                }
+
                 stage_error(STAGE_ANALYZER, e->loc,
                             "no function '%s' takes %d arguments",
                             e->as.func_call.name, e->as.func_call.count);
@@ -476,7 +635,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 break;
             }
 
-            //find exact type match
+            //find best type match. Exact wins; numeric-coercible accepts.
+            //First pass: exact match. Second pass: implicit numeric coercion.
             FuncSign* match = NULL;
             for (int i = 0; i < matchCount; i++) {
                 FuncSign* candidate = matches[i];
@@ -487,9 +647,19 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                         break;
                     }
                 }
-                if (typesMatch) {
-                    match = candidate;
-                    break;
+                if (typesMatch) { match = candidate; break; }
+            }
+            if (match == NULL) {
+                for (int i = 0; i < matchCount; i++) {
+                    FuncSign* candidate = matches[i];
+                    bool typesMatch = true;
+                    for (int j = 0; j < candidate->paramNum; j++) {
+                        if (!numeric_compatible(candidate->parameters[j].type, argTypes[j])) {
+                            typesMatch = false;
+                            break;
+                        }
+                    }
+                    if (typesMatch) { match = candidate; break; }
                 }
             }
 
@@ -557,6 +727,12 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             }
 
             result = match->retType;
+            //extern functions can be marked as returning a nullable value
+            //(e.g. zues plugin's GetX(e): ptr?). Surface that on the call expr
+            //so var-decl + match analysis can enforce/handle it.
+            if (match->retNullable) {
+                e->is_nullable = true;
+            }
             free(argTypes);
             free(matches);
             break;
@@ -800,6 +976,68 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
 void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* currentFunc) {
     switch (s->type) {
         case VAR_DECL_S: {
+            // Function-pointer typed declaration: analyze initializer,
+            // verify it's a function reference (FN_T result with attached
+            // sig), shallow-validate signature compatibility (param count
+            // + return type for v1; full type-tuple match next pass).
+            if (s->as.var_decl.varType == FN_T) {
+                TokenType it = analyze_expr(scope, funcTable,
+                                             s->as.var_decl.expr, currentFunc);
+                FuncSign* init_sig = s->as.var_decl.expr->analyzed_fn_sig;
+                if (it != FN_T || !init_sig) {
+                    stage_error(STAGE_ANALYZER, s->loc,
+                                "function-pointer '%s' must be initialized with a function name",
+                                s->as.var_decl.name);
+                } else {
+                    FuncSign* expected = s->as.var_decl.fnSig;
+                    if (expected->paramNum != init_sig->paramNum ||
+                        expected->retType  != init_sig->retType) {
+                        stage_error(STAGE_ANALYZER, s->loc,
+                                    "function '%s' signature does not match declared fn type for '%s'",
+                                    init_sig->name ? init_sig->name : "(?)",
+                                    s->as.var_decl.name);
+                    }
+                }
+                declare(scope, s->as.var_decl.name, FN_T,
+                        OWNERSHIP_NONE, false, s->as.var_decl.isConst, false, 0);
+                Symbol* sym = lookup(scope, s->as.var_decl.name);
+                if (sym) sym->fn_sig = s->as.var_decl.fnSig;
+                break;
+            }
+
+            // Struct-typed declaration: validate the type name resolves to
+            // a registered struct, declare the symbol, and stamp its
+            // type_name so field access on it resolves later. v1 doesn't
+            // support struct literals — only zero-init via VOID_E placeholder.
+            if (s->as.var_decl.varType == VAR_T) {
+                StructDecl* sd = lookup_struct(g_struct_table,
+                                               s->as.var_decl.typeName);
+                if (!sd) {
+                    stage_error(STAGE_ANALYZER, s->loc,
+                                "unknown type '%s' for variable '%s'",
+                                s->as.var_decl.typeName, s->as.var_decl.name);
+                }
+                declare(scope,
+                        s->as.var_decl.name,
+                        VAR_T,
+                        s->as.var_decl.ownership,
+                        s->as.var_decl.isNullable,
+                        s->as.var_decl.isConst,
+                        s->as.var_decl.isArray,
+                        s->as.var_decl.isArray
+                            ? (s->as.var_decl.arraySize
+                                && s->as.var_decl.arraySize->type == INT_LIT_E
+                                ? s->as.var_decl.arraySize->as.int_val
+                                : 0)
+                            : 0);
+                // Stamp type_name on the freshly-declared symbol so future
+                // field accesses can resolve. lookup() returns the actual
+                // slot — pointer is stable until the scope grows again.
+                Symbol* sym = lookup(scope, s->as.var_decl.name);
+                if (sym) sym->type_name = s->as.var_decl.typeName;
+                break;
+            }
+
             //skip type analysis for uninitialized arrays (VOID_E placeholder)
             TokenType t = VOID_KEYWORD_T;
             if (s->as.var_decl.expr->type != VOID_E) {
@@ -842,20 +1080,24 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
             if (s->as.var_decl.expr->type == ALLOC_E && s->as.var_decl.ownership != OWNERSHIP_OWN)
                 stage_error(STAGE_ANALYZER, s->loc, "'alloc' can only be used with 'own' variables");
 
+            // nullable propagation: if rhs may be null (e.g. extern returning ptr?),
+            // the declared variable must also be marked nullable so the user is
+            // forced to handle the null case via `match` / null check.
+            if (s->as.var_decl.expr->type != VOID_E &&
+                s->as.var_decl.expr->is_nullable &&
+                !s->as.var_decl.isNullable) {
+                stage_error(STAGE_ANALYZER, s->loc,
+                    "'%s' may be null but is not declared nullable - declare as `?%s` and handle with `match`",
+                    s->as.var_decl.name, token_type_name(s->as.var_decl.varType));
+            }
+
             if (s->as.var_decl.expr->type != VOID_E && t != s->as.var_decl.varType && !(s->as.var_decl.isNullable && t == NULL_LIT_T)) {
                 //special case: allow assigning alloc[n] char to string
                 bool isStringAlloc = (s->as.var_decl.varType == STR_KEYWORD_T && t == CHAR_KEYWORD_T && s->as.var_decl.expr->type == ALLOC_E);
                 
                 //numeric promotion: char -> int -> float -> double
-                bool isNumericPromotion = false;
-                TokenType target = s->as.var_decl.varType;
-                if (target == DOUBLE_KEYWORD_T) {
-                    if (t == FLOAT_KEYWORD_T || t == INT_KEYWORD_T || t == CHAR_KEYWORD_T) isNumericPromotion = true;
-                } else if (target == FLOAT_KEYWORD_T) {
-                    if (t == INT_KEYWORD_T || t == CHAR_KEYWORD_T) isNumericPromotion = true;
-                } else if (target == INT_KEYWORD_T) {
-                    if (t == CHAR_KEYWORD_T) isNumericPromotion = true;
-                }
+                const bool isNumericPromotion =
+                    numeric_compatible(s->as.var_decl.varType, t);
 
                 if (!isStringAlloc && !isNumericPromotion) {
                     stage_error(STAGE_ANALYZER, s->loc, "variable '%s' declared as %s but initialized with %s",
@@ -925,6 +1167,47 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
             break;
         }
 
+        case FIELD_ASSIGN_S: {
+            // target.field = value
+            // Analyze the target → must yield a struct (VAR_T) with a known
+            // type_name. Then validate the field exists and the value type
+            // matches (with the usual numeric-promotion allowance).
+            TokenType targetType = analyze_expr(scope, funcTable,
+                                                 s->as.field_assign.target,
+                                                 currentFunc);
+            if (targetType != VAR_T) {
+                stage_error(STAGE_ANALYZER, s->loc,
+                            "field assignment requires a struct target, got '%s'",
+                            token_type_name(targetType));
+                break;
+            }
+            const char* tname = s->as.field_assign.target->analyzed_type_name;
+            StructDecl* sd = lookup_struct(g_struct_table, tname);
+            if (!sd) {
+                stage_error(STAGE_ANALYZER, s->loc,
+                            "unknown struct type '%s' on field assign",
+                            tname ? tname : "(unnamed)");
+                break;
+            }
+            StructField* fld = lookup_field(sd, s->as.field_assign.field_name);
+            if (!fld) {
+                stage_error(STAGE_ANALYZER, s->loc,
+                            "struct '%s' has no field '%s'",
+                            sd->name, s->as.field_assign.field_name);
+                break;
+            }
+            TokenType vt = analyze_expr(scope, funcTable,
+                                         s->as.field_assign.value, currentFunc);
+            if (!numeric_compatible(fld->type, vt)) {
+                stage_error(STAGE_ANALYZER, s->loc,
+                            "field '%s.%s' is %s but assigned %s",
+                            sd->name, fld->name,
+                            token_type_name(fld->type),
+                            token_type_name(vt));
+            }
+            break;
+        }
+
         case ASSIGN_S: {
             stage_trace(STAGE_ANALYZER, "analyzing assignment to '%s'", s->as.var_assign.name);
             Symbol* sym = lookup(scope, s->as.var_assign.name);
@@ -951,16 +1234,8 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                 //special case: allow assigning alloc[n] char to string
                 bool isStringAlloc = (sym->type == STR_KEYWORD_T && t == CHAR_KEYWORD_T && s->as.var_assign.expr->type == ALLOC_E);
                 
-                //numeric promotion: char -> int -> float -> double
-                bool isNumericPromotion = false;
-                TokenType target = sym->type;
-                if (target == DOUBLE_KEYWORD_T) {
-                    if (t == FLOAT_KEYWORD_T || t == INT_KEYWORD_T || t == CHAR_KEYWORD_T) isNumericPromotion = true;
-                } else if (target == FLOAT_KEYWORD_T) {
-                    if (t == INT_KEYWORD_T || t == CHAR_KEYWORD_T) isNumericPromotion = true;
-                } else if (target == INT_KEYWORD_T) {
-                    if (t == CHAR_KEYWORD_T) isNumericPromotion = true;
-                }
+                const bool isNumericPromotion =
+                    numeric_compatible(sym->type, t);
 
                 if (!isStringAlloc && !isNumericPromotion) {
                     stage_error(STAGE_ANALYZER, s->loc, "cannot assign %s to '%s' of type %s",
@@ -987,8 +1262,17 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
 
         case IF_S: {
             TokenType c = analyze_expr(scope, funcTable, s->as.if_stmt.cond, currentFunc);
-            if (c != BOOL_KEYWORD_T)
-                stage_error(STAGE_ANALYZER, s->loc, "if condition must be bool, got %s", token_type_name(c));
+            // Truthy-coerce: bool, int (any int kind), ptr, and nullable values
+            // are all valid as conditions. C handles the runtime test for free
+            // (non-zero / non-null = true), so we just relax the type check here.
+            const bool truthy_ok =
+                c == BOOL_KEYWORD_T || c == INT_KEYWORD_T ||
+                c == CHAR_KEYWORD_T || c == PTR_KEYWORD_T ||
+                s->as.if_stmt.cond->is_nullable;
+            if (!truthy_ok)
+                stage_error(STAGE_ANALYZER, s->loc,
+                    "if condition must be bool, int, ptr, or nullable, got %s",
+                    token_type_name(c));
 
             bool isSomeCheck = false;
             char* unwrappedVarName = nullptr;
@@ -996,6 +1280,15 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                 s->as.if_stmt.cond->as.some.var->type == VAR_E) {
                 isSomeCheck = true;
                 unwrappedVarName = s->as.if_stmt.cond->as.some.var->as.var.name;
+            }
+            // Shorthand: `if (pos)` where pos is a nullable variable acts like
+            // `if (some(pos))` — inside the true branch, `pos` is unwrapped so
+            // the user can dereference it without a `match`.
+            if (!isSomeCheck &&
+                s->as.if_stmt.cond->type == VAR_E &&
+                s->as.if_stmt.cond->is_nullable) {
+                isSomeCheck = true;
+                unwrappedVarName = s->as.if_stmt.cond->as.var.name;
             }
 
             Scope* tScope = make_scope(scope);
@@ -1018,8 +1311,14 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
 
         case WHILE_S: {
             TokenType c = analyze_expr(scope, funcTable, s->as.while_stmt.cond, currentFunc);
-            if (c != BOOL_KEYWORD_T)
-                stage_error(STAGE_ANALYZER, s->loc, "while condition must be bool, got %s", token_type_name(c));
+            const bool truthy_ok =
+                c == BOOL_KEYWORD_T || c == INT_KEYWORD_T ||
+                c == CHAR_KEYWORD_T || c == PTR_KEYWORD_T ||
+                s->as.while_stmt.cond->is_nullable;
+            if (!truthy_ok)
+                stage_error(STAGE_ANALYZER, s->loc,
+                    "while condition must be bool, int, ptr, or nullable, got %s",
+                    token_type_name(c));
             Scope* body = make_scope(scope);
             analyze_stmt(body, funcTable, s->as.while_stmt.body, currentFunc);
             free(body);
@@ -1031,8 +1330,14 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
             analyze_stmt(body, funcTable, s->as.do_while_stmt.body, currentFunc);
             free(body);
             TokenType c = analyze_expr(scope, funcTable, s->as.do_while_stmt.cond, currentFunc);
-            if (c != BOOL_KEYWORD_T)
-                stage_error(STAGE_ANALYZER, s->loc, "do-while condition must be bool, got %s", token_type_name(c));
+            const bool truthy_ok =
+                c == BOOL_KEYWORD_T || c == INT_KEYWORD_T ||
+                c == CHAR_KEYWORD_T || c == PTR_KEYWORD_T ||
+                s->as.do_while_stmt.cond->is_nullable;
+            if (!truthy_ok)
+                stage_error(STAGE_ANALYZER, s->loc,
+                    "do-while condition must be bool, int, ptr, or nullable, got %s",
+                    token_type_name(c));
             break;
         }
 
@@ -1272,8 +1577,13 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
     FuncSign copy;
     copy.name = strdup(func->signature->name);  //make a real copy of the name string
     copy.retType = func->signature->retType;
+    copy.retTypeName = func->signature->retTypeName ? strdup(func->signature->retTypeName) : NULL;
     copy.retOwnership = func->signature->retOwnership;
     copy.paramNum = func->signature->paramNum;
+    copy.isExtern = false;   // user-defined functions are never extern (was uninit)
+    copy.retNullable = func->signature->retNullable;   // CRITICAL: leaving uninit causes
+                                                       // every call to be treated as
+                                                       // potentially-null garbage.
 
     //deep copy parameters array
     if (copy.paramNum > 0) {
@@ -1347,6 +1657,31 @@ void analyze_program(Program* prog) {
         register_import(g_import_registry, prog->imports->imports[i]);
     }
 
+    //register all top-level struct decls before anything else, so
+    //field types referencing other structs (forward refs across the
+    //file) resolve uniformly.
+    g_struct_table = make_struct_table();
+    for (int i = 0; i < prog->struct_count; i++) {
+        // Skip raw templates — only their concrete monomorphisations carry
+        // analysable field types. Templates with unresolved `T` fields would
+        // fail the field-type validation below.
+        if (prog->structs[i] && prog->structs[i]->type_params) continue;
+        register_struct(g_struct_table, prog->structs[i]);
+    }
+    //second pass: validate that struct field types referring to other
+    //structs (VAR_T fields) actually resolve. Cheap and catches typos
+    //before any function body uses the struct.
+    for (int i = 0; i < g_struct_table->count; i++) {
+        StructDecl* d = g_struct_table->decls[i];
+        for (int j = 0; j < d->field_count; j++) {
+            StructField* f = &d->fields[j];
+            if (f->type == VAR_T && !lookup_struct(g_struct_table, f->type_name)) {
+                stage_error(STAGE_ANALYZER, d->loc,
+                            "struct '%s' field '%s' has unknown type '%s'",
+                            d->name, f->name, f->type_name);
+            }
+        }
+    }
 
     //0. Register extern functions
     for (int i = 0; i < prog->ext_block_count; ++i) {
@@ -1376,13 +1711,26 @@ void analyze_program(Program* prog) {
     }
 
     for (int i = 0; i < count; ++i) {
+        // Skip raw function templates; only the concrete monomorphisations
+        // (added to prog->functions by tpl_drain_pending) get analysed.
+        if (fs[i] && fs[i]->type_params) continue;
         defineAndAnalyzeFunc(funcTable, fs[i]);
     }
     for (int i = 0; i < count; ++i) {
+        if (fs[i] && fs[i]->type_params) continue;   // skip raw templates
         Scope* funcScope = make_scope(global);
 
         for (int j = 0; j < fs[i]->signature->paramNum; ++j) {
-            declare(funcScope, fs[i]->signature->parameters[j].name, fs[i]->signature->parameters[j].type, fs[i]->signature->parameters[j].ownership, fs[i]->signature->parameters[j].isNullable, fs[i]->signature->parameters[j].isConst, false, 0);
+            FuncParam* fp = &fs[i]->signature->parameters[j];
+            declare(funcScope, fp->name, fp->type, fp->ownership,
+                    fp->isNullable, fp->isConst, false, 0);
+            // Struct + fn-pointer params: stamp the symbol's auxiliary
+            // type info so subsequent expressions resolve correctly.
+            Symbol* sym = lookup(funcScope, fp->name);
+            if (sym) {
+                if (fp->type == VAR_T) sym->type_name = fp->type_name;
+                if (fp->type == FN_T)  sym->fn_sig    = fp->fn_sig;
+            }
         }
 
         analyze_stmt(funcScope, funcTable, fs[i]->body, fs[i]->signature);

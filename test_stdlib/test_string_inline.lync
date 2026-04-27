@@ -1,0 +1,61 @@
+// Inline test for std.string logic
+
+extern <string.h> {
+    def str_len(s: string): int;
+    def memcmp(a: ptr, b: ptr, n: int): int;
+    def strstr(haystack: string, needle: string): string?;
+}
+
+extern <stdlib.h> {
+    def strtol(s: string, endptr: ptr, base: int): int;
+}
+
+def str_eq(a: string, b: string): bool {
+    la: int = str_len(a);
+    lb: int = str_len(b);
+    if (la != lb) {
+        return false;
+    }
+    return memcmp(a, b, la) == 0;
+}
+
+def str_starts_with(s: string, prefix: string): bool {
+    ls: int = str_len(s);
+    lp: int = str_len(prefix);
+    if (lp > ls) {
+        return false;
+    }
+    return memcmp(s, prefix, lp) == 0;
+}
+
+def str_contains(s: string, needle: string): bool {
+    match strstr(s, needle) {
+        some(r): {
+            return true;
+        }
+        null: {
+            return false;
+        }
+    };
+    return false;
+}
+
+// str_to_int omitted — int? return type not parseable for non-extern def in Lync v1.
+
+def main(): int {
+    eq: bool = str_eq("hello", "hello");
+    print("str_eq(hello,hello):", eq);
+
+    ne: bool = str_eq("hello", "world");
+    print("str_eq(hello,world):", ne);
+
+    sw: bool = str_starts_with("hello world", "hello");
+    print("starts_with(hello world, hello):", sw);
+
+    co: bool = str_contains("hello world", "world");
+    print("contains(hello world, world):", co);
+
+    // str_to_int test skipped — blocked by T? return type parser limitation.
+
+    return 0;
+}

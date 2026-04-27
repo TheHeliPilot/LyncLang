@@ -1,0 +1,247 @@
+// =============================================================================
+// std.list — Generic dynamic array for the Lync standard library.
+//
+// List<T> is a heap-backed growable array.  Internally `items` is a raw heap
+// buffer of capacity `cap` elements of type T.  It is declared as `own ptr`
+// because the element type and capacity are not known at struct-declaration
+// time; the runtime width is sizeof(T) * cap bytes.
+//
+// Ownership: the List owns its buffer.  Call list_free when done.
+// Growth policy: double capacity when count == cap.
+//
+// =============================================================================
+// KNOWN LYNC v1 COMPILER LIMITATIONS
+// =============================================================================
+// 1. sizeof(T) — not available as a Lync expression.  Struct carries
+//    `elem_size: int` set by the caller.
+//    SIGNATURE CHANGE: list_new gains a second parameter `elem_size: int`.
+//      Original: def list_new<T>(initial_cap: int): List<T>
+//      New:      def list_new<T>(initial_cap: int, elem_size: int): List<T>
+//
+// 2. No ptr+int arithmetic — cannot index into void* buffers by element.
+//    list_push, list_pop, list_get, list_set are stubbed.
+//
+// 3. No address-of (&x) — cannot form a pointer to a stack value, so copying
+//    a T value into a raw buffer slot is impossible without addr_of.
+//
+// 4. T? nullable return — not parseable for non-extern def functions.
+//    list_pop and list_get return `own ptr` as a nullable proxy.
+//
+// 5. `free` is a Lync keyword — cannot be in an extern block.  Use the
+//    built-in `free x;` statement for owned pointers.
+//
+// 6. malloc / realloc take `size_t` in C but Lync's `int` maps to int64_t.
+//    On 64-bit platforms this causes a conflicting forward-declaration.
+//    TODO: once the compiler either adds a usize type or stops emitting
+//    forward-decls for stdlib functions, these will compile cleanly.
+//
+// Import entire module:   using std.list.*;
+// Import single binding:  using std.list.list_push;
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// libc wrappers
+// NOTE: malloc/realloc conflict with the hardcoded #include <stdlib.h> on
+// 64-bit due to size_t vs int.  They are declared here for the type checker
+// but will produce a conflicting-types linker error until the compiler is fixed.
+// ---------------------------------------------------------------------------
+
+extern <stdlib.h> {
+    def malloc(n: int): own ptr;
+    def realloc(p: own ptr, n: int): own ptr;
+}
+
+extern <stdio.h> {
+    def memcpy(dst: ptr, src: ptr, n: int): ptr;
+}
+
+// ---------------------------------------------------------------------------
+// Struct definition
+// ---------------------------------------------------------------------------
+
+// Dynamic array of T.  `items` is a raw heap buffer; treat as T[] of length cap.
+struct List<T> {
+    // Raw heap buffer; internally T* of length cap.
+    items: own ptr,
+    // Number of elements currently stored.
+    count: int,
+    // Current allocated capacity in number of elements.
+    cap: int,
+    // Size in bytes of one element (sizeof(T)); set by caller via list_new.
+    elem_size: int,
+}
+
+// ---------------------------------------------------------------------------
+// Lifecycle
+// ---------------------------------------------------------------------------
+
+// Allocates a new List with at least initial_cap slots pre-reserved.
+// CHANGED SIGNATURE: caller must also pass sizeof(T) as elem_size.
+//   Example: list_new<int>(8, 8)   // 8 bytes = sizeof(int64_t) on this platform.
+def list_new<T>(initial_cap: int, elem_size: int): List<T> {
+    cap: int = initial_cap;
+    if (cap < 1) {
+        cap = 8;
+    }
+    l: List<T>;
+    l.elem_size = elem_size;
+    l.count = 0;
+    l.cap = cap;
+    l.items = malloc(cap * elem_size);
+    return l;
+}
+
+// Releases the heap buffer owned by l.  l itself is stack-allocated by the
+// caller; only the internal items buffer is freed.
+def list_free<T>(l: ref List<T>): void {
+    free l.items;
+    l.count = 0;
+    l.cap = 0;
+}
+
+// ---------------------------------------------------------------------------
+// Internal: grow buffer to at least new_cap elements
+// ---------------------------------------------------------------------------
+
+def _list_ensure_cap<T>(l: ref List<T>, new_cap: int): void {
+    if (new_cap <= l.cap) {
+        return;
+    }
+    grown: int = l.cap * 2;
+    if (grown < new_cap) {
+        grown = new_cap;
+    }
+    l.items = realloc(l.items, grown * l.elem_size);
+    l.cap = grown;
+}
+
+// ---------------------------------------------------------------------------
+// Mutation
+// ---------------------------------------------------------------------------
+
+// Appends v to the end of l, growing the buffer if necessary.
+// TODO: needs addr_of(v) to memcpy the T value into the correct slot.
+// The buffer is grown and count is incremented but no data is written.
+def list_push<T>(l: ref List<T>, v: T): void {
+    _list_ensure_cap<T>(l, l.count + 1);
+    // TODO: memcpy(l.items + l.count * l.elem_size, addr_of(v), l.elem_size)
+    // — blocked by missing addr_of and ptr arithmetic in Lync v1.
+    l.count += 1;
+}
+
+// Removes and returns the last element as an own ptr proxy; null if empty.
+// Original intended signature: T?
+def list_pop<T>(l: ref List<T>): own ptr {
+    if (l.count == 0) {
+        return null;
+    }
+    l.count -= 1;
+    // TODO: read and return pointer to T at items[(count)*elem_size].
+    return null;
+}
+
+// Overwrites element at index i with v.  No-op if out of bounds.
+// TODO: blocked by addr_of(v) and ptr arithmetic.
+def list_set<T>(l: ref List<T>, i: int, v: T): void {
+    if (i < 0 || i >= l.count) {
+        return;
+    }
+    // TODO: memcpy(l.items + i * l.elem_size, addr_of(v), l.elem_size)
+}
+
+// Swap-removes element at index i (replaces with the last element). O(1).
+// No-op if out of bounds.
+// TODO: blocked by ptr arithmetic (two memcpy calls with element offsets).
+def list_remove<T>(l: ref List<T>, i: int): void {
+    if (i < 0 || i >= l.count) {
+        return;
+    }
+    last: int = l.count - 1;
+    if (i != last) {
+        // TODO: memcpy(items+i*elem_size, items+last*elem_size, elem_size)
+    }
+    l.count -= 1;
+}
+
+// Sets count to 0 without freeing the buffer.
+def list_clear<T>(l: ref List<T>): void {
+    l.count = 0;
+}
+
+// ---------------------------------------------------------------------------
+// Access
+// ---------------------------------------------------------------------------
+
+// Returns the element at index i as an own ptr (void*) proxy, or null.
+// Original intended signature: T?
+// TODO: needs ptr arithmetic + typed load to return actual T value.
+def list_get<T>(l: ref List<T>, i: int): own ptr {
+    if (i < 0 || i >= l.count) {
+        return null;
+    }
+    // TODO: return pointer to items[i*elem_size] — needs ptr arithmetic.
+    return null;
+}
+
+// Calls cb once for every element in order.
+// TODO: blocked — cannot dereference each T slot without ptr arithmetic.
+def list_each<T>(l: ref List<T>, cb: fn(T): void): void {
+    // TODO: for each i, read T at items[i*elem_size] and call cb(elem).
+}
+
+// =============================================================================
+// IntList — Concrete, working-as-far-as-possible dynamic array of int.
+//
+// Avoids the generic sizeof/ptr-cast limitations by treating int directly.
+// list_int_push increments count but cannot write element data (addr_of gap).
+// list_int_clear and lifecycle functions fully work.
+// =============================================================================
+
+struct IntList {
+    items: own ptr,
+    count: int,
+    cap: int,
+}
+
+// Allocates a new IntList with initial_cap slots.
+def int_list_new(initial_cap: int): IntList {
+    cap: int = initial_cap;
+    if (cap < 1) {
+        cap = 8;
+    }
+    l: IntList;
+    l.count = 0;
+    l.cap = cap;
+    // 8 bytes per int (Lync int = int64_t per design doc).
+    l.items = malloc(cap * 8);
+    return l;
+}
+
+// Releases the internal buffer.
+def int_list_free(l: ref IntList): void {
+    free l.items;
+    l.count = 0;
+    l.cap = 0;
+}
+
+// Grow helper — doubles capacity.
+def _int_list_grow(l: ref IntList): void {
+    new_cap: int = l.cap * 2;
+    l.items = realloc(l.items, new_cap * 8);
+    l.cap = new_cap;
+}
+
+// Appends v.  Count is incremented; data write is TODO (addr_of limitation).
+def int_list_push(l: ref IntList, v: int): void {
+    if (l.count == l.cap) {
+        _int_list_grow(l);
+    }
+    // TODO: write v at byte offset (l.count * 8) in l.items.
+    // Needs ptr arithmetic: *(int64_t*)(l.items + l.count*8) = v;
+    l.count += 1;
+}
+
+// Clears without freeing.
+def int_list_clear(l: ref IntList): void {
+    l.count = 0;
+}

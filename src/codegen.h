@@ -38,4 +38,10 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership, FILE* ou
 
 char* type_to_c_type(TokenType t);
 
+// Mangled C name for a user function, computed deterministically from the
+// signature. Result lives in a static buffer — copy if you need to keep
+// it across other codegen calls. Used by plugins (via plugin_dispatch_*)
+// to reference user functions by their emitted C names.
+char* get_mangled_name(struct FuncSign* sign);
+
 #endif //lYNC_CODEGEN_H

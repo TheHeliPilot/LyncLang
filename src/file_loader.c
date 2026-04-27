@@ -50,6 +50,31 @@ char* get_directory(const char* file_path) {
     return dir;
 }
 
+// Configurable stdlib root (set via --stdlib=PATH). Falls back to a sibling
+// `stdlib/` directory next to lync.exe — discovered lazily on first use so we
+// don't depend on argv[0] being available.
+static char* g_stdlib_dir = NULL;
+
+void file_loader_set_stdlib_dir(const char* path) {
+    if (g_stdlib_dir) free(g_stdlib_dir);
+    g_stdlib_dir = path ? strdup(path) : NULL;
+}
+
+// Resolve a `std.<mod>` import to a real file path inside g_stdlib_dir.
+// Returns NULL if no stdlib dir is configured or no matching file exists.
+static char* try_stdlib_path(const char* module_name) {
+    if (!g_stdlib_dir || !module_name) return NULL;
+    // Convention: `std.list` -> "<stdlib>/std.list.lync" (kept flat — simpler
+    // than a nested std/ subdir and matches the on-disk layout we ship).
+    size_t need = strlen(g_stdlib_dir) + 1 + strlen(module_name) + 6;
+    char* path = malloc(need);
+    snprintf(path, need, "%s/%s.lync", g_stdlib_dir, module_name);
+    FILE* probe = fopen(path, "r");
+    if (!probe) { free(path); return NULL; }
+    fclose(probe);
+    return path;
+}
+
 char* resolve_module_path(const char* module_name, const char* source_dir) {
     // convert dots to path separators: "utils.arrays" -> "utils/arrays.lync"
     size_t mod_len = strlen(module_name);
@@ -130,8 +155,35 @@ Program* load_and_parse_file(const char* file_path, int depth) {
         char* dir = get_directory(file_path);
         for (int i = 0; i < prog->imports->import_count; i++) {
             IncludeStmt* imp = prog->imports->imports[i];
-            // skip std.* imports
-            if (strncmp(imp->module_name, "std.", 4) == 0) continue;
+            // std.* imports: try the configured stdlib dir first; if a file
+            // exists there, load it like any normal module. Otherwise skip
+            // (these are the inline-codegen builtins like std.io).
+            if (strncmp(imp->module_name, "std.", 4) == 0) {
+                char* sp = try_stdlib_path(imp->module_name);
+                if (!sp) continue;
+                Program* nested = load_and_parse_file(sp, depth + 1);
+                if (nested) {
+                    // Merge structs (templates included), extern blocks, and
+                    // functions. The std modules are treated as IMPORT_ALL.
+                    for (int j = 0; j < nested->struct_count; ++j) {
+                        prog->structs = realloc(prog->structs,
+                            sizeof(StructDecl*) * (prog->struct_count + 1));
+                        prog->structs[prog->struct_count++] = nested->structs[j];
+                    }
+                    for (int j = 0; j < nested->ext_block_count; ++j) {
+                        prog->externBlocks = realloc(prog->externBlocks,
+                            sizeof(ExternBlock*) * (prog->ext_block_count + 1));
+                        prog->externBlocks[prog->ext_block_count++] = nested->externBlocks[j];
+                    }
+                    for (int j = 0; j < nested->func_count; ++j) {
+                        prog->functions = realloc(prog->functions,
+                            sizeof(Func*) * (prog->func_count + 1));
+                        prog->functions[prog->func_count++] = nested->functions[j];
+                    }
+                }
+                free(sp);
+                continue;
+            }
 
             char* nested_path = resolve_module_path(imp->module_name, dir);
             Program* nested = load_and_parse_file(nested_path, depth + 1);
@@ -197,8 +249,39 @@ void process_file_includes(Program* prog, const char* source_file) {
     for (int i = 0; i < prog->imports->import_count; i++) {
         IncludeStmt* imp = prog->imports->imports[i];
 
-        // skip std.* imports — theyre handled by the existing system
-        if (strncmp(imp->module_name, "std.", 4) == 0) continue;
+        // std.* imports are normally inlined by codegen (std.io). For modules
+        // shipped as .lync files in the stdlib dir (std.math, std.string,
+        // std.list, ...), load and merge them like any other file so user
+        // code can `include std.math.*;` and get its templates and helpers.
+        // If no backing file exists, fall through to the legacy skip — the
+        // import is then assumed to be a codegen builtin.
+        if (strncmp(imp->module_name, "std.", 4) == 0) {
+            char* sp = try_stdlib_path(imp->module_name);
+            if (!sp) continue;
+            Program* nested = load_and_parse_file(sp, 0);
+            free(sp);
+            if (nested) {
+                for (int j = 0; j < nested->struct_count; ++j) {
+                    prog->structs = realloc(prog->structs,
+                        sizeof(StructDecl*) * (prog->struct_count + 1));
+                    prog->structs[prog->struct_count++] = nested->structs[j];
+                }
+                for (int j = 0; j < nested->ext_block_count; ++j) {
+                    prog->externBlocks = realloc(prog->externBlocks,
+                        sizeof(ExternBlock*) * (prog->ext_block_count + 1));
+                    prog->externBlocks[prog->ext_block_count++] = nested->externBlocks[j];
+                }
+                for (int j = 0; j < nested->func_count; ++j) {
+                    bool should_include = (imp->type == IMPORT_ALL) ||
+                        (strcmp(nested->functions[j]->signature->name, imp->function_name) == 0);
+                    if (!should_include) continue;
+                    prog->functions = realloc(prog->functions,
+                        sizeof(Func*) * (prog->func_count + 1));
+                    prog->functions[prog->func_count++] = nested->functions[j];
+                }
+            }
+            continue;
+        }
 
         char* file_path = resolve_module_path(imp->module_name, source_dir);
         Program* included = load_and_parse_file(file_path, 0);
@@ -258,8 +341,56 @@ void process_file_includes(Program* prog, const char* source_file) {
             }
         }
 
+        // Merge struct decls (where [Component] decls live) for IMPORT_ALL.
+        // Without this, `include Foo.*;` would only pull in Foo's functions
+        // and silently drop its components - the Zues plugin then sees zero
+        // [Component]s and emits no project entry, so the DLL has no
+        // zues_project_entry symbol and the editor refuses to load it.
+        if (imp->type == IMPORT_ALL && included->struct_count > 0) {
+            for (int j = 0; j < included->struct_count; j++) {
+                bool duplicate = false;
+                for (int k = 0; k < prog->struct_count; k++) {
+                    if (strcmp(prog->structs[k]->name,
+                               included->structs[j]->name) == 0) {
+                        stage_error(STAGE_PARSER, imp->loc,
+                            "duplicate struct '%s' - already defined or imported",
+                            included->structs[j]->name);
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate) {
+                    int new_count = prog->struct_count + 1;
+                    prog->structs = realloc(prog->structs,
+                                             sizeof(StructDecl*) * new_count);
+                    prog->structs[prog->struct_count] = included->structs[j];
+                    prog->struct_count = new_count;
+                }
+            }
+        }
+
+        // Same for extern blocks (the prelude header decls) - some users
+        // put their `extern <stddef.h> { ... }` in a shared file and
+        // include it.
+        if (imp->type == IMPORT_ALL && included->ext_block_count > 0) {
+            for (int j = 0; j < included->ext_block_count; j++) {
+                int new_count = prog->ext_block_count + 1;
+                prog->externBlocks = realloc(prog->externBlocks,
+                                              sizeof(ExternBlock*) * new_count);
+                prog->externBlocks[prog->ext_block_count] =
+                    included->externBlocks[j];
+                prog->ext_block_count = new_count;
+            }
+        }
+
         free(file_path);
     }
+
+    // Now that every imported module's structs, functions, and templates
+    // have been merged into `prog`, run a strict template drain to realize
+    // any pendings that were left unresolved by parseProgram (e.g. uses of
+    // `min<int>` from the main file when min<T> lives in std.math).
+    tpl_drain_pending(prog, true);
 
     free(source_dir);
 }

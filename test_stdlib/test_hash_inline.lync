@@ -1,0 +1,39 @@
+// Test hash functions — these are fully working with no extern dependencies.
+
+def hash_int(k: int): int {
+    h: int = k;
+    if (h < 0) {
+        h = 0 - h;
+    }
+    h = h * 2654435761;
+    if (h < 0) {
+        h = 0 - h;
+    }
+    return h;
+}
+
+def hash_str(s: string): int {
+    h: int = 5381;
+    i: int = 0;
+    while (s[i] != 0) {
+        h = h * 33 + s[i];
+        i += 1;
+    }
+    if (h < 0) {
+        h = 0 - h;
+    }
+    return h;
+}
+
+def main(): int {
+    print("hash_int(0):", hash_int(0));
+    print("hash_int(1):", hash_int(1));
+    print("hash_int(42):", hash_int(42));
+    print("hash_str(hello):", hash_str("hello"));
+    print("hash_str(world):", hash_str("world"));
+    // Verify different strings give different hashes
+    h1: int = hash_str("foo");
+    h2: int = hash_str("bar");
+    print("foo!=bar:", h1 != h2);
+    return 0;
+}

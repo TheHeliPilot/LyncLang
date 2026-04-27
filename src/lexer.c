@@ -253,6 +253,9 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "def") == 0) { type = DEF_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "include") == 0) { type = INCLUDE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "extern") == 0) { type = EXTERN_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "struct") == 0) { type = STRUCT_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "fn") == 0)     { type = FN_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "ptr") == 0)    { type = PTR_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "while") == 0) { type = WHILE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "do") == 0) { type = DO_T; value = NULL; free_word = true; }
             else if (strcmp(word, "for") == 0) { type = FOR_T; value = NULL; free_word = true; }
@@ -302,6 +305,45 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 tokens = realloc(tokens, capacity * sizeof(Token));
             }
             continue;
+        }
+
+        //compound-assign + increment/decrement (two-char operators that
+        //start with +, -, *, /, %). Order matters: must come before the
+        //single-char switch below, and the `/` case must come before the
+        //comment handler (which also keys on `/`).
+        if (c == '+' && code[i + 1] == '+') {
+            tokens[count++] = (Token){ .type = PLUS_PLUS_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i += 2; column += 2; goto resize_check;
+        }
+        if (c == '+' && code[i + 1] == '=') {
+            tokens[count++] = (Token){ .type = PLUS_EQ_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i += 2; column += 2; goto resize_check;
+        }
+        if (c == '-' && code[i + 1] == '-') {
+            tokens[count++] = (Token){ .type = MINUS_MINUS_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i += 2; column += 2; goto resize_check;
+        }
+        if (c == '-' && code[i + 1] == '=') {
+            tokens[count++] = (Token){ .type = MINUS_EQ_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i += 2; column += 2; goto resize_check;
+        }
+        if (c == '*' && code[i + 1] == '=') {
+            tokens[count++] = (Token){ .type = STAR_EQ_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i += 2; column += 2; goto resize_check;
+        }
+        if (c == '/' && code[i + 1] == '=') {
+            tokens[count++] = (Token){ .type = SLASH_EQ_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i += 2; column += 2; goto resize_check;
+        }
+        if (c == '%') {
+            if (code[i + 1] == '=') {
+                tokens[count++] = (Token){ .type = PERCENT_EQ_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+                i += 2; column += 2;
+            } else {
+                tokens[count++] = (Token){ .type = PERCENT_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+                i += 1; column += 1;
+            }
+            goto resize_check;
         }
 
         //comments
@@ -531,6 +573,14 @@ const char* token_type_name(TokenType type) {
         case MINUS_T: return "-";
         case STAR_T: return "*";
         case SLASH_T: return "/";
+        case PERCENT_T: return "%";
+        case PLUS_EQ_T: return "+=";
+        case MINUS_EQ_T: return "-=";
+        case STAR_EQ_T: return "*=";
+        case SLASH_EQ_T: return "/=";
+        case PERCENT_EQ_T: return "%=";
+        case PLUS_PLUS_T: return "++";
+        case MINUS_MINUS_T: return "--";
         case EQUALS_T: return "=";
         case DOUBLE_EQUALS_T: return "==";
         case NOT_EQUALS_T: return "!=";
@@ -566,6 +616,9 @@ const char* token_type_name(TokenType type) {
         case DEF_KEYWORD_T: return "def";
         case INCLUDE_T: return "include";
         case EXTERN_T: return "extern";
+        case STRUCT_T: return "struct";
+        case FN_T: return "fn";
+        case PTR_KEYWORD_T: return "ptr";
         case EOF_T: return "EOF";
         case COMMA_T: return ",";
         case DOT_T: return ".";

@@ -1,0 +1,8 @@
+// DLL smoke test: no main, just one exported function. Compile with
+//   lync dll_smoke.lync --target=dll -o dll_smoke.dll --emit-c
+// Inspect dll_smoke.c to verify shape; LoadLibrary it from a host to
+// resolve `add42` (mangled name will be `add42_int_int`).
+
+def add42(x: int): int {
+    return x + 42;
+}

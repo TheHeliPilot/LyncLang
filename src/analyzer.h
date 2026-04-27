@@ -15,6 +15,8 @@ typedef enum {
 typedef struct {
     TokenType type;
     char* name;
+    char* type_name;             // non-NULL when type == VAR_T (struct types)
+    FuncSign* fn_sig;            // non-NULL when type == FN_T (function pointer)
     Ownership ownership;
     Ownership element_ownership; // for arrays of owned pointers
     VarState state;
@@ -26,6 +28,20 @@ typedef struct {
     bool is_array;
     int array_size;
 } Symbol;
+
+// Registered struct decls. Built at the start of analyze_program from
+// prog->structs[]. Field access + var-decl with struct type look up here
+// to validate the type exists and to find field info.
+typedef struct {
+    StructDecl** decls;
+    int          count;
+    int          capacity;
+} StructTable;
+
+StructTable* make_struct_table();
+void         register_struct(StructTable* t, StructDecl* d);
+StructDecl*  lookup_struct(StructTable* t, const char* name);
+StructField* lookup_field(StructDecl* d, const char* field_name);
 
 typedef struct Scope Scope;
 struct Scope {

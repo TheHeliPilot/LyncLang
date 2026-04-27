@@ -13,6 +13,7 @@ add_executable(lync src/main.c
         src/lexer.h
         src/parser.c
         src/parser.h
+        src/template.c
         src/analyzer.c
         src/analyzer.h
         src/codegen.c
@@ -25,4 +26,13 @@ add_executable(lync src/main.c
         src/codegen_asm.c
         src/file_loader.c
         src/file_loader.h
+        src/plugin.c
+        src/plugin.h
+        src/plugin_dl.c
+        src/lync_plugin.h
 )
+
+# On POSIX we need libdl for dlopen; on Windows it's in kernel32 (linked by default).
+if(UNIX AND NOT APPLE)
+    target_link_libraries(lync PRIVATE dl)
+endif()

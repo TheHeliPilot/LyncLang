@@ -1,0 +1,18 @@
+// Test std.math non-template functions (pi, e, inf, sqrt, floor, ceil)
+// Template functions (min, max, clamp, abs, lerp) cannot be tested via include
+// because stdlib templates are merged after tpl_drain_pending runs — a known
+// compiler ordering limitation.
+
+include std.math.*;
+
+def main(): int {
+    p: float = pi();
+    print("pi:", p);
+    s: float = sqrt(2.0);
+    print("sqrt(2):", s);
+    f: float = floor(3.7);
+    print("floor(3.7):", f);
+    c: float = ceil(3.2);
+    print("ceil(3.2):", c);
+    return 0;
+}

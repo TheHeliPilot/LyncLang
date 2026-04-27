@@ -12,8 +12,82 @@ char* type_to_c_type(TokenType t) {
         case FLOAT_KEYWORD_T: return "float";
         case DOUBLE_KEYWORD_T: return "double";
         case VOID_KEYWORD_T: return "void";
+        case PTR_KEYWORD_T:  return "void*";   // opaque pointer
         default: return "-UNKNOWN-";
     }
+}
+
+// Emit a C function-pointer declarator: "RetType (*name)(P1, P2, ...)".
+// `name` may be empty (parameter without a name in fn-type position).
+// Used by var-decl + func-param emission for FN_T types.
+static void emit_fn_ptr_decl(FuncSign* sig, const char* name, FILE* out);
+
+// Render an attribute list as C comments. Plugins later read these by
+// scanning the .c output (or, properly, via the plugin AST API once that
+// lands). Emitting is no-op when list is NULL or empty.
+static void emit_attr_list(const AttributeList* list, FILE* out) {
+    if (!list || list->count == 0) return;
+    for (int i = 0; i < list->count; ++i) {
+        const Attribute* a = list->items[i];
+        fprintf(out, "// @lync_attr %s", a->name);
+        if (a->arg_count > 0) {
+            fprintf(out, "(");
+            for (int j = 0; j < a->arg_count; ++j) {
+                if (j > 0) fprintf(out, ", ");
+                const AttrArg* g = &a->args[j];
+                switch (g->kind) {
+                    case ATTR_ARG_INT:    fprintf(out, "%d", g->int_val); break;
+                    case ATTR_ARG_BOOL:   fprintf(out, "%s", g->int_val ? "true" : "false"); break;
+                    case ATTR_ARG_STRING: fprintf(out, "\"%s\"", g->str_val ? g->str_val : ""); break;
+                }
+            }
+            fprintf(out, ")");
+        }
+        fprintf(out, "\n");
+    }
+}
+
+static const char* type_for_fn_param(FuncParam* p) {
+    if (p->type == VAR_T && p->type_name) return p->type_name;
+    return type_to_c_type(p->type);
+}
+
+static void emit_fn_ptr_decl(FuncSign* sig, const char* name, FILE* out) {
+    // Return type. For struct returns we'd use sig->retTypeName; v1 doesn't
+    // exercise that path through fn-pointers.
+    fprintf(out, "%s (*%s)(",
+            sig->retType == VAR_T && sig->retTypeName
+                ? sig->retTypeName
+                : type_to_c_type(sig->retType),
+            name ? name : "");
+    if (sig->paramNum == 0) {
+        fprintf(out, "void");
+    } else {
+        for (int i = 0; i < sig->paramNum; ++i) {
+            if (i > 0) fprintf(out, ", ");
+            FuncParam* p = &sig->parameters[i];
+            if (p->type == FN_T && p->fn_sig) {
+                // Nested fn-type param. Emit a fully unnamed callable.
+                emit_fn_ptr_decl(p->fn_sig, "", out);
+            } else {
+                fprintf(out, "%s", type_for_fn_param(p));
+            }
+        }
+    }
+    fprintf(out, ")");
+}
+
+// Struct-aware variants. Func params + struct fields can carry a struct
+// type, where the C type IS the struct name (we typedef'd it that way).
+// Pure C primitives fall through to type_to_c_type / token_type_name.
+static const char* c_type_for(TokenType t, const char* type_name) {
+    if (t == VAR_T && type_name) return type_name;
+    return type_to_c_type(t);
+}
+
+static const char* mangle_type_for(TokenType t, const char* type_name) {
+    if (t == VAR_T && type_name) return type_name;
+    return token_type_name(t);
 }
 
 //emit indentation (2 spaces per level)
@@ -101,7 +175,8 @@ char* get_mangled_name(FuncSign* sign) {
     stage_trace(STAGE_CODEGEN, "adding %d parameters", sign->paramNum);
     for (int i = 0; i < sign->paramNum; i++) {
         stage_trace(STAGE_CODEGEN, "adding param %d", i);
-        ptr += sprintf(ptr, "_%s", token_type_name(sign->parameters[i].type));
+        ptr += sprintf(ptr, "_%s", mangle_type_for(sign->parameters[i].type,
+                                                    sign->parameters[i].type_name));
         if (sign->parameters[i].ownership != OWNERSHIP_NONE) {
             ptr += sprintf(ptr, "%s",
                            sign->parameters[i].ownership == OWNERSHIP_OWN ? "own" : "ref");
@@ -155,7 +230,8 @@ char* get_type_signature(FuncSign* sign) {
 
     for (int i = 0; i < sign->paramNum; i++) {
         if (i > 0) ptr += sprintf(ptr, "_");
-        ptr += sprintf(ptr, "%s", token_type_name(sign->parameters[i].type));
+        ptr += sprintf(ptr, "%s", mangle_type_for(sign->parameters[i].type,
+                                                   sign->parameters[i].type_name));
         if (sign->parameters[i].ownership != OWNERSHIP_NONE) {
             ptr += sprintf(ptr, "%s",
                            sign->parameters[i].ownership == OWNERSHIP_OWN ? "own" : "ref");
@@ -168,14 +244,24 @@ char* get_type_signature(FuncSign* sign) {
 void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
     stage_trace(STAGE_CODEGEN, "emit_func: %s", f->signature->name);
 
+    emit_attr_list(f->attrs, out);
     if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
     else fprintf(out, "%s%s", type_to_c_type(f->signature->retType), (f->signature->retOwnership != OWNERSHIP_NONE && f->signature->retType != STR_KEYWORD_T) ? "*" : "");
     fprintf(out, " %s(", strcmp(f->signature->name, "main") == 0 ? "main" : get_func_name_from_sign(fstn, f->signature));
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
-        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), (f->signature->parameters[i].ownership != OWNERSHIP_NONE && f->signature->parameters[i].type != STR_KEYWORD_T) ? "*" : "");
-        fprintf(out, " %s", f->signature->parameters[i].name);
+        FuncParam* p = &f->signature->parameters[i];
+        if (p->type == FN_T && p->fn_sig) {
+            // fn-typed param — emit as a C function-pointer declarator
+            // with the param name baked into the (*name) slot.
+            emit_fn_ptr_decl(p->fn_sig, p->name, out);
+        } else {
+            fprintf(out, "%s%s",
+                c_type_for(p->type, p->type_name),
+                (p->ownership != OWNERSHIP_NONE && p->type != STR_KEYWORD_T) ? "*" : "");
+            fprintf(out, " %s", p->name);
+        }
     }
     fprintf(out, ")\n");
 
@@ -223,7 +309,16 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
         if(i > 0) fprintf(out, ", ");
-        fprintf(out, "%s%s", type_to_c_type(f->signature->parameters[i].type), (f->signature->parameters[i].ownership != OWNERSHIP_NONE && f->signature->parameters[i].type != STR_KEYWORD_T) ? "*" : "");
+        {
+            FuncParam* __p = &f->signature->parameters[i];
+            if (__p->type == FN_T && __p->fn_sig) {
+                emit_fn_ptr_decl(__p->fn_sig, __p->name, out);
+                continue;
+            }
+            fprintf(out, "%s%s",
+                c_type_for(__p->type, __p->type_name),
+                (__p->ownership != OWNERSHIP_NONE && __p->type != STR_KEYWORD_T) ? "*" : "");
+        }
         fprintf(out, " %s", f->signature->parameters[i].name);
     }
     fprintf(out, ");\n");
@@ -239,10 +334,28 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             fprintf(out, "%d", e->as.int_val);
             break;
 
-        case FLOAT_LIT_E:
-            fprintf(out, "%g", e->as.double_val);
+        case FIELD_ACCESS_E:
+            // Emit target then `.field`. Recursive-friendly: nested chain
+            // (a.b.c) will recursively emit a.b first, then `.c`.
+            emit_expr(e->as.field_access.target, out, fstn);
+            fprintf(out, ".%s", e->as.field_access.field_name);
+            break;
+
+        case FLOAT_LIT_E: {
+            // %g strips trailing zeros AND the decimal point for whole
+            // numbers — `0.0` prints as `0`, which combined with the `f`
+            // suffix below would yield `0f` (not a valid C float literal).
+            // Re-add `.0` when the formatted value has no decimal/exponent.
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%g", e->as.double_val);
+            fprintf(out, "%s", buf);
+            const bool has_dot_or_exp = strchr(buf, '.') || strchr(buf, 'e')
+                                     || strchr(buf, 'E') || strchr(buf, 'n')
+                                     || strchr(buf, 'N');   // nan/inf
+            if (!has_dot_or_exp) fprintf(out, ".0");
             if (e->analyzedType == FLOAT_KEYWORD_T) fprintf(out, "f");
             break;
+        }
 
         case BOOL_LIT_E:
             fprintf(out, e->as.bool_val ? "true" : "false");
@@ -286,6 +399,14 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
         }
 
         case VAR_E:
+            // Function-name-as-value: analyzer attached the resolved sig.
+            // Emit the mangled C name via fstn so signatures match the
+            // function definition emitted earlier.
+            if (e->analyzed_fn_sig) {
+                fprintf(out, "%s",
+                        get_func_name_from_sign(fstn, e->analyzed_fn_sig));
+                break;
+            }
             fprintf(out, "%s%s", (e->as.var.ownership != OWNERSHIP_NONE && e->analyzedType != STR_KEYWORD_T) ? "*" : "", e->as.var.name);
             break;
 
@@ -311,6 +432,7 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                 case MINUS_T: fprintf(out, " - "); break;
                 case STAR_T: fprintf(out, " * "); break;
                 case SLASH_T: fprintf(out, " / "); break;
+                case PERCENT_T: fprintf(out, " %% "); break;
                 case DOUBLE_EQUALS_T: fprintf(out, " == "); break;
                 case NOT_EQUALS_T: fprintf(out, " != "); break;
                 case LESS_T: fprintf(out, " < "); break;
@@ -363,7 +485,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
 
             if(strcmp(e->as.func_call.name, "print") == 0) {
 
-                fprintf(out, "printf(\"");
+                // Wrap in (printf(...), fflush(stdout)) so debug output
+                // appears immediately. Without the flush, stdout buffering
+                // inside a DLL can swallow print() before the host process
+                // sees it (different CRT instance, different buffer).
+                fprintf(out, "(printf(\"");
 
                 for (int i = 0; i < e->as.func_call.count; ++i) {
                     Expr* p = e->as.func_call.params[i];
@@ -399,7 +525,7 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                     }
                 }
 
-                fprintf(out, ")");
+                fprintf(out, "), fflush(stdout))");
                 return;
             }
 
@@ -415,10 +541,17 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             FuncSign* rs = e->as.func_call.resolved_sign;
             stage_trace(STAGE_CODEGEN, "resolved_sign pointer: %p", rs);
 
-            //dont try to dereference if it might be bad
-            char* mangled_name = get_mangled_name(rs);
-            stage_trace(STAGE_CODEGEN, "mangled name: %s", mangled_name);
-            fprintf(out, "%s(", mangled_name);
+            // If the resolved sig is anonymous (no name), the call is
+            // through a fn-pointer LOCAL of name e->as.func_call.name.
+            // C lets us call function pointers exactly like functions, so
+            // just emit the local's name verbatim.
+            if (rs && rs->name == NULL) {
+                fprintf(out, "%s(", e->as.func_call.name);
+            } else {
+                char* mangled_name = get_mangled_name(rs);
+                stage_trace(STAGE_CODEGEN, "mangled name: %s", mangled_name);
+                fprintf(out, "%s(", mangled_name);
+            }
             for (int i = 0; i < e->as.func_call.count; ++i) {
                 stage_trace(STAGE_CODEGEN, "emitting parameter %d", i);
                 if (i != 0) fprintf(out, ", ");
@@ -582,6 +715,28 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
 
     switch (s->type) {
         case VAR_DECL_S:
+            // fn-typed local: emit `R (*name)(P,P) = init;`. Initializer
+            // is a Var of FN_T whose emit will produce the C function name.
+            if (s->as.var_decl.varType == FN_T && s->as.var_decl.fnSig) {
+                emit_indent(out, indent);
+                emit_fn_ptr_decl(s->as.var_decl.fnSig,
+                                  s->as.var_decl.name, out);
+                fprintf(out, " = ");
+                emit_expr(s->as.var_decl.expr, out, fstn);
+                fprintf(out, ";\n");
+                break;
+            }
+            // Struct-typed local: emit `TypeName name = {0};`. Default zero-
+            // init covers v1's "no struct literal yet" decision. When
+            // literal syntax lands, emit a designated initializer here
+            // instead. typedef'd name from generate_code is the C type.
+            if (s->as.var_decl.varType == VAR_T) {
+                emit_indent(out, indent);
+                fprintf(out, "%s %s = {0};\n",
+                        s->as.var_decl.typeName,
+                        s->as.var_decl.name);
+                break;
+            }
             if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE && s->as.var_decl.elementOwnership == OWNERSHIP_NONE) {
                 //case 1: stack array of values - int arr[5]
                 emit_indent(out, indent);
@@ -689,6 +844,18 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             emit_expr(s->as.array_elem_assign.index, out, fstn);
             fprintf(out, "] = ");
             emit_expr(s->as.array_elem_assign.value, out, fstn);
+            fprintf(out, ";\n");
+            break;
+
+        case FIELD_ASSIGN_S:
+            // target.field = value;  Target is any expression chain; emit
+            // it as-is, then `.field = value;`. C's `.` works for value
+            // structs and chained access (a.b.c.field) is handled by
+            // emit_expr walking the FIELD_ACCESS_E chain.
+            emit_indent(out, indent);
+            emit_expr(s->as.field_assign.target, out, fstn);
+            fprintf(out, ".%s = ", s->as.field_assign.field_name);
+            emit_expr(s->as.field_assign.value, out, fstn);
             fprintf(out, ";\n");
             break;
 
@@ -869,8 +1036,59 @@ void generate_code(Program* prog, FILE* output) {
     fprintf(output, "#include <string.h>\n");
 
     //emit extern includes
+    // For each extern block: emit the #include AND a C forward declaration
+    // for every function the user declared inside. Without the forward
+    // decls, calls to those functions trigger "implicit-function-declaration"
+    // warnings (and on strict C compilers, errors). The include alone isn't
+    // enough — extern fns may live in a TU that ISN'T in the included
+    // header (e.g. plugin-emitted Zues wrappers in the same .c file).
+    // Headers we already auto-include above. If a user extern block targets
+    // one of these, the real prototype is already visible to the C compiler;
+    // emitting our own `extern <ret> <name>(<lync-typed-params>)` would just
+    // produce a conflicting-types error (e.g. our `malloc(int)` vs libc's
+    // `malloc(size_t)`). Suppress the forward-decls in that case and rely on
+    // the header's prototype.
+    // Standard libc headers whose prototypes use size_t / double / etc. that
+    // don't match Lync's int/float exactly. Re-declaring those functions
+    // with Lync types after the real header has been included produces a
+    // conflicting-types error; trust the header instead.
+    static const char* k_auto_headers[] = {
+        "stdio.h", "stdlib.h", "stdint.h", "stdbool.h", "string.h",
+        "math.h", "ctype.h", "time.h", "errno.h", "stddef.h", "assert.h",
+        "limits.h", "float.h", "wchar.h", "wctype.h", "locale.h", "signal.h",
+        "setjmp.h", NULL
+    };
     for(int i = 0; i < prog->ext_block_count; ++i) {
-        fprintf(output, "#include <%s>\n", prog->externBlocks[i]->header);
+        ExternBlock* eb = prog->externBlocks[i];
+        fprintf(output, "#include <%s>\n", eb->header);
+        bool auto_included = false;
+        for (int k = 0; k_auto_headers[k]; ++k) {
+            if (strcmp(eb->header, k_auto_headers[k]) == 0) {
+                auto_included = true;
+                break;
+            }
+        }
+        if (auto_included) continue;
+        for (int j = 0; j < eb->count; ++j) {
+            FuncSign* sig = eb->signs[j];
+            const char* ret_c = (sig->retType == VAR_T && sig->retTypeName)
+                ? sig->retTypeName
+                : type_to_c_type(sig->retType);
+            fprintf(output, "extern %s %s(", ret_c, sig->name);
+            if (sig->paramNum == 0) {
+                fprintf(output, "void");
+            } else {
+                for (int p = 0; p < sig->paramNum; ++p) {
+                    if (p > 0) fprintf(output, ", ");
+                    FuncParam* fp = &sig->parameters[p];
+                    const char* pc = (fp->type == VAR_T && fp->type_name)
+                        ? fp->type_name
+                        : type_to_c_type(fp->type);
+                    fprintf(output, "%s", pc);
+                }
+            }
+            fprintf(output, ");\n");
+        }
     }
 
     //add platform-specific headers for read_key if needed
@@ -1033,6 +1251,26 @@ void generate_code(Program* prog, FILE* output) {
 
     stage_trace(STAGE_CODEGEN, "imports processed, allocating FuncSignToName");
 
+    // Emit struct typedefs BEFORE function declarations so functions can
+    // take/return struct types. Order in source = order of emission;
+    // forward refs across structs would need a topological sort here, but
+    // we already validate "struct field of unknown type" in the analyzer
+    // so any well-formed program orders correctly by user discipline.
+    for (int i = 0; i < prog->struct_count; ++i) {
+        StructDecl* d = prog->structs[i];
+        if (d && d->type_params) continue;     // skip raw templates; only emit monomorphisations
+        emit_attr_list(d->attrs, output);
+        fprintf(output, "typedef struct {\n");
+        for (int j = 0; j < d->field_count; ++j) {
+            StructField* f = &d->fields[j];
+            const char* c_type = (f->type == VAR_T)
+                ? f->type_name              // user struct - typedef matches name
+                : type_to_c_type(f->type);  // primitive
+            fprintf(output, "    %s %s;\n", c_type, f->name);
+        }
+        fprintf(output, "} %s;\n\n", d->name);
+    }
+
     FuncSignToName* fstn = malloc(sizeof(FuncSignToName));
     fstn->count = 0;
     fstn->height = 2;
@@ -1049,6 +1287,7 @@ void generate_code(Program* prog, FILE* output) {
     stage_trace(STAGE_CODEGEN, "emitting %d function declarations", count);
 
     for (int i = 0; i < count; ++i) {
+        if (program[i] && program[i]->type_params) continue;   // skip raw templates
         stage_trace(STAGE_CODEGEN, "emitting decl for function %d", i);
         emit_func_decl(program[i], output, fnc, fstn);
     }
@@ -1056,6 +1295,7 @@ void generate_code(Program* prog, FILE* output) {
     stage_trace(STAGE_CODEGEN, "emitting %d function definitions", count);
 
     for (int i = 0; i < count; ++i) {
+        if (program[i] && program[i]->type_params) continue;
         stage_trace(STAGE_CODEGEN, "emitting function %d", i);
         emit_func(program[i], output, fstn);
     }

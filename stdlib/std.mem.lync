@@ -1,0 +1,93 @@
+// =============================================================================
+// std.mem — Low-level memory primitives for the Lync standard library.
+//
+// All functions are generic over T and are monomorphised at compile time.
+// `ptr` in parameter position means an untyped raw pointer (T*); callers
+// must ensure alignment and lifetime are correct.
+//
+// =============================================================================
+// KNOWN LYNC v1 COMPILER LIMITATIONS
+// =============================================================================
+// 1. No address-of operator (&x or addr_of(x)) — cannot obtain a pointer to
+//    a stack-allocated variable.  swap<T> and mem_set<T> are fully blocked.
+//
+// 2. sizeof(T) not available — cannot compute byte widths for generic T.
+//    mem_copy<T>'s count parameter is treated as raw bytes, not element count.
+//
+// 3. `free` is a Lync keyword — cannot appear as an extern function name.
+//    Use `free x;` (Lync statement) for all owned allocations.
+//
+// 4. malloc/realloc take size_t in C but Lync's int is int64_t (signed).
+//    On 64-bit platforms the extern forward-declarations conflict with
+//    #include <stdlib.h> which codegen always emits.  These are declared below
+//    for the type-checker but will produce a conflicting-types C compiler error
+//    until the Lync compiler adds a usize type or stops re-emitting stdlib
+//    forward-decls for already-included functions.
+//
+// Import entire module:   using std.mem.*;
+// Import single binding:  using std.mem.mem_copy;
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// libc wrappers
+// NOTE: malloc/realloc will conflict on 64-bit (size_t vs int); declared for
+// type-checker use only until the compiler gap is resolved.
+// NOTE: free is a Lync keyword and cannot appear in an extern block — use the
+// built-in `free x;` statement instead.
+// ---------------------------------------------------------------------------
+
+extern <stdio.h> {
+    // Raw byte copy; use mem_copy<T> for type-safe copying.
+    // NOTE: n is bytes, not element count.  Caller must multiply by sizeof(T).
+    def memcpy(dst: ptr, src: ptr, n: int): ptr;
+
+    // Raw byte set (fill with a byte value).
+    def memset(dst: ptr, value: int, n: int): ptr;
+}
+
+extern <stdlib.h> {
+    // Allocate n bytes; returns null on failure.
+    // CONFLICT: malloc(size_t) vs malloc(int) — see limitation note above.
+    def malloc(n: int): own ptr;
+
+    // Resize a prior allocation to n bytes.
+    // CONFLICT: realloc(void*, size_t) vs realloc(own ptr, int).
+    def realloc(p: own ptr, n: int): own ptr;
+}
+
+// ---------------------------------------------------------------------------
+// Type-safe helpers
+// ---------------------------------------------------------------------------
+
+// Swaps the values at the two pointer locations.
+//
+// BLOCKED: requires the &-operator (or addr_of intrinsic) to form pointers to
+// stack variables, AND sizeof(T) to know the element byte width.
+//
+// When those features land, the body will be:
+//   tmp: own ptr = malloc(sizeof(T));
+//   memcpy(tmp, a, sizeof(T));
+//   memcpy(a,   b, sizeof(T));
+//   memcpy(b, tmp, sizeof(T));
+//   free tmp;
+def swap<T>(a: ptr, b: ptr): void {
+    // TODO: blocked — requires addr_of and sizeof(T).
+}
+
+// Copies count BYTES from src to dst (NOT count elements of T).
+// Correct use: pass count * sizeof(T) as `count`.
+// TODO: once sizeof(T) is available this can be changed to an element count.
+def mem_copy<T>(dst: ptr, src: ptr, count: int): void {
+    memcpy(dst, src, count);
+}
+
+// Writes value into each of the count T-sized slots starting at dst.
+//
+// BLOCKED: requires sizeof(T) to advance the pointer by one T per iteration,
+// and a typed store through a pointer.
+//
+// When those features land, the body will iterate:
+//   for i in 0..count: *(T*)(dst + i * sizeof(T)) = value;
+def mem_set<T>(dst: ptr, value: T, count: int): void {
+    // TODO: blocked — requires sizeof(T) and ptr+int arithmetic.
+}

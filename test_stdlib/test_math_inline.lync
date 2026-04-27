@@ -1,0 +1,45 @@
+// Test math logic inline — verifies the control flow bodies compile correctly.
+// Note: Lync float literals are double-typed; use double vars where needed.
+
+def pi(): float { return 3.14159265358979; }
+
+def min_int(a: int, b: int): int {
+    if (a < b) {
+        return a;
+    }
+    return b;
+}
+
+def max_int(a: int, b: int): int {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}
+
+def clamp_int(v: int, lo: int, hi: int): int {
+    if (v < lo) {
+        return lo;
+    }
+    if (v > hi) {
+        return hi;
+    }
+    return v;
+}
+
+def abs_int(v: int): int {
+    if (v < 0) {
+        return 0 - v;
+    }
+    return v;
+}
+
+def main(): int {
+    p: float = pi();
+    print("pi:", p);
+    print("min(3,7):", min_int(3, 7));
+    print("max(3,7):", max_int(3, 7));
+    print("clamp(10,0,5):", clamp_int(10, 0, 5));
+    print("abs(-4):", abs_int(0 - 4));
+    return 0;
+}

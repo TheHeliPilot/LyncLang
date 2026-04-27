@@ -1,0 +1,159 @@
+// =============================================================================
+// std.hash — Generic hash map for the Lync standard library.
+//
+// HashMap<K, V> uses open addressing with linear probing.
+// Three parallel heap buffers (keys, vals, occupied) form the table.
+// Each buffer has `cap` slots; `occupied` is a bool[] flag array.
+//
+// v1 key constraint: K must be int or string.  Generic monomorphisation will
+// compile for any K, but the internal hash dispatch calls hash_int or hash_str
+// at link time — using another K type is a link error until future versions
+// add a user-supplied hash function parameter.
+//
+// K must also support == for equality comparison during probe.
+//
+// Load factor threshold for rehashing: 0.75.
+//
+// =============================================================================
+// KNOWN LYNC v1 COMPILER LIMITATIONS (blocking full implementation)
+// =============================================================================
+// 1. sizeof(K) / sizeof(V) — not available; cannot allocate correctly-sized
+//    keys/vals buffers.  map_new and all map ops are stubs.
+//
+// 2. No ptr+int arithmetic — cannot probe or index into raw void* buffers.
+//
+// 3. T? nullable return type — not parseable for non-extern def functions.
+//    map_get returns own ptr (void*) as a proxy nullable type.
+//    TODO: revert to V? once the parser supports nullable non-extern returns.
+//
+// 4. Lync's int != C's size_t — extern blocks for malloc/realloc/strlen
+//    produce conflicting forward-declarations on 64-bit platforms.  Worked
+//    around in hash_str by iterating to the null terminator instead.
+//
+// 5. `free` is a Lync keyword — cannot declare it inside an extern block.
+//    The Lync `free x;` statement is used instead for owned allocations.
+//
+// hash_int and hash_str are FULLY IMPLEMENTED and compile without externals.
+//
+// RECOMMENDATION: complete map ops after sizeof(T) and ptr arithmetic land.
+//
+// Import entire module:   using std.hash.*;
+// Import single binding:  using std.hash.hash_int;
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Struct definition
+// ---------------------------------------------------------------------------
+
+// Open-addressing hash map with K keys and V values.
+struct HashMap<K, V> {
+    // Raw buffer of K; length cap.
+    keys: own ptr,
+    // Raw buffer of V; length cap.
+    vals: own ptr,
+    // Raw buffer of bool (1 byte each); 1 = slot occupied, 0 = empty.
+    occupied: own ptr,
+    // Number of key-value pairs currently stored.
+    count: int,
+    // Total number of slots allocated in each buffer.
+    cap: int,
+}
+
+// ---------------------------------------------------------------------------
+// Hash functions — FULLY IMPLEMENTED, no extern dependencies
+// ---------------------------------------------------------------------------
+
+// Integer hash using Knuth multiplicative hash (works with Lync's int arithmetic).
+// Output is always non-negative.
+def hash_int(k: int): int {
+    h: int = k;
+    if (h < 0) {
+        h = 0 - h;
+    }
+    // Knuth's multiplicative constant (2^32 / golden ratio).
+    h = h * 2654435761;
+    if (h < 0) {
+        h = 0 - h;
+    }
+    return h;
+}
+
+// String hash using djb2 algorithm: h = h*33 + c for each byte.
+// Iterates by index until null terminator (s[i] == 0) — no extern needed.
+// String indexing s[i] is valid in Lync v1 (emits C array index on char*).
+def hash_str(s: string): int {
+    h: int = 5381;
+    i: int = 0;
+    while (s[i] != 0) {
+        h = h * 33 + s[i];
+        i += 1;
+    }
+    if (h < 0) {
+        h = 0 - h;
+    }
+    return h;
+}
+
+// ---------------------------------------------------------------------------
+// Lifecycle — STUBBED (sizeof limitation)
+// ---------------------------------------------------------------------------
+
+// Allocates a new HashMap with at least initial_cap slots.
+// TODO: blocked by sizeof(K) and sizeof(V).
+def map_new<K, V>(initial_cap: int): HashMap<K, V> {
+    m: HashMap<K, V>;
+    m.count = 0;
+    m.cap = 0;
+    // Cannot allocate keys/vals without sizeof(K)/sizeof(V).
+    // TODO: once sizeof lands, use:
+    //   m.keys = malloc(initial_cap * sizeof(K));
+    //   m.vals = malloc(initial_cap * sizeof(V));
+    //   m.occupied = malloc(initial_cap);
+    m.keys = 0;
+    m.vals = 0;
+    m.occupied = 0;
+    return m;
+}
+
+// Releases all three heap buffers owned by m.
+// TODO: implement after map_new is functional.
+def map_free<K, V>(m: ref HashMap<K, V>): void {
+    // TODO: free keys, vals, occupied once map_new allocates them.
+    m.count = 0;
+    m.cap = 0;
+}
+
+// ---------------------------------------------------------------------------
+// Mutation — STUBBED (sizeof + ptr arithmetic)
+// ---------------------------------------------------------------------------
+
+// Inserts or overwrites the entry for key k with value v.
+// TODO: needs sizeof(K)/sizeof(V) for slot indexing and addr_of(k)/addr_of(v).
+def map_set<K, V>(m: ref HashMap<K, V>, k: K, v: V): void {
+    // TODO: blocked by sizeof and ptr arithmetic.
+}
+
+// Removes the entry for key k if it exists.
+// TODO: blocked by sizeof and ptr arithmetic.
+def map_remove<K, V>(m: ref HashMap<K, V>, k: K): void {
+    // TODO: blocked by sizeof and ptr arithmetic.
+}
+
+// ---------------------------------------------------------------------------
+// Query — STUBBED
+// ---------------------------------------------------------------------------
+
+// Returns the value associated with k as an own ptr proxy, or null.
+// Original intended signature: def map_get<K, V>(...): V?
+// Changed to own ptr because V? is not parseable for non-extern def functions.
+def map_get<K, V>(m: ref HashMap<K, V>, k: K): own ptr {
+    // TODO: blocked by sizeof and ptr arithmetic.
+    return null;
+}
+
+// Returns true if k is present in the map.
+// TODO: blocked by sizeof and ptr arithmetic.
+def map_has<K, V>(m: ref HashMap<K, V>, k: K): bool {
+    // TODO: blocked by sizeof and ptr arithmetic.
+    return false;
+}

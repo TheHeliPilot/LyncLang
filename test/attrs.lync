@@ -1,0 +1,33 @@
+// Lync v0.4 — attribute parsing test.
+// Attributes are pure metadata in core. The compiler emits them as
+// `// @lync_attr ...` comments before each declaration. Plugins (Phase
+// 1C-ii) consume them at compile time.
+
+[component]
+Position: struct {
+    x: float,
+    y: float
+}
+
+[component]
+[serializable]
+Velocity: struct {
+    vx: float,
+    vy: float
+}
+
+[on_load]
+def init(): int {
+    return 0;
+}
+
+[system("Input", "Game")]
+[priority(10)]
+def my_input_system(): int {
+    return 0;
+}
+
+def main(): int {
+    print("attrs compiled cleanly");
+    return 0;
+}

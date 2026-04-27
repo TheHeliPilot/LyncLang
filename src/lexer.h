@@ -17,6 +17,14 @@ typedef enum {
 
     //arithmetic operators
     PLUS_T, MINUS_T, STAR_T, SLASH_T,
+    PERCENT_T,                          // %
+
+    //compound assignment operators
+    PLUS_EQ_T, MINUS_EQ_T, STAR_EQ_T,   // +=, -=, *=
+    SLASH_EQ_T, PERCENT_EQ_T,           // /=, %=
+
+    //increment / decrement
+    PLUS_PLUS_T, MINUS_MINUS_T,         // ++, --
 
     //comparison operators
     EQUALS_T,           //=
@@ -73,6 +81,9 @@ typedef enum {
     PRINT_KEYWORD_T,
     INCLUDE_T,
     EXTERN_T,
+    STRUCT_T,
+    FN_T,                  // function-pointer type prefix:  fn(T,T): R
+    PTR_KEYWORD_T,         // opaque void* type
 
     //mem stuff
 

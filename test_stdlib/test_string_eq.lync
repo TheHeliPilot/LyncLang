@@ -1,0 +1,56 @@
+// Test str_eq and str_starts_with logic inline.
+// Uses char-by-char comparison (no extern conflict).
+
+def _str_len_internal(s: string): int {
+    n: int = 0;
+    while (s[n] != 0) {
+        n += 1;
+    }
+    return n;
+}
+
+def str_len(s: string): int {
+    return _str_len_internal(s);
+}
+
+def str_eq(a: string, b: string): bool {
+    la: int = _str_len_internal(a);
+    lb: int = _str_len_internal(b);
+    if (la != lb) {
+        return false;
+    }
+    i: int = 0;
+    while (i < la) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+        i += 1;
+    }
+    return true;
+}
+
+def str_starts_with(s: string, prefix: string): bool {
+    ls: int = _str_len_internal(s);
+    lp: int = _str_len_internal(prefix);
+    if (lp > ls) {
+        return false;
+    }
+    i: int = 0;
+    while (i < lp) {
+        if (s[i] != prefix[i]) {
+            return false;
+        }
+        i += 1;
+    }
+    return true;
+}
+
+def main(): int {
+    print("str_len(hello):", str_len("hello"));
+    print("str_eq(hello,hello):", str_eq("hello", "hello"));
+    print("str_eq(hello,world):", str_eq("hello", "world"));
+    print("str_eq(hi,hello):", str_eq("hi", "hello"));
+    print("starts_with(hello world,hello):", str_starts_with("hello world", "hello"));
+    print("starts_with(hello world,world):", str_starts_with("hello world", "world"));
+    return 0;
+}

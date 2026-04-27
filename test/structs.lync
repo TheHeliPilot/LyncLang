@@ -1,0 +1,40 @@
+// Lync v0.4 — first test of struct support.
+// Exercises: top-level struct decls, struct-typed vars (zero-init),
+// nested structs, field read, field write, chained field access.
+
+Point: struct {
+    x: int,
+    y: int
+}
+
+Rect: struct {
+    origin: Point,
+    width:  int,
+    height: int
+}
+
+def area(r: Rect): int {
+    return r.width * r.height;
+}
+
+def main(): int {
+    print("=== struct demo ===");
+
+    p: Point;
+    p.x = 10;
+    p.y = 20;
+    print("p.x =", p.x);
+    print("p.y =", p.y);
+
+    r: Rect;
+    r.origin.x = 100;
+    r.origin.y = 200;
+    r.width    = 30;
+    r.height   = 40;
+
+    print("r.origin.x =", r.origin.x);
+    print("r.origin.y =", r.origin.y);
+    print("area(r)    =", area(r));
+
+    return 0;
+}

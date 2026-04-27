@@ -1,0 +1,34 @@
+// Lync v0.4 — function-pointer + ptr type test.
+// Exercises:
+//   * Declaring `fn(...)` typed variables initialized from a named function
+//   * Calling through a function-pointer variable (works because fn-ptr in C
+//     can be invoked the same as a function name; we emit the C name)
+//   * Function with a `fn(...)` typed PARAMETER (the callback case)
+//   * `ptr` as an opaque `void*`-typed parameter (for project-API user data)
+
+def add(a: int, b: int): int {
+    return a + b;
+}
+
+def mul(a: int, b: int): int {
+    return a * b;
+}
+
+// Function that takes a callback. The fn(int, int): int param compiles to
+// a C function-pointer signature.
+def apply(f: fn(int, int): int, x: int, y: int): int {
+    return f(x, y);
+}
+
+def main(): int {
+    print("=== fn-ptr demo ===");
+
+    // Declare a fn-typed local and initialize from a named function.
+    op: fn(int, int): int = add;
+
+    // Pass a function name where a callback is expected.
+    print("apply(add, 3, 4) =", apply(add, 3, 4));
+    print("apply(mul, 3, 4) =", apply(mul, 3, 4));
+
+    return 0;
+}

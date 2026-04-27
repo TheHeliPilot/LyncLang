@@ -1,0 +1,15 @@
+include std.math.*;
+
+def main(): int {
+    a: int = min<int>(3, 7);
+    b: int = max<int>(3, 7);
+    c: int = clamp<int>(10, 0, 5);
+    d: int = abs<int>(0 - 4);
+    f: float = lerp<float>(0.0, 10.0, 0.5);
+    print("min:", a);
+    print("max:", b);
+    print("clamp:", c);
+    print("abs:", d);
+    print("lerp:", f);
+    return 0;
+}
