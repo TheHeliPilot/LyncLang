@@ -181,7 +181,14 @@ Program* load_and_parse_file(const char* file_path, int depth) {
                         prog->functions[prog->func_count++] = nested->functions[j];
                     }
                 }
-                free(sp);
+                // Intentional leak: `sp` was passed into tokenize() via
+                // load_and_parse_file as the filename argument, so token
+                // SourceLocations now reference its bytes for the rest of
+                // this compile. Freeing here turns every later access to
+                // loc.filename into a use-after-free (visible as garbage
+                // strings in --emit-symbols output and in error messages).
+                // Compiler is short-lived; the path strings are tiny.
+                // free(sp);  // do NOT free
                 continue;
             }
 
@@ -230,7 +237,10 @@ Program* load_and_parse_file(const char* file_path, int depth) {
                 }
             }
 
-            free(nested_path);
+            // Same UAF as above: tokens in `nested` reference
+            // `nested_path` via loc.filename. Leak it on purpose for the
+            // duration of the compile.
+            // free(nested_path);  // do NOT free
         }
         free(dir);
     }
@@ -259,7 +269,8 @@ void process_file_includes(Program* prog, const char* source_file) {
             char* sp = try_stdlib_path(imp->module_name);
             if (!sp) continue;
             Program* nested = load_and_parse_file(sp, 0);
-            free(sp);
+            // Intentional leak: token locs in `nested` reference `sp`.
+            // free(sp);
             if (nested) {
                 for (int j = 0; j < nested->struct_count; ++j) {
                     prog->structs = realloc(prog->structs,
@@ -289,6 +300,8 @@ void process_file_includes(Program* prog, const char* source_file) {
         if (!included) {
             stage_error(STAGE_PARSER, imp->loc,
                 "could not load module '%s' (file: %s)", imp->module_name, file_path);
+            // file_path was never passed to tokenize (load_and_parse_file
+            // returned early). Safe to free here.
             free(file_path);
             continue;
         }
@@ -383,14 +396,18 @@ void process_file_includes(Program* prog, const char* source_file) {
             }
         }
 
-        free(file_path);
+        // Intentional leak: tokens reference file_path via loc.filename.
+        // free(file_path);
     }
 
     // Now that every imported module's structs, functions, and templates
-    // have been merged into `prog`, run a strict template drain to realize
-    // any pendings that were left unresolved by parseProgram (e.g. uses of
-    // `min<int>` from the main file when min<T> lives in std.math).
-    tpl_drain_pending(prog, true);
+    // have been merged into `prog`, drain pending template instantiations.
+    // We use NON-strict mode here because plugin-synthesized externs
+    // (e.g. zues plugin's `Add__Health` for [Component] Health) get merged
+    // AFTER this point — call sites like `Add<Health>(...)` would error
+    // here in strict mode but resolve cleanly once the synth pass adds
+    // the extern. main.c runs the final strict drain after that merge.
+    tpl_drain_pending(prog, false);
 
     free(source_dir);
 }

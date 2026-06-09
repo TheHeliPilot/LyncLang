@@ -1,82 +1,26 @@
 // =============================================================================
 // std.string — String utilities for the Lync standard library.
 //
-// The Lync `string` type is an alias for C `char*`.  Functions that return
-// newly allocated strings are marked `own`; the caller owns and must free
-// that memory.  Functions that only inspect strings borrow their arguments.
+// The Lync `string` type is an alias for C `char*`. Functions here treat
+// strings as immutable null-terminated byte sequences.
 //
-// =============================================================================
-// KNOWN LYNC v1 COMPILER LIMITATIONS
-// =============================================================================
-// 1. size_t vs int conflict: libc string functions (strlen, memcmp, strncmp,
-//    snprintf, malloc, realloc) take `size_t` counts, but Lync's `int` maps to
-//    `int64_t`.  On 64-bit platforms this causes a conflicting-types error when
-//    Lync emits forward-declarations in extern blocks.  Workaround: iterate to
-//    the null terminator directly (like hash_str) or avoid extern blocks for
-//    those functions.  Functions that cannot avoid size_t params are stubbed.
+// v1 SCOPE: only the inspection helpers (StrLen, StrEq, StrStartsWith,
+// StrEndsWith, StrContains) are exposed. Construction helpers
+// (concat, format, int->str) are blocked on a real String type with
+// proper allocation, which lands in the next language pass.
 //
-// 2. `free` is a Lync keyword — cannot appear as an extern function name.
-//    Use `free x;` (Lync statement) for owned allocations.
-//
-// 3. T? nullable return types — not parseable for non-extern `def` functions.
-//    str_to_int's signature is kept as a comment; the body is a TODO stub.
-//
-// 4. String and ptr type mismatch — the analyzer rejects passing a `string`
-//    where `ptr` is expected; memcmp requires `ptr` params.  Worked around via
-//    null-terminator-based comparison (no extern call needed for str_len).
-//
-// 5. No pointer arithmetic — str_concat and str_ends_with cannot fully append
-//    or offset into buffers.
-//
-// Import entire module:   using std.string.*;
-// Import single binding:  using std.string.str_eq;
+// Import entire module:   include std.string.*;
+// Import single binding:  include std.string.StrEq;
 // =============================================================================
 
-// ---------------------------------------------------------------------------
-// libc wrappers
-// ---------------------------------------------------------------------------
-
-extern <stdio.h> {
-    // Write formatted int into buf (at most size bytes including null terminator).
-    // Note: the Lync int vs size_t mismatch means the `size` param may truncate
-    // on very large counts, but 24/32-byte scratch buffers are safe.
-    def snprintf(buf: string, size: int, fmt: string, val: int): int;
-
-    // snprintf overload for float values.
-    def snprintf_f(buf: string, size: int, fmt: string, val: float): int;
-}
-
-// strtol — the second parameter is char** (pointer to pointer).  Lync has no
-// type for char**, so we pass 0 (NULL) and skip endptr-based error detection.
-extern <stdlib.h> {
-    def strtol(s: string, endptr: ptr, base: int): int;
-}
-
-// strstr — declared here so the analyzer knows the return is nullable.
-// NOTE: on 64-bit Windows the codegen emits `extern char* strstr(char*, char*)`
-// which conflicts with `<string.h>`'s declaration only in const-qualifier — GCC
-// accepts this with -fpermissive.  The symbol itself is always available because
-// codegen hardcodes `#include <string.h>`.
+// strstr is exposed so StrContains / StrEndsWith have a fast path.
 extern <stdio.h> {
     def strstr(haystack: string, needle: string): string?;
 }
 
-// malloc — similarly conflicts; snprintf/strtol are used for the construction
-// functions and the raw heap alloc uses Lync's `alloc` keyword where possible.
-// For dynamically-sized buffers we must call malloc via extern.
-extern <stdlib.h> {
-    def malloc_str(n: int): own string;
-}
-// NOTE: malloc_str is an alias that does NOT exist in libc — it will link-fail.
-// TODO: use Lync's `alloc` keyword when it supports arbitrary-size allocation,
-// or add a sizeof-free workaround once the compiler gains that feature.
-
-// ---------------------------------------------------------------------------
-// Internal: compute string length by iterating to the null terminator.
-// This avoids the extern size_t conflict entirely.
-// ---------------------------------------------------------------------------
-
-def _str_len_internal(s: string): int {
+// Internal: compute length by walking to the null terminator. Avoids the
+// libc strlen extern conflict (size_t vs int return).
+def _StrLenInternal(s: string): int {
     n: int = 0;
     while (s[n] != 0) {
         n += 1;
@@ -84,24 +28,15 @@ def _str_len_internal(s: string): int {
     return n;
 }
 
-// ---------------------------------------------------------------------------
-// Public: str_len (mirrors strlen; exposed so callers don't need the internal)
-// ---------------------------------------------------------------------------
-
 // Returns the length of s in bytes, not including the null terminator.
-def str_len(s: string): int {
-    return _str_len_internal(s);
+def StrLen(s: string): int {
+    return _StrLenInternal(s);
 }
 
-// ---------------------------------------------------------------------------
-// Comparison and search
-// ---------------------------------------------------------------------------
-
 // Returns true if a and b contain identical byte sequences.
-// Uses char-by-char comparison to avoid the ptr/string type mismatch with memcmp.
-def str_eq(a: string, b: string): bool {
-    la: int = _str_len_internal(a);
-    lb: int = _str_len_internal(b);
+def StrEq(a: string, b: string): bool {
+    la: int = _StrLenInternal(a);
+    lb: int = _StrLenInternal(b);
     if (la != lb) {
         return false;
     }
@@ -116,10 +51,9 @@ def str_eq(a: string, b: string): bool {
 }
 
 // Returns true if s begins with prefix.
-// Uses char-by-char comparison for the first str_len(prefix) chars.
-def str_starts_with(s: string, prefix: string): bool {
-    ls: int = _str_len_internal(s);
-    lp: int = _str_len_internal(prefix);
+def StrStartsWith(s: string, prefix: string): bool {
+    ls: int = _StrLenInternal(s);
+    lp: int = _StrLenInternal(prefix);
     if (lp > ls) {
         return false;
     }
@@ -134,82 +68,29 @@ def str_starts_with(s: string, prefix: string): bool {
 }
 
 // Returns true if s ends with suffix.
-// NOTE: uses strstr as a proxy; may return true if suffix appears anywhere in s.
-// Exact suffix-position check needs ptr arithmetic (s + ls - lsu).
-// TODO: refine when ptr+int arithmetic lands.
-def str_ends_with(s: string, suffix: string): bool {
-    ls: int = _str_len_internal(s);
-    lsu: int = _str_len_internal(suffix);
+def StrEndsWith(s: string, suffix: string): bool {
+    ls: int = _StrLenInternal(s);
+    lsu: int = _StrLenInternal(suffix);
     if (lsu > ls) {
         return false;
     }
-    match strstr(s, suffix) {
-        some(found): {
-            // TODO: verify found == s+(ls-lsu) — needs ptr arithmetic.
-            return true;
-        }
-        null: {
+    // Compare the last lsu chars of s against suffix.
+    offset: int = ls - lsu;
+    i: int = 0;
+    while (i < lsu) {
+        if (s[offset + i] != suffix[i]) {
             return false;
         }
-    };
-    return false;
+        i += 1;
+    }
+    return true;
 }
 
 // Returns true if needle appears anywhere inside s.
-def str_contains(s: string, needle: string): bool {
+def StrContains(s: string, needle: string): bool {
     match strstr(s, needle) {
-        some(r): {
-            return true;
-        }
-        null: {
-            return false;
-        }
+        some(r): { return true; }
+        null:    { return false; }
     };
     return false;
 }
-
-// ---------------------------------------------------------------------------
-// Construction (own = caller takes ownership of the returned allocation)
-// ---------------------------------------------------------------------------
-
-// Returns a newly allocated string that is the concatenation of a and b.
-// NOTE: only a is copied because ptr arithmetic to offset into the buffer
-// is not available in Lync v1.  TODO: blocked by ptr+int arithmetic.
-def str_concat(a: string, b: string): own string {
-    // TODO: full implementation needs malloc(la+lb+1) and ptr arithmetic.
-    // For now return a copy of a only.
-    la: int = _str_len_internal(a);
-    // Lync `alloc` allocates a single element; for n-byte string buffers we
-    // need malloc.  Since malloc_str is a stub, this function is partial.
-    // TODO: blocked by malloc_str linker gap (see limitation note above).
-    return null; // placeholder — will crash; replace when malloc_str links.
-}
-
-// Formats n as a decimal string; caller must free the returned buffer.
-// TODO: blocked by malloc_str linker gap; see str_concat note.
-def int_to_str(n: int): own string {
-    // 64-bit int fits in 21 chars ("-9223372036854775808\0"); use 24 for safety.
-    // TODO: buf: own string = malloc_str(24); snprintf(buf, 24, "%d", n); return buf;
-    return null; // placeholder — replace when malloc_str links.
-}
-
-// Formats x as a float string; caller must free the returned buffer.
-// TODO: blocked by malloc_str linker gap.
-def float_to_str(x: float): own string {
-    // TODO: buf: own string = malloc_str(32); snprintf_f(buf, 32, "%g", x); return buf;
-    return null; // placeholder.
-}
-
-// ---------------------------------------------------------------------------
-// Parsing (nullable return — null signals parse failure)
-// ---------------------------------------------------------------------------
-
-// Parses s as a base-10 integer.  Returns null if s is empty.
-//
-// PARSER LIMITATION: `int?` is not a valid return type for non-extern def
-// functions in Lync v1 — this signature will cause a parse error.  The stub
-// is kept for forward compatibility; implement once the parser is fixed.
-// Body (when it compiles):
-//   if (str_len(s) == 0) { return null; }
-//   return strtol(s, 0, 10);
-def str_to_int(s: string): int? { /* TODO: blocked — T? return type not parseable for def functions in Lync v1 */ }

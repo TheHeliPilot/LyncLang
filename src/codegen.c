@@ -6,6 +6,10 @@
 char* type_to_c_type(TokenType t) {
     switch (t) {
         case INT_KEYWORD_T: return "int";
+        case USIZE_KEYWORD_T: return "size_t";  // matches libc width on every
+                                                // platform; needs <stddef.h>
+                                                // (always emitted at file top
+                                                // by the auto-include block).
         case BOOL_KEYWORD_T: return "bool";
         case CHAR_KEYWORD_T: return "char";
         case STR_KEYWORD_T: return "char*";
@@ -27,8 +31,30 @@ static void emit_fn_ptr_decl(FuncSign* sig, const char* name, FILE* out);
 // lands). Emitting is no-op when list is NULL or empty.
 static void emit_attr_list(const AttributeList* list, FILE* out) {
     if (!list || list->count == 0) return;
+    // Known attributes get translated into C decorators that flow
+    // before the function's return type. Unknown attributes still
+    // round-trip as `// @lync_attr Name(args)` comments so they're
+    // visible in the generated source for engine-side tooling.
     for (int i = 0; i < list->count; ++i) {
         const Attribute* a = list->items[i];
+        if (a->name && strcmp(a->name, "inline")     == 0) {
+            fprintf(out, "static inline ");
+            continue;
+        }
+        if (a->name && strcmp(a->name, "noinline")   == 0) {
+            fprintf(out, "__attribute__((noinline)) ");
+            continue;
+        }
+        if (a->name && strcmp(a->name, "pure")       == 0) {
+            fprintf(out, "__attribute__((pure)) ");
+            continue;
+        }
+        if (a->name && strcmp(a->name, "const_attr") == 0) {
+            // Even purer than `pure` -- no global memory reads either.
+            // Names it `const_attr` because `const` is a Lync keyword.
+            fprintf(out, "__attribute__((const)) ");
+            continue;
+        }
         fprintf(out, "// @lync_attr %s", a->name);
         if (a->arg_count > 0) {
             fprintf(out, "(");
@@ -100,6 +126,7 @@ void emit_indent(FILE* out, int level) {
 void emit_type(TokenType type, FILE* out) {
     switch (type) {
         case INT_KEYWORD_T: fprintf(out, "int"); break;
+        case USIZE_KEYWORD_T: fprintf(out, "size_t"); break;
         case BOOL_KEYWORD_T: fprintf(out, "bool"); break;
         case STR_KEYWORD_T: fprintf(out, "char"); break;
         case CHAR_KEYWORD_T: fprintf(out, "char"); break;
@@ -241,11 +268,75 @@ char* get_type_signature(FuncSign* sign) {
     return buffer;
 }
 
+// ---- defer support --------------------------------------------------------
+//
+// Function-scope `defer` collects all deferred statements during a
+// pre-walk of the function body, replaces every `return` with
+// `goto __zues_cleanup`, and emits the deferred bodies in LIFO order
+// at the cleanup label before the actual return. The visitors stash
+// state in a tiny module-global so emit_stmt can detect "skip me, I'm
+// a defer" and intercept FUNC_RET_E without threading state through
+// the entire codegen API.
+static Stmt** g_defers           = NULL;
+static int    g_defer_count      = 0;
+static int    g_defer_capacity   = 0;
+static bool   g_func_has_defers  = false;
+static TokenType g_func_ret_type = VOID_KEYWORD_T;
+static char*  g_func_ret_typename = NULL;
+
+static void collect_defers(Stmt* s) {
+    if (!s) return;
+    switch (s->type) {
+        case DEFER_S:
+            if (g_defer_count >= g_defer_capacity) {
+                g_defer_capacity = g_defer_capacity ? g_defer_capacity * 2 : 4;
+                g_defers = realloc(g_defers, sizeof(Stmt*) * g_defer_capacity);
+            }
+            g_defers[g_defer_count++] = s->as.defer_stmt.body;
+            break;
+        case BLOCK_S:
+            for (int i = 0; i < s->as.block_stmt.count; ++i)
+                collect_defers(s->as.block_stmt.stmts[i]);
+            break;
+        case IF_S:
+            collect_defers(s->as.if_stmt.trueStmt);
+            collect_defers(s->as.if_stmt.falseStmt);
+            break;
+        case WHILE_S:    collect_defers(s->as.while_stmt.body);    break;
+        case DO_WHILE_S: collect_defers(s->as.do_while_stmt.body); break;
+        case FOR_S:      collect_defers(s->as.for_stmt.body);      break;
+        case MATCH_S:
+            for (int i = 0; i < s->as.match_stmt.branchCount; ++i) {
+                MatchBranchStmt* b = &s->as.match_stmt.branches[i];
+                for (int j = 0; j < b->stmtCount; ++j)
+                    collect_defers(b->stmts[j]);
+            }
+            break;
+        default: break;
+    }
+}
+
 void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
     stage_trace(STAGE_CODEGEN, "emit_func: %s", f->signature->name);
 
+    // Reset defer collection state for this function.
+    g_defer_count       = 0;
+    g_func_has_defers   = false;
+    g_func_ret_type     = f->signature->retType;
+    g_func_ret_typename = f->signature->retTypeName;
+    if (f->body) collect_defers(f->body);
+    g_func_has_defers = (g_defer_count > 0);
+
     emit_attr_list(f->attrs, out);
     if(strcmp(f->signature->name, "main") == 0) fprintf(out, "int");
+    else if (f->signature->retType == VAR_T && f->signature->retTypeName) {
+        // Struct return: emit the typedef name. type_to_c_type has no
+        // VAR_T case (returns "-UNKNOWN-") -- without this, every
+        // function whose return type is a templated struct (List<int>,
+        // ...) generates broken C.
+        fprintf(out, "%s%s", f->signature->retTypeName,
+            f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
+    }
     else fprintf(out, "%s%s", type_to_c_type(f->signature->retType), (f->signature->retOwnership != OWNERSHIP_NONE && f->signature->retType != STR_KEYWORD_T) ? "*" : "");
     fprintf(out, " %s(", strcmp(f->signature->name, "main") == 0 ? "main" : get_func_name_from_sign(fstn, f->signature));
 
@@ -257,16 +348,62 @@ void emit_func(Func* f, FILE* out, FuncSignToName* fstn) {
             // with the param name baked into the (*name) slot.
             emit_fn_ptr_decl(p->fn_sig, p->name, out);
         } else {
+            // Same pointer-suffix rule as emit_func_decl above: ownership
+            // marker OR nullable-struct param both demand a `*`.
+            const bool ptr_suffix =
+                (p->ownership != OWNERSHIP_NONE && p->type != STR_KEYWORD_T)
+                || (p->isNullable && p->type == VAR_T);
             fprintf(out, "%s%s",
                 c_type_for(p->type, p->type_name),
-                (p->ownership != OWNERSHIP_NONE && p->type != STR_KEYWORD_T) ? "*" : "");
+                ptr_suffix ? "*" : "");
             fprintf(out, " %s", p->name);
         }
     }
     fprintf(out, ")\n");
 
     stage_trace(STAGE_CODEGEN, "emit_func: calling emit_stmt for body");
-    emit_stmt(f->body, out, 0, fstn);
+    if (g_func_has_defers && f->body && f->body->type == BLOCK_S) {
+        // Custom body emit so we can inject `__zues_ret` declaration
+        // at the top and the cleanup label at the bottom.
+        fprintf(out, "{\n");
+        // Reserve __zues_ret only when the function returns a value.
+        const bool void_ret = (f->signature->retType == VOID_KEYWORD_T);
+        if (!void_ret) {
+            emit_indent(out, 1);
+            const bool ret_is_struct = (f->signature->retType == VAR_T &&
+                                          f->signature->retTypeName);
+            if (ret_is_struct) {
+                fprintf(out, "%s%s __zues_ret = {0};\n",
+                        f->signature->retTypeName,
+                        f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
+            } else {
+                fprintf(out, "%s%s __zues_ret = 0;\n",
+                        type_to_c_type(f->signature->retType),
+                        (f->signature->retOwnership != OWNERSHIP_NONE &&
+                         f->signature->retType != STR_KEYWORD_T) ? "*" : "");
+            }
+        }
+        for (int i = 0; i < f->body->as.block_stmt.count; ++i) {
+            emit_stmt(f->body->as.block_stmt.stmts[i], out, 1, fstn);
+        }
+        // Cleanup tail. Defers run in LIFO order; an unreachable label
+        // warning is sidestepped because every return path goes through
+        // it. The trailing return matches the function's signature.
+        fprintf(out, "__zues_cleanup:;\n");
+        for (int i = g_defer_count - 1; i >= 0; --i) {
+            emit_stmt(g_defers[i], out, 1, fstn);
+        }
+        if (void_ret) {
+            emit_indent(out, 1);
+            fprintf(out, "return;\n");
+        } else {
+            emit_indent(out, 1);
+            fprintf(out, "return __zues_ret;\n");
+        }
+        fprintf(out, "}\n");
+    } else {
+        emit_stmt(f->body, out, 0, fstn);
+    }
     stage_trace(STAGE_CODEGEN, "emit_func: done with %s", f->signature->name);
 }
 
@@ -304,7 +441,16 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
         fstn->elements = realloc(fstn->elements, sizeof(FuncSignToNameElement) * fstn->height);
     }
 
-    fprintf(out, "%s%s", type_to_c_type(f->signature->retType), (f->signature->retOwnership != OWNERSHIP_NONE && f->signature->retType != STR_KEYWORD_T) ? "*" : "");
+    // Mirror attributes onto the prototype so the C compiler doesn't
+    // complain about a `static inline` or `__attribute__((pure))`
+    // definition declared without those qualifiers.
+    emit_attr_list(f->attrs, out);
+    if (f->signature->retType == VAR_T && f->signature->retTypeName) {
+        fprintf(out, "%s%s", f->signature->retTypeName,
+            f->signature->retOwnership != OWNERSHIP_NONE ? "*" : "");
+    } else {
+        fprintf(out, "%s%s", type_to_c_type(f->signature->retType), (f->signature->retOwnership != OWNERSHIP_NONE && f->signature->retType != STR_KEYWORD_T) ? "*" : "");
+    }
     fprintf(out, " %s(", mangled);
 
     for (int i = 0; i < f->signature->paramNum; ++i) {
@@ -315,9 +461,17 @@ void emit_func_decl(Func* f, FILE* out, FuncNameCounter* fnc, FuncSignToName* fs
                 emit_fn_ptr_decl(__p->fn_sig, __p->name, out);
                 continue;
             }
+            // Pointer suffix for either an ownership marker (`own`/`ref`)
+            // OR a nullable struct (`p: PlayerData?`). Nullable structs
+            // round-trip through pointers on the C side -- the
+            // analyser's match-unwrap path emits `if (p != NULL)` etc.,
+            // which only typechecks if `p` is actually a pointer.
+            const bool ptr_suffix =
+                (__p->ownership != OWNERSHIP_NONE && __p->type != STR_KEYWORD_T)
+                || (__p->isNullable && __p->type == VAR_T);
             fprintf(out, "%s%s",
                 c_type_for(__p->type, __p->type_name),
-                (__p->ownership != OWNERSHIP_NONE && __p->type != STR_KEYWORD_T) ? "*" : "");
+                ptr_suffix ? "*" : "");
         }
         fprintf(out, " %s", f->signature->parameters[i].name);
     }
@@ -334,12 +488,67 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             fprintf(out, "%d", e->as.int_val);
             break;
 
-        case FIELD_ACCESS_E:
-            // Emit target then `.field`. Recursive-friendly: nested chain
-            // (a.b.c) will recursively emit a.b first, then `.c`.
-            emit_expr(e->as.field_access.target, out, fstn);
-            fprintf(out, ".%s", e->as.field_access.field_name);
+        case SIZEOF_E:
+            // Primitive operand -> emit C type via type_to_c_type. Struct
+            // operand (VAR_T) -> emit the type name directly; Lync
+            // typedefs every struct as `typedef struct { ... } Name;`.
+            if (e->as.sizeof_op.operand_type == VAR_T) {
+                fprintf(out, "sizeof(%s)",
+                    e->as.sizeof_op.operand_type_name
+                        ? e->as.sizeof_op.operand_type_name : "void");
+            } else {
+                fprintf(out, "sizeof(%s)",
+                    type_to_c_type(e->as.sizeof_op.operand_type));
+            }
             break;
+
+        case ADDR_OF_E:
+            // Parenthesise so the address-of binds tightly to the operand
+            // and not to whatever follows in the surrounding expression.
+            fprintf(out, "&(");
+            emit_expr(e->as.addr_of.target, out, fstn);
+            fprintf(out, ")");
+            break;
+
+        case FIELD_ACCESS_E:
+            // Emit target then `.field` (or `->field` when target is a
+            // pointer in C terms — nullable VAR_T param with the
+            // analyzer-set `target_is_ptr` flag). Recursive-friendly:
+            // nested chain (a.b.c) recurses through the same logic for
+            // each step.
+            //
+            // Suppress the auto-deref `*` that VAR_E normally prepends for
+            // owned vars: when target is a VAR_E with ownership and we're
+            // about to emit `->`, the dereference is already handled by
+            // `->` itself. Without this, `p.field` on a `ref T` param
+            // would emit `*p->field` and the C compiler chokes (`unary *
+            // on float`).
+            if (e->as.field_access.target_is_ptr
+                && e->as.field_access.target->type == VAR_E) {
+                fprintf(out, "%s", e->as.field_access.target->as.var.name);
+            } else {
+                emit_expr(e->as.field_access.target, out, fstn);
+            }
+            fprintf(out, "%s%s",
+                e->as.field_access.target_is_ptr ? "->" : ".",
+                e->as.field_access.field_name);
+            break;
+
+        case STRUCT_LIT_E: {
+            // Emit a C99 designated-initializer compound literal. Lync
+            // emits structs as `typedef struct { ... } Name;` so the cast
+            // prefix is just the typedef name.
+            // Missing fields are implicitly zero-initialised by C, matching
+            // our analyzer's "missing field is OK" rule.
+            fprintf(out, "(%s){", e->as.struct_lit.type_name);
+            for (int i = 0; i < e->as.struct_lit.field_count; ++i) {
+                if (i) fprintf(out, ", ");
+                fprintf(out, ".%s = ", e->as.struct_lit.field_names[i]);
+                emit_expr(e->as.struct_lit.field_values[i], out, fstn);
+            }
+            fprintf(out, "}");
+            break;
+        }
 
         case FLOAT_LIT_E: {
             // %g strips trailing zeros AND the decimal point for whole
@@ -555,7 +764,30 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
             for (int i = 0; i < e->as.func_call.count; ++i) {
                 stage_trace(STAGE_CODEGEN, "emitting parameter %d", i);
                 if (i != 0) fprintf(out, ", ");
-                emit_expr(e->as.func_call.params[i], out, fstn);
+
+                // Pass-through rules for `ref T` params:
+                //   arg is VAR_E ownership=NONE  ->  emit "&(name)"
+                //   arg is VAR_E ownership=REF/OWN -> emit "name" (no
+                //     auto-deref; bypasses the default VAR_E emit which
+                //     would write "*name")
+                //   anything else  ->  fall through to emit_expr
+                Expr* a = e->as.func_call.params[i];
+                bool is_ref_param =
+                    (rs && rs->parameters && i < rs->paramNum &&
+                     rs->parameters[i].ownership == OWNERSHIP_REF);
+                bool handled = false;
+                if (is_ref_param && a->type == VAR_E) {
+                    if (a->as.var.ownership == OWNERSHIP_NONE) {
+                        fprintf(out, "&(%s)", a->as.var.name);
+                        handled = true;
+                    } else {
+                        // already a pointer in C terms -- pass it raw,
+                        // skipping the default VAR_E auto-deref.
+                        fprintf(out, "%s", a->as.var.name);
+                        handled = true;
+                    }
+                }
+                if (!handled) emit_expr(a, out, fstn);
             }
             fprintf(out, ")");
             stage_trace(STAGE_CODEGEN, "done with function call: %s", e->as.func_call.name);
@@ -660,7 +892,15 @@ void emit_assign_expr_to_var(Expr* e, const char* targetVar, Ownership o, FILE* 
             //if SOME_PATTERN, declare binding variable
             if (branch->pattern->type == SOME_PATTERN) {
                 emit_indent(out, indent + 1);
-                emit_type(branch->analyzed_type, out);
+                // VAR_T binding -> typed pointer to the source's
+                // analyzed_type_name. Same fix as MATCH_S; without it
+                // the binding is `void*` and field access fails.
+                if (branch->analyzed_type == VAR_T &&
+                    e->as.match.var->analyzed_type_name) {
+                    fprintf(out, "%s", e->as.match.var->analyzed_type_name);
+                } else {
+                    emit_type(branch->analyzed_type, out);
+                }
                 fprintf(out, "* %s = ", branch->pattern->as.binding_name);
                 //emit just the variable name, not dereferenced
                 if (e->as.match.var->type == VAR_E) {
@@ -726,15 +966,36 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 fprintf(out, ";\n");
                 break;
             }
-            // Struct-typed local: emit `TypeName name = {0};`. Default zero-
-            // init covers v1's "no struct literal yet" decision. When
-            // literal syntax lands, emit a designated initializer here
-            // instead. typedef'd name from generate_code is the C type.
+            // Struct-typed local: emit `TypeName name = <rhs>;`. When the
+            // user wrote `p: Point = Point{x:1, y:2};` we hand the RHS
+            // expression to emit_expr (typically a STRUCT_LIT_E producing
+            // a designated-initializer compound literal). When no RHS was
+            // supplied (`p: Point;`), default-zero-init the whole thing.
+            // typedef'd name from generate_code is the C type.
             if (s->as.var_decl.varType == VAR_T) {
+                // `gm: ref T = f()` should emit `T* gm = f()` (and same for
+                // `own T` / nullable VAR_T). The previous fall-through always
+                // emitted `T name` by value, which then fails to compile when
+                // the RHS is a function returning T*. The default `{0}`
+                // initializer for "no RHS" still works for the by-value path
+                // since ownership=NONE entities default-zero-init fine.
+                const bool is_ptr =
+                    (s->as.var_decl.ownership == OWNERSHIP_OWN) ||
+                    (s->as.var_decl.ownership == OWNERSHIP_REF) ||
+                    s->as.var_decl.isNullable;
                 emit_indent(out, indent);
-                fprintf(out, "%s %s = {0};\n",
+                fprintf(out, "%s%s %s = ",
                         s->as.var_decl.typeName,
+                        is_ptr ? "*" : "",
                         s->as.var_decl.name);
+                // The parser inserts a VOID_E placeholder for `p: Point;`
+                // (no RHS). Treat that as default-zero-init.
+                if (s->as.var_decl.expr && s->as.var_decl.expr->type != VOID_E) {
+                    emit_expr(s->as.var_decl.expr, out, fstn);
+                } else {
+                    fprintf(out, is_ptr ? "NULL" : "{0}");
+                }
+                fprintf(out, ";\n");
                 break;
             }
             if (s->as.var_decl.isArray && s->as.var_decl.ownership == OWNERSHIP_NONE && s->as.var_decl.elementOwnership == OWNERSHIP_NONE) {
@@ -848,13 +1109,23 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             break;
 
         case FIELD_ASSIGN_S:
-            // target.field = value;  Target is any expression chain; emit
-            // it as-is, then `.field = value;`. C's `.` works for value
-            // structs and chained access (a.b.c.field) is handled by
-            // emit_expr walking the FIELD_ACCESS_E chain.
+            // target.field = value;  Emit `.` for value-typed targets,
+            // `->` for pointer targets (analyzer-set target_is_ptr flag
+            // -- nullable VAR_T param, function returning T*, etc).
+            //
+            // Same auto-deref suppression as FIELD_ACCESS_E: `->` already
+            // dereferences, so don't let VAR_E's owned-var emit prepend
+            // a stray `*`.
             emit_indent(out, indent);
-            emit_expr(s->as.field_assign.target, out, fstn);
-            fprintf(out, ".%s = ", s->as.field_assign.field_name);
+            if (s->as.field_assign.target_is_ptr
+                && s->as.field_assign.target->type == VAR_E) {
+                fprintf(out, "%s", s->as.field_assign.target->as.var.name);
+            } else {
+                emit_expr(s->as.field_assign.target, out, fstn);
+            }
+            fprintf(out, "%s%s = ",
+                s->as.field_assign.target_is_ptr ? "->" : ".",
+                s->as.field_assign.field_name);
             emit_expr(s->as.field_assign.value, out, fstn);
             fprintf(out, ";\n");
             break;
@@ -908,14 +1179,53 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             fprintf(out, ");\n");
             break;
 
-        case FOR_S:
+        case FOR_S: {
+            const char* lab = s->as.for_stmt.label;
             emit_indent(out, indent);
             fprintf(out, "for (int %s = ", s->as.for_stmt.varName);
             emit_expr(s->as.for_stmt.min, out, fstn);
             fprintf(out, "; %s <= ", s->as.for_stmt.varName);
             emit_expr(s->as.for_stmt.max, out, fstn);
-            fprintf(out, "; %s++) ", s->as.for_stmt.varName);
-            emit_stmt(s->as.for_stmt.body, out, indent, fstn);
+            fprintf(out, "; %s++) {\n", s->as.for_stmt.varName);
+            // Body opens its own block. Labelled loops emit two goto
+            // targets: `__lync_cont_<label>` at the END of the body
+            // (so `continue <label>` skips to the next iteration via
+            // the natural for-step), and `__lync_after_<label>` AFTER
+            // the for-loop (so `break <label>` jumps past it).
+            if (s->as.for_stmt.body && s->as.for_stmt.body->type == BLOCK_S) {
+                Stmt* body = s->as.for_stmt.body;
+                for (int i = 0; i < body->as.block_stmt.count; i++)
+                    emit_stmt(body->as.block_stmt.stmts[i], out, indent + 1, fstn);
+            } else {
+                emit_stmt(s->as.for_stmt.body, out, indent + 1, fstn);
+            }
+            if (lab) {
+                emit_indent(out, indent + 1);
+                fprintf(out, "__lync_cont_%s:;\n", lab);
+            }
+            emit_indent(out, indent);
+            fprintf(out, "}\n");
+            if (lab) {
+                emit_indent(out, indent);
+                fprintf(out, "__lync_after_%s:;\n", lab);
+            }
+            break;
+        }
+
+        case BREAK_S:
+            emit_indent(out, indent);
+            if (s->as.break_stmt.label)
+                fprintf(out, "goto __lync_after_%s;\n", s->as.break_stmt.label);
+            else
+                fprintf(out, "break;\n");
+            break;
+
+        case CONTINUE_S:
+            emit_indent(out, indent);
+            if (s->as.continue_stmt.label)
+                fprintf(out, "goto __lync_cont_%s;\n", s->as.continue_stmt.label);
+            else
+                fprintf(out, "continue;\n");
             break;
 
         case BLOCK_S:
@@ -929,9 +1239,30 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
             break;
 
         case EXPR_STMT_S:
+            // Defer interception: rewrite `return X` to stash the value
+            // into __zues_ret and jump to the cleanup label that emits
+            // every defer in LIFO before the actual return.
+            if (g_func_has_defers &&
+                s->as.expr_stmt && s->as.expr_stmt->type == FUNC_RET_E) {
+                Expr* ret_expr = s->as.expr_stmt->as.func_ret_expr;
+                if (ret_expr && ret_expr->type != VOID_E) {
+                    emit_indent(out, indent);
+                    fprintf(out, "__zues_ret = ");
+                    emit_expr(ret_expr, out, fstn);
+                    fprintf(out, ";\n");
+                }
+                emit_indent(out, indent);
+                fprintf(out, "goto __zues_cleanup;\n");
+                break;
+            }
             emit_indent(out, indent);
             emit_expr(s->as.expr_stmt, out, fstn);
             fprintf(out, ";\n");
+            break;
+
+        case DEFER_S:
+            // Pre-walked into g_defers + emitted at the cleanup label.
+            // Skip here so the body doesn't run inline.
             break;
 
         case MATCH_S: {
@@ -963,7 +1294,19 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
 
                 if (branch->pattern->type == SOME_PATTERN) {
                     emit_indent(out, indent + 1);
-                    emit_type(branch->analyzed_type, out);
+                    // For VAR_T bindings (struct types), emit the
+                    // analyzed type name so the resulting C decl is
+                    // `MyStruct* x = ...` rather than `void* x = ...` --
+                    // otherwise field access through `x` later fails
+                    // with "request for member in something not a
+                    // structure or union".
+                    if (branch->analyzed_type == VAR_T &&
+                        s->as.match_stmt.var->analyzed_type_name) {
+                        fprintf(out, "%s",
+                            s->as.match_stmt.var->analyzed_type_name);
+                    } else {
+                        emit_type(branch->analyzed_type, out);
+                    }
                     fprintf(out, "* %s = ", branch->pattern->as.binding_name);
                     //emit just the variable name, not dereferenced
                     if (s->as.match_stmt.var->type == VAR_E) {
@@ -1009,7 +1352,19 @@ void emit_stmt(Stmt* s, FILE* out, int indent, FuncSignToName* fstn) {
                 fprintf(out, "}\n");
             }
             emit_indent(out, indent);
-            fprintf(out, "free(%s);\n", s->as.free_stmt.varName);
+            // Translate "l.items" to either "l->items" (when base is a
+            // pointer in C; analyzer set target_is_ptr) or "l.items"
+            // (value base). Bare identifiers ("p") emit unchanged.
+            const char* nm = s->as.free_stmt.varName;
+            const char* dot = strchr(nm, '.');
+            if (dot) {
+                fprintf(out, "free(%.*s%s%s);\n",
+                    (int)(dot - nm), nm,
+                    s->as.free_stmt.target_is_ptr ? "->" : ".",
+                    dot + 1);
+            } else {
+                fprintf(out, "free(%s);\n", nm);
+            }
             break;
         }
     }
@@ -1033,6 +1388,7 @@ void generate_code(Program* prog, FILE* output) {
     fprintf(output, "#include <stdlib.h>\n");
     fprintf(output, "#include <stdint.h>\n");
     fprintf(output, "#include <stdbool.h>\n");
+    fprintf(output, "#include <stddef.h>\n");   // size_t for `usize` Lync type
     fprintf(output, "#include <string.h>\n");
 
     //emit extern includes
@@ -1058,37 +1414,14 @@ void generate_code(Program* prog, FILE* output) {
         "limits.h", "float.h", "wchar.h", "wctype.h", "locale.h", "signal.h",
         "setjmp.h", NULL
     };
+    // Phase 1: Emit ONLY the #include directives from extern blocks. The
+    // forward-decl pass below comes AFTER struct typedefs so extern
+    // signatures referencing user-declared structs (e.g.
+    // `def KeyCode(): KeyCodeT;` -> `extern KeyCodeT KeyCode(void);`) see
+    // the typedef and don't fall back to implicit-int.
     for(int i = 0; i < prog->ext_block_count; ++i) {
         ExternBlock* eb = prog->externBlocks[i];
         fprintf(output, "#include <%s>\n", eb->header);
-        bool auto_included = false;
-        for (int k = 0; k_auto_headers[k]; ++k) {
-            if (strcmp(eb->header, k_auto_headers[k]) == 0) {
-                auto_included = true;
-                break;
-            }
-        }
-        if (auto_included) continue;
-        for (int j = 0; j < eb->count; ++j) {
-            FuncSign* sig = eb->signs[j];
-            const char* ret_c = (sig->retType == VAR_T && sig->retTypeName)
-                ? sig->retTypeName
-                : type_to_c_type(sig->retType);
-            fprintf(output, "extern %s %s(", ret_c, sig->name);
-            if (sig->paramNum == 0) {
-                fprintf(output, "void");
-            } else {
-                for (int p = 0; p < sig->paramNum; ++p) {
-                    if (p > 0) fprintf(output, ", ");
-                    FuncParam* fp = &sig->parameters[p];
-                    const char* pc = (fp->type == VAR_T && fp->type_name)
-                        ? fp->type_name
-                        : type_to_c_type(fp->type);
-                    fprintf(output, "%s", pc);
-                }
-            }
-            fprintf(output, ");\n");
-        }
     }
 
     //add platform-specific headers for read_key if needed
@@ -1266,9 +1599,66 @@ void generate_code(Program* prog, FILE* output) {
             const char* c_type = (f->type == VAR_T)
                 ? f->type_name              // user struct - typedef matches name
                 : type_to_c_type(f->type);  // primitive
-            fprintf(output, "    %s %s;\n", c_type, f->name);
+            // own/ref fields become C pointers. ptr is already void*
+            // so adding another `*` would yield void**; skip the suffix
+            // for STR_KEYWORD_T too since that's already char*.
+            const char* ptr_suffix =
+                (f->ownership != OWNERSHIP_NONE &&
+                 f->type != PTR_KEYWORD_T &&
+                 f->type != STR_KEYWORD_T) ? "*" : "";
+            fprintf(output, "    %s%s %s;\n", c_type, ptr_suffix, f->name);
         }
         fprintf(output, "} %s;\n\n", d->name);
+    }
+
+    // Phase 2: Extern forward declarations. Emitted AFTER struct typedefs
+    // so signatures that reference user structs (return or param) see the
+    // typedef and don't fall back to C's implicit-int rule. Headers that
+    // we already auto-include (stdio/stdlib/...) are skipped because the
+    // real prototypes come from the system header and wouldn't match
+    // lync's lower-fidelity types (e.g. malloc(int) vs malloc(size_t)).
+    for(int i = 0; i < prog->ext_block_count; ++i) {
+        ExternBlock* eb = prog->externBlocks[i];
+        bool auto_included = false;
+        for (int k = 0; k_auto_headers[k]; ++k) {
+            if (strcmp(eb->header, k_auto_headers[k]) == 0) {
+                auto_included = true;
+                break;
+            }
+        }
+        if (auto_included) continue;
+        for (int j = 0; j < eb->count; ++j) {
+            FuncSign* sig = eb->signs[j];
+            const char* ret_c = (sig->retType == VAR_T && sig->retTypeName)
+                ? sig->retTypeName
+                : type_to_c_type(sig->retType);
+            // Pointer-suffix the return type when the extern declares any
+            // ownership (own/ref) on a non-string scalar/struct, OR when the
+            // return is a nullable VAR_T (legacy `: T?` shape). Both
+            // ownership flavours map to the same C `T*`.
+            const char* ptr_suffix =
+                ((sig->retOwnership != OWNERSHIP_NONE && sig->retType != STR_KEYWORD_T)
+                 || (sig->retNullable && sig->retType == VAR_T)) ? "*" : "";
+            fprintf(output, "extern %s%s %s(", ret_c, ptr_suffix, sig->name);
+            if (sig->paramNum == 0) {
+                fprintf(output, "void");
+            } else {
+                for (int p = 0; p < sig->paramNum; ++p) {
+                    if (p > 0) fprintf(output, ", ");
+                    FuncParam* fp = &sig->parameters[p];
+                    const char* pc = (fp->type == VAR_T && fp->type_name)
+                        ? fp->type_name
+                        : type_to_c_type(fp->type);
+                    // Same pointer-suffix rule for params: any ownership
+                    // marker (own/ref) or nullable VAR_T -> T*.
+                    const bool param_ptr =
+                        (fp->ownership != OWNERSHIP_NONE && fp->type != STR_KEYWORD_T)
+                        || (fp->isNullable && fp->type == VAR_T);
+                    fprintf(output, "%s%s", pc, param_ptr ? "*" : "");
+                }
+            }
+            fprintf(output, ");\n");
+        }
     }
 
     FuncSignToName* fstn = malloc(sizeof(FuncSignToName));

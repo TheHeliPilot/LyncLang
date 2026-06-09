@@ -78,6 +78,20 @@ typedef struct {
     char*        name;
     TokenType    type;
     char*        type_name;     // non-NULL only when type == VAR_T
+    // Optional `own` / `ref` modifier applied to the field type:
+    //     items: own ptr,
+    //     child: ref Node
+    // Both turn the field into a C pointer. `own` carries lifetime
+    // (caller of struct destructor frees it; analyzer's `free
+    // x.items;` checks for own ownership). `ref` is borrowed --
+    // never freed via the struct.
+    Ownership    ownership;
+    bool         is_nullable;   // true if `?` followed the type
+    // Visibility: false = public (default, matches every existing
+    // struct), true = private. Private fields can only be read /
+    // written from inside the struct's own methods (functions whose
+    // first param has matching type).
+    bool         is_private;
 } StructField;
 
 // ----------------------------------------------------------------------------
@@ -125,6 +139,14 @@ struct StructDecl {
     AttributeList*   attrs;          // attached `[...]` attributes (may be NULL)
     SourceLocation   loc;
     TypeParamList*   type_params;    // NULL = concrete struct; non-NULL = template
+    // Inline methods declared with `def name(...) { ... }` inside the
+    // struct body. parseStructDecl owns these as a side output; the
+    // top-level loop drains them into Program::functions, mangling
+    // each name to "<StructName><MethodName>" and prepending an
+    // implicit `self: ref <StructName>` parameter so the method
+    // resolves through the existing UFCS dispatch unchanged.
+    struct Func**    methods;
+    int              method_count;
 };
 
 typedef struct {
@@ -165,6 +187,12 @@ struct FuncSign {
     Ownership retOwnership;
     bool isExtern;
     bool retNullable;            // when true, callers must treat the result as nullable
+    // Visibility / OOP metadata mirrored from the owning Func so the
+    // analyzer (which only sees FuncSign through funcTable) can enforce
+    // private + static rules without a Func* round-trip.
+    bool  is_private;
+    bool  is_static;
+    char* owner_struct;          // NULL for non-method functions
 };
 
 struct Func {
@@ -172,6 +200,18 @@ struct Func {
     Stmt*          body;
     AttributeList* attrs;            // attached `[...]` attributes (may be NULL)
     TypeParamList* type_params;      // NULL = concrete function; non-NULL = template
+    // Set when an inline struct method was declared `private`. The
+    // analyzer rejects calls from outside the struct's own methods.
+    // The function still lives at file scope (mangled name) for the
+    // C backend; visibility is enforced at the Lync analyzer level.
+    bool           is_private;
+    // Owning struct name for inline methods. NULL for plain top-level
+    // functions. Used by the visibility check + (later) the static
+    // call resolver so `Type.fn()` knows what to look up.
+    char*          owner_struct;
+    // Static methods omit the implicit `self` parameter and are
+    // callable as `Type.name(args)` even when no instance exists.
+    bool           is_static;
 };
 
 struct ExternBlock {
@@ -235,6 +275,14 @@ typedef enum {
     //structs
     STRUCT_LIT_E,    //Name { field: value, ... }
     FIELD_ACCESS_E,  //expr.field
+
+    // sizeof(T) — emits C `sizeof(C_type)`. Result type is `usize`.
+    // Used by std.list / std.string to drop the manual `elem_size` param.
+    SIZEOF_E,
+    // addr_of(x) — emits C `&(x)`. Result type is `ptr`. The std.list
+    // memcpy-into-slot pattern needed this; without it lists couldn't
+    // store T values into their backing buffer.
+    ADDR_OF_E,
 } ExprType;
 
 struct Expr {
@@ -328,7 +376,26 @@ struct Expr {
             // Resolved by analyzer:
             TokenType field_type;
             char*     field_type_name;   // for nested struct fields
+            // True when `target` resolves to a C-level pointer (nullable
+            // VAR_T param, deref-once-unwrapped match binding, etc.) so
+            // codegen knows to emit `->` instead of `.`. Defaults to
+            // false; analyzer flips it where applicable.
+            bool      target_is_ptr;
         } field_access;
+
+        // sizeof(T) -- T is a token type for primitives, or a struct name.
+        // Carries enough info for codegen to emit either "sizeof(int)" or
+        // "sizeof(MyStruct)".
+        struct {
+            TokenType operand_type;       // primitive type token, or VAR_T
+            char*     operand_type_name;  // when operand_type == VAR_T
+        } sizeof_op;
+
+        // addr_of(x) -- `target` is the inner expression. Codegen emits
+        // `&(...)`. Analyzer assigns analyzedType = PTR_KEYWORD_T.
+        struct {
+            Expr* target;
+        } addr_of;
     } as;
 };
 
@@ -345,6 +412,9 @@ typedef enum {
     MATCH_S,
     FREE_S,
     EXPR_STMT_S,        //expression as statement
+    DEFER_S,            //defer <stmt>; -- runs at function exit (LIFO)
+    BREAK_S,            //break; OR break <label>;
+    CONTINUE_S,         //continue; OR continue <label>;
 } StmtType;
 
 struct Stmt {
@@ -395,6 +465,13 @@ struct Stmt {
             Expr* min;
             Expr* max;
             Stmt* body;
+            // Optional label set by `for(...) as outer { ... }`.
+            // NULL when the loop has no label. Codegen emits the
+            // `__lync_after_<label>` and `__lync_cont_<label>` C
+            // goto labels around the body so labelled `break`/
+            // `continue` statements can jump out of arbitrary
+            // nesting depths.
+            char* label;
         } for_stmt;
 
         struct {
@@ -409,9 +486,15 @@ struct Stmt {
         } match_stmt;
 
         struct {
-            char* varName;
+            char* varName;       // identifier path, e.g. "l" or "l.items"
+                                 // (analyzer / codegen split on '.' for
+                                 // single-level field access).
             bool isArrayOfOwned;  //set by analyzer: array has element ownership
             int arraySize;        //set by analyzer: number of elements to free
+            // Set by analyzer when varName contains a '.' AND the base
+            // identifier resolves to a ref/own pointer. Codegen uses
+            // this to emit `base->field` instead of `base.field`.
+            bool target_is_ptr;
         } free_stmt;
 
         struct {
@@ -425,9 +508,33 @@ struct Stmt {
             Expr* target;
             char* field_name;
             Expr* value;
+            // Set by analyzer when `target` evaluates to a C pointer
+            // (nullable VAR_T binding, function returning T*, etc.) so
+            // codegen emits `target->field = value` instead of
+            // `target.field = value`.
+            bool  target_is_ptr;
         } field_assign;
 
         Expr* expr_stmt;
+
+        // `defer body;` -- the body runs at function exit, in LIFO
+        // order with other defers. Codegen rewrites every `return`
+        // in the function to `goto __cleanup` and emits the deferred
+        // statements at the cleanup label.
+        struct {
+            struct Stmt* body;
+        } defer_stmt;
+
+        // `break;` / `break <label>;` -- plain break compiles to C
+        // `break;`; a labelled break compiles to a `goto __lync_after_<label>`
+        // emitted by the enclosing labelled loop. Same shape for
+        // `continue;` / `continue <label>;` (goto __lync_cont_<label>).
+        struct {
+            char* label;     // NULL = unlabelled
+        } break_stmt;
+        struct {
+            char* label;
+        } continue_stmt;
 
     } as;
 };

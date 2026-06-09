@@ -68,6 +68,149 @@ static char* replace_extension(const char* path, const char* new_ext) {
     return result;
 }
 
+// ---- Symbol-table JSON emit ----
+// Writes a stable, machine-readable view of every concrete (non-template)
+// function and struct after the analyzer succeeds. Consumed by the Zues
+// editor for type-aware autocomplete + UFCS-aware param hints. Format
+// versioned via "version" so the consumer can refuse incompatible files.
+static void json_write_str(FILE* f, const char* s) {
+    fputc('"', f);
+    if (s) for (const unsigned char* p = (const unsigned char*)s; *p; ++p) {
+        switch (*p) {
+            case '"':  fputs("\\\"", f); break;
+            case '\\': fputs("\\\\", f); break;
+            case '\n': fputs("\\n",  f); break;
+            case '\r': fputs("\\r",  f); break;
+            case '\t': fputs("\\t",  f); break;
+            default:
+                if (*p < 0x20) fprintf(f, "\\u%04x", *p);
+                else           fputc(*p, f);
+        }
+    }
+    fputc('"', f);
+}
+
+// Heuristic: SourceLocation.filename can be a dangling pointer in some
+// lync code paths (a known issue, separate fix). Validate before emitting
+// so the editor consumer never sees garbage UTF-8.
+static bool is_safe_filename(const char* s) {
+    if (!s) return false;
+    for (int i = 0; i < 1024 && s[i]; ++i) {
+        unsigned char c = (unsigned char)s[i];
+        if (c < 0x20 || c > 0x7E) return false;
+    }
+    return s[0] != '\0';
+}
+
+static const char* type_str(TokenType t, const char* type_name) {
+    if (t == VAR_T && type_name) return type_name;
+    return token_type_name(t);
+}
+
+static const char* ownership_str(Ownership o) {
+    switch (o) {
+        case OWNERSHIP_OWN: return "own";
+        case OWNERSHIP_REF: return "ref";
+        default:            return "none";
+    }
+}
+
+static void emit_symbols_json(Program* program, const char* path) {
+    FILE* f = fopen(path, "w");
+    if (!f) {
+        fprintf(stderr, "warning: --emit-symbols: cannot open '%s'\n", path);
+        return;
+    }
+    fputs("{\n  \"version\": 1,\n  \"functions\": [", f);
+    bool first = true;
+    for (int i = 0; i < program->func_count; ++i) {
+        Func* fn = program->functions[i];
+        // Skip templates - they aren't callable on their own. Concrete
+        // monomorphisations live alongside under their mangled names.
+        if (fn->type_params) continue;
+        if (!fn->signature) continue;
+        FuncSign* s = fn->signature;
+        SourceLocation loc = NO_LOC;
+        if (fn->body) loc = fn->body->loc;
+
+        if (!first) fputc(',', f);
+        first = false;
+        fputs("\n    {", f);
+
+        fputs("\"name\":", f); json_write_str(f, s->name);
+        fputs(",\"ret_type\":", f); json_write_str(f, type_str(s->retType, s->retTypeName));
+        fprintf(f, ",\"ret_nullable\":%s", s->retNullable ? "true" : "false");
+        fprintf(f, ",\"ret_ownership\":\"%s\"", ownership_str(s->retOwnership));
+        fprintf(f, ",\"is_extern\":%s", s->isExtern ? "true" : "false");
+        fputs(",\"params\":[", f);
+        for (int p = 0; p < s->paramNum; ++p) {
+            if (p) fputc(',', f);
+            FuncParam* fp = &s->parameters[p];
+            fputc('{', f);
+            fputs("\"name\":", f); json_write_str(f, fp->name);
+            fputs(",\"type\":", f); json_write_str(f, type_str(fp->type, fp->type_name));
+            fprintf(f, ",\"nullable\":%s", fp->isNullable ? "true" : "false");
+            fprintf(f, ",\"ownership\":\"%s\"", ownership_str(fp->ownership));
+            fputc('}', f);
+        }
+        fputc(']', f);
+
+        // Attributes - just names + a flag for plugin-targeted ones.
+        fputs(",\"attrs\":[", f);
+        if (fn->attrs) {
+            for (int a = 0; a < fn->attrs->count; ++a) {
+                if (a) fputc(',', f);
+                json_write_str(f, fn->attrs->items[a]->name);
+            }
+        }
+        fputc(']', f);
+
+        fputs(",\"loc\":{", f);
+        fputs("\"file\":", f);
+        json_write_str(f, is_safe_filename(loc.filename) ? loc.filename : "");
+        fprintf(f, ",\"line\":%d,\"col\":%d}", loc.line, loc.column);
+        fputc('}', f);
+    }
+    fputs("\n  ],\n  \"structs\": [", f);
+
+    first = true;
+    for (int i = 0; i < program->struct_count; ++i) {
+        StructDecl* sd = program->structs[i];
+        if (sd->type_params) continue;   // skip templates
+        if (!first) fputc(',', f);
+        first = false;
+        fputs("\n    {", f);
+        fputs("\"name\":", f); json_write_str(f, sd->name);
+        fputs(",\"fields\":[", f);
+        for (int p = 0; p < sd->field_count; ++p) {
+            if (p) fputc(',', f);
+            StructField* fl = &sd->fields[p];
+            fputc('{', f);
+            fputs("\"name\":", f); json_write_str(f, fl->name);
+            fputs(",\"type\":", f); json_write_str(f, type_str(fl->type, fl->type_name));
+            fputc('}', f);
+        }
+        fputc(']', f);
+
+        fputs(",\"attrs\":[", f);
+        if (sd->attrs) {
+            for (int a = 0; a < sd->attrs->count; ++a) {
+                if (a) fputc(',', f);
+                json_write_str(f, sd->attrs->items[a]->name);
+            }
+        }
+        fputc(']', f);
+
+        fputs(",\"loc\":{", f);
+        fputs("\"file\":", f);
+        json_write_str(f, is_safe_filename(sd->loc.filename) ? sd->loc.filename : "");
+        fprintf(f, ",\"line\":%d,\"col\":%d}", sd->loc.line, sd->loc.column);
+        fputc('}', f);
+    }
+    fputs("\n  ]\n}\n", f);
+    fclose(f);
+}
+
 void print_usage(const char* program_name) {
     fprintf(stderr, "Usage: %s [options] [input_file]\n", program_name);
     fprintf(stderr, "       %s run [options] [input_file]\n", program_name);
@@ -76,6 +219,7 @@ void print_usage(const char* program_name) {
     fprintf(stderr, "  -o <file>      Output executable name\n");
     fprintf(stderr, "  -S             Emit assembly instead of executable\n");
     fprintf(stderr, "  --emit-c       Keep the intermediate .c file\n");
+    fprintf(stderr, "  --emit-symbols=<path>  Write JSON symbol table to <path> after analysis\n");
     fprintf(stderr, "  -trace         Enable trace/debug output\n");
     fprintf(stderr, "  -no-color      Disable colored output\n");
     fprintf(stderr, "  -O0            No optimization (default)\n");
@@ -95,6 +239,7 @@ int main(int argc, char** argv) {
     bool emit_c = false;
     bool emit_asm = false;
     bool run_mode = false;
+    const char* emit_symbols_path = NULL;
 
     int opt_level = 0;
     bool opt_size = false;
@@ -128,6 +273,8 @@ int main(int argc, char** argv) {
             no_color = true;
         } else if (strcmp(argv[i], "--emit-c") == 0) {
             emit_c = true;
+        } else if (strncmp(argv[i], "--emit-symbols=", 15) == 0) {
+            emit_symbols_path = argv[i] + 15;
         } else if (strcmp(argv[i], "-S") == 0) {
             emit_asm = true;
         } else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
@@ -394,6 +541,18 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Final strict template drain — file_loader and the synth merge above
+    // both leave pendings non-strict so neither phase races the other.
+    // Anything still unresolved here is a real "no template + no extern"
+    // miss and surfaces as a parse-time error.
+    tpl_drain_pending(program, true);
+    if (has_errors(g_error_collector)) {
+        print_messages(g_error_collector);
+        free_error_collector(g_error_collector);
+        free(code); free(c_file); free(exe_file);
+        return 1;
+    }
+
     //--- analyzer ---
     stage_trace_enter(STAGE_ANALYZER, "starting semantic analysis");
     analyze_program(program);
@@ -407,6 +566,13 @@ int main(int argc, char** argv) {
         free(c_file);
         free(exe_file);
         return 1;
+    }
+
+    // Emit JSON symbol table BEFORE optimization so we capture the user's
+    // source-shape exactly (no inlined / dead-code-eliminated fns).
+    if (emit_symbols_path) {
+        emit_symbols_json(program, emit_symbols_path);
+        stage_trace(STAGE_ANALYZER, "wrote symbol table to %s", emit_symbols_path);
     }
 
     //--- optimizer ---

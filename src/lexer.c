@@ -17,6 +17,21 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
     int i = 0;
 
     while (code[i] != '\0') {
+        // Pre-write capacity guard. Every per-token branch below assumes
+        // it can do `tokens[count++] = ...` without overflowing the
+        // buffer. The historical pattern was "write -> if (count>=cap)
+        // realloc" which silently corrupts the heap when ANY branch
+        // emits multiple tokens before the realloc check, or when a
+        // branch skips the check entirely. Centralising the grow here
+        // means every branch is safe by construction; the post-write
+        // checks below remain harmless (count < capacity makes them
+        // no-ops). +1 reserve covers branches that might emit two
+        // tokens before yielding to the next loop iteration.
+        if (count + 1 >= capacity) {
+            capacity *= 2;
+            tokens = realloc(tokens, capacity * sizeof(Token));
+        }
+
         char c = code[i];
         int start_col = column;  //save column at start of token
 
@@ -245,6 +260,7 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             if (strcmp(word, "if") == 0) { type = IF_T; value = NULL; free_word = true; }
             else if (strcmp(word, "else") == 0) { type = ELSE_T; value = NULL; free_word = true; }
             else if (strcmp(word, "int") == 0) { type = INT_KEYWORD_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "usize") == 0) { type = USIZE_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "char") == 0) { type = CHAR_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "void") == 0) { type = VOID_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "null") == 0) { type = NULL_LIT_T; value = NULL; free_word = true; }
@@ -268,6 +284,23 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
             else if (strcmp(word, "own") == 0) { type = OWN_T; value = NULL; free_word = true; }
             else if (strcmp(word, "ref") == 0) { type = REF_T; value = NULL; free_word = true; }
             else if (strcmp(word, "const") == 0) { type = CONST_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "private") == 0) { type = PRIVATE_T; value = NULL; free_word = true; }
+            else if (strcmp(word, "public") == 0)  { type = PUBLIC_T;  value = NULL; free_word = true; }
+            else if (strcmp(word, "static") == 0)  { type = STATIC_T;  value = NULL; free_word = true; }
+            else if (strcmp(word, "defer") == 0)   { type = DEFER_T;   value = NULL; free_word = true; }
+            else if (strcmp(word, "unsafe") == 0)  { type = UNSAFE_T;  value = NULL; free_word = true; }
+            else if (strcmp(word, "break") == 0)   { type = BREAK_T;   value = NULL; free_word = true; }
+            else if (strcmp(word, "continue") == 0){ type = CONTINUE_T;value = NULL; free_word = true; }
+            else if (strcmp(word, "as") == 0)      { type = AS_T;      value = NULL; free_word = true; }
+            // `this` is an alias for `self` -- lex it as a VAR_T whose
+            // string value is "self" so the synthesized method
+            // parameter (named "self") resolves either keyword. Pure
+            // surface-syntax sugar; no analyzer / codegen change.
+            else if (strcmp(word, "this") == 0) {
+                type  = VAR_T;
+                value = strdup("self");
+                free_word = true;
+            }
             else if (strcmp(word, "float") == 0) { type = FLOAT_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "double") == 0) { type = DOUBLE_KEYWORD_T; value = NULL; free_word = true; }
             else if (strcmp(word, "true") == 0) {
@@ -464,6 +497,15 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 i += 2;
                 column += 2;
                 goto resize_check;
+            } else if (code[i + 1] == '>') {
+                // |>  -- pipeline operator. Sugar for prepending the
+                // LHS as the first arg of a call on the RHS:
+                //     x |> foo(1, 2)   ==>   foo(x, 1, 2)
+                //     x |> foo         ==>   foo(x)
+                tokens[count++] = (Token){ .type = PIPE_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+                i += 2;
+                column += 2;
+                goto resize_check;
             } else {
                 //error with recovery - suggest || instead
                 SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
@@ -472,6 +514,16 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 column++;
                 continue;
             }
+        }
+
+        // `#[name]` -- treat the leading `#` as a no-op marker so
+        // attributes can be written either `[Foo]` (legacy) or
+        // `#[Foo]` (Rust-style). The next iteration picks up `[` as
+        // the L_BRACKET_T attribute opener.
+        if (c == '#' && code[i + 1] == '[') {
+            ++i;
+            ++column;
+            goto resize_check;
         }
 
         //single-character tokens
@@ -607,6 +659,7 @@ const char* token_type_name(TokenType type) {
         case MATCH_T: return "match";
         case SOME_T: return "some";
         case INT_KEYWORD_T: return "int";
+        case USIZE_KEYWORD_T: return "usize";
         case BOOL_KEYWORD_T: return "bool";
         case STR_KEYWORD_T: return "str";
         case CHAR_KEYWORD_T: return "char";
@@ -633,6 +686,15 @@ const char* token_type_name(TokenType type) {
         case DOUBLE_SLASH_T: return "//";
         case COMMENT_L_T: return "/*";
         case COMMENT_R_T: return "*/";
+        case PRIVATE_T: return "private";
+        case PUBLIC_T:  return "public";
+        case STATIC_T:  return "static";
+        case DEFER_T:   return "defer";
+        case PIPE_T:    return "|>";
+        case UNSAFE_T:  return "unsafe";
+        case BREAK_T:   return "break";
+        case CONTINUE_T:return "continue";
+        case AS_T:      return "as";
         default: return "unknown";
     }
 }

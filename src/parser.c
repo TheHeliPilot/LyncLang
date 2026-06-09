@@ -201,7 +201,8 @@ static bool looks_like_type_args(Parser* p, bool follow_paren_required) {
         Token* t = peek(p, j);
         if (t->type == EOF_T) return false;
         switch (t->type) {
-            case INT_KEYWORD_T: case BOOL_KEYWORD_T: case STR_KEYWORD_T:
+            case INT_KEYWORD_T: case USIZE_KEYWORD_T:
+            case BOOL_KEYWORD_T: case STR_KEYWORD_T:
             case CHAR_KEYWORD_T: case FLOAT_KEYWORD_T: case DOUBLE_KEYWORD_T:
             case VOID_KEYWORD_T: case PTR_KEYWORD_T: case VAR_T:
             case COMMA_T:
@@ -223,9 +224,67 @@ static bool looks_like_type_args(Parser* p, bool follow_paren_required) {
 // Parse exactly one `def name<TParams>(...): T { ... }` function. Extracted
 // from parseFunctions so the top-level loop can attach attributes per-function.
 // Caller has already confirmed peek == DEF_KEYWORD_T.
+//
+// Method syntax: `def Type.name(args): T { body }` desugars to
+//   def TypeName(self: Type, args): T { body }
+// The function name is the type name concatenated with the method name
+// (e.g. `def Vec2.Mul(s: float)` -> `Vec2Mul`), matching the existing
+// UFCS dispatch convention. Inside the body the receiver is bound to
+// `self`. Mutable receivers can use `def Type.name(...)` and write
+// `self.field = ...` -- the synthesized first parameter is `ref Type`
+// so member writes propagate back to the caller's value.
 static Func* parseSingleFunction(Parser* p) {
     consume(p);                                  // def
     Token* name = expect(p, VAR_T);
+
+    // Detect `def Type.name(...)` -- the method-syntax sugar.
+    char*  method_self_type = NULL;   // when set, prepend `self: T`
+    bool   method_is_static = false;  // tracked for `def Type.static name(...)`
+    bool   method_is_unary  = false;  // tracked so `Type.-()` mangles to op_neg
+    if (peek(p, 0)->type == DOT_T) {
+        consume(p);                              // dot
+        // The method name slot accepts either a normal identifier or
+        // an operator token. The operator path mirrors the inline-
+        // method form so `def Vec2.+(o)` and `Vec2: struct { def +(o) }`
+        // produce the same flat `Vec2op_add` symbol.
+        const char* op_name = NULL;
+        const TokenType nt  = peek(p, 0)->type;
+        switch (nt) {
+            case PLUS_T:          op_name = "op_add"; consume(p); break;
+            case MINUS_T:         op_name = "op_sub"; consume(p); method_is_unary = true; break;
+            case STAR_T:          op_name = "op_mul"; consume(p); break;
+            case SLASH_T:         op_name = "op_div"; consume(p); break;
+            case PERCENT_T:       op_name = "op_mod"; consume(p); break;
+            case DOUBLE_EQUALS_T: op_name = "op_eq";  consume(p); break;
+            case NOT_EQUALS_T:    op_name = "op_ne";  consume(p); break;
+            case LESS_T:          op_name = "op_lt";  consume(p); break;
+            case MORE_T:          op_name = "op_gt";  consume(p); break;
+            case LESS_EQUALS_T:   op_name = "op_le";  consume(p); break;
+            case MORE_EQUALS_T:   op_name = "op_ge";  consume(p); break;
+            case NEGATION_T:      op_name = "op_not"; consume(p); method_is_unary = true; break;
+            default: break;
+        }
+        const char* method_name_src;
+        if (op_name) {
+            method_name_src = op_name;
+        } else {
+            // Optional `static` modifier: `def Type.static name(...)`.
+            if (peek(p, 0)->type == STATIC_T) {
+                consume(p);
+                method_is_static = true;
+            }
+            Token* method = expect(p, VAR_T);
+            method_name_src = (const char*)method->value;
+        }
+        const size_t la = strlen(name->value);
+        const size_t lb = strlen(method_name_src);
+        char* combined = malloc(la + lb + 1);
+        memcpy(combined, name->value, la);
+        memcpy(combined + la, method_name_src, lb);
+        combined[la + lb] = 0;
+        method_self_type = strdup(name->value);
+        name->value      = combined;
+    }
 
     // Optional <T1, T2, ...> turns this into a function template.
     TypeParamList* type_params = NULL;
@@ -238,13 +297,53 @@ static Func* parseSingleFunction(Parser* p) {
     int pCount = 0;
     FuncParam* params = parseFuncParams(p, &pCount);
 
+    // For method syntax, prepend an implicit `self: ref T` parameter
+    // so mutating methods (`self.x = ...`) propagate back to the
+    // caller's value. Pure-getter methods can ignore the reference.
+    // Static methods skip the implicit self entirely.
+    if (method_self_type && !method_is_static) {
+        // Unary `def Type.-(): ...` was tentatively named op_sub; if
+        // the user supplied no params, switch to op_neg (matches the
+        // inline-method rule).
+        if (method_is_unary && pCount == 0) {
+            const size_t la = strlen(method_self_type);
+            const char*  un = "op_neg";
+            const size_t lb = strlen(un);
+            char* combined  = malloc(la + lb + 1);
+            memcpy(combined, method_self_type, la);
+            memcpy(combined + la, un, lb);
+            combined[la + lb] = 0;
+            name->value = combined;
+        }
+        FuncParam* expanded = malloc(sizeof(FuncParam) * (pCount + 1));
+        expanded[0].type        = VAR_T;
+        expanded[0].name        = strdup("self");
+        expanded[0].type_name   = method_self_type;
+        expanded[0].fn_sig      = NULL;
+        expanded[0].ownership   = OWNERSHIP_REF;
+        expanded[0].isNullable  = false;
+        expanded[0].isConst     = false;
+        for (int i = 0; i < pCount; ++i) expanded[i + 1] = params[i];
+        free(params);
+        params = expanded;
+        ++pCount;
+    }
+
     expect(p, R_PAREN_T);
     expect(p, COLON_T);
 
+    // Canonical return-type syntax: `[own|ref][?] T`. The `?` glues to the
+    // ownership keyword, never the type. There's exactly one spelling --
+    // anything else is a parse error.
     Ownership o = OWNERSHIP_NONE;
+    bool retNullable = false;
     Token* retOwn = peek(p, 0);
     if (retOwn->type == OWN_T)      { consume(p); o = OWNERSHIP_OWN; }
     else if (retOwn->type == REF_T) { consume(p); o = OWNERSHIP_REF; }
+    if (o != OWNERSHIP_NONE && peek(p, 0)->type == QUESTION_MARK_T) {
+        consume(p);
+        retNullable = true;
+    }
 
     Token* ret = consume(p);
     TokenType retType = ret->type;
@@ -254,11 +353,33 @@ static Func* parseSingleFunction(Parser* p) {
         char* mangled = maybe_consume_type_args_as_struct(p, retTypeName, TOK_LOC(ret));
         if (mangled) retTypeName = mangled;
     }
+    // Trailing `?` is a postfix nullable-marker for the return type. The
+    // analyzer + codegen already understand `retNullable`; this just
+    // unblocks the surface syntax. Pairs with `ref?`/`own?` prefixes
+    // (which set retNullable earlier) -- both forms are accepted, with
+    // the prefix form preferred for owned/borrowed pointers.
+    if (peek(p, 0)->type == QUESTION_MARK_T) {
+        consume(p);
+        retNullable = true;
+    }
     Stmt* body = parseBlock(p);
 
     Func* f = makeFunc(name->value, params, pCount, retType, o, body);
     if (retTypeName) f->signature->retTypeName = retTypeName;
+    if (f->signature) f->signature->retNullable = retNullable;
     f->type_params = type_params;     // NULL when not a template
+    // Standalone method-syntax (`def Type.name(...)`): mirror the
+    // is_static / owner_struct flags onto the Func + FuncSign so the
+    // analyzer enforces visibility + lets `Type.foo(...)` static calls
+    // resolve through the existing dispatch path.
+    if (method_self_type) {
+        f->owner_struct = strdup(method_self_type);
+        f->is_static    = method_is_static;
+        if (f->signature) {
+            f->signature->owner_struct = strdup(method_self_type);
+            f->signature->is_static    = method_is_static;
+        }
+    }
     return f;
 }
 
@@ -279,6 +400,10 @@ FuncSign* parseFnType(Parser* p) {
     sig->retOwnership = OWNERSHIP_NONE;
     sig->isExtern     = false;
     sig->retNullable  = false;
+    // Anonymous fn-pointer types have no OOP affiliation.
+    sig->is_private   = false;
+    sig->is_static    = false;
+    sig->owner_struct = NULL;
 
     int cap = 4;
     sig->parameters = malloc(sizeof(FuncParam) * cap);
@@ -351,18 +476,200 @@ StructDecl* parseStructDecl(Parser* p) {
 
     int cap = 4;
     decl->fields = malloc(sizeof(StructField) * cap);
+    decl->methods       = NULL;
+    decl->method_count  = 0;
+    int methods_cap     = 0;
 
     while (peek(p, 0)->type != R_BRACE_T && peek(p, 0)->type != EOF_T) {
-        if (decl->field_count > 0) {
-            // Lenient separator: prefer comma but accept semicolon too.
-            if (peek(p, 0)->type == COMMA_T) consume(p);
-            else if (peek(p, 0)->type == SEMICOLON_T) consume(p);
-            else break;     // missing separator — let the R_BRACE expect catch it
-        }
+        // Lenient separators -- comma, semicolon, OR no separator
+        // when the previous item was a method block (the closing `}`
+        // of the method body acts as its own terminator).
+        if (peek(p, 0)->type == COMMA_T)         consume(p);
+        else if (peek(p, 0)->type == SEMICOLON_T) consume(p);
         if (peek(p, 0)->type == R_BRACE_T) break;   // trailing comma
+
+        // Optional visibility modifier. Default = public for parity
+        // with the pre-visibility prelude. Only `private` actually
+        // restricts; `public` is a no-op kept for symmetry.
+        bool entry_private = false;
+        if (peek(p, 0)->type == PRIVATE_T) { consume(p); entry_private = true;  }
+        else if (peek(p, 0)->type == PUBLIC_T) { consume(p); entry_private = false; }
+
+        // ---- Inline method ----------------------------------------------
+        // `def name(args): T { body }` declared inside the struct body
+        // is hoisted to a top-level function named `<StructName><name>`
+        // with an implicit `self: ref <StructName>` first parameter,
+        // matching the existing UFCS dispatch convention exactly.
+        //
+        // Operator overloads use the same `def` syntax with an operator
+        // token where the method name normally goes:
+        //     def +(other: Vec2): Vec2 { ... }
+        // The token is mangled to `op_add`/`op_sub`/etc; the analyzer
+        // rewrites `a + b` (where both operands are user struct types)
+        // into a call to the matching `<TypeName>op_<...>` function.
+        if (peek(p, 0)->type == DEF_KEYWORD_T) {
+            consume(p);                                  // def
+            // Optional `static` modifier -- omits the implicit `self`
+            // parameter so the function is callable as `Type.name(args)`
+            // even with no instance.
+            bool entry_static = false;
+            if (peek(p, 0)->type == STATIC_T) {
+                consume(p);
+                entry_static = true;
+            }
+            // Method name OR operator overload token. We carry the
+            // resolved name as a heap string so the operator path
+            // doesn't depend on a lexer-owned literal.
+            char* method_name = NULL;
+            const TokenType nt = peek(p, 0)->type;
+            // For unary op overloads we tentatively pick the binary
+            // mangling (op_sub / op_not). After parsing the param
+            // list, if there are no user params we re-mangle to the
+            // unary form (op_neg / op_not). Same dispatch model, the
+            // analyzer's UN_OP path looks for the unary name.
+            switch (nt) {
+                case PLUS_T:           method_name = strdup("op_add"); consume(p); break;
+                case MINUS_T:          method_name = strdup("op_sub"); consume(p); break;
+                case STAR_T:           method_name = strdup("op_mul"); consume(p); break;
+                case SLASH_T:          method_name = strdup("op_div"); consume(p); break;
+                case PERCENT_T:        method_name = strdup("op_mod"); consume(p); break;
+                case DOUBLE_EQUALS_T:  method_name = strdup("op_eq");  consume(p); break;
+                case NOT_EQUALS_T:     method_name = strdup("op_ne");  consume(p); break;
+                case LESS_T:           method_name = strdup("op_lt");  consume(p); break;
+                case MORE_T:           method_name = strdup("op_gt");  consume(p); break;
+                case LESS_EQUALS_T:    method_name = strdup("op_le");  consume(p); break;
+                case MORE_EQUALS_T:    method_name = strdup("op_ge");  consume(p); break;
+                case NEGATION_T:       method_name = strdup("op_not"); consume(p); break;
+                default: {
+                    Token* mname = expect(p, VAR_T);
+                    method_name = strdup((const char*)mname->value);
+                    break;
+                }
+            }
+            // Tiny shim so the existing code below (which expects a
+            // lexer-owned `mname->value`) keeps working unchanged.
+            Token name_tok_shim = {0};
+            name_tok_shim.type  = VAR_T;
+            name_tok_shim.value = method_name;
+            Token* mname        = &name_tok_shim;
+
+            TypeParamList* m_type_params = NULL;
+            if (peek(p, 0)->type == LESS_T) {
+                m_type_params = parseTypeParams(p);
+            }
+
+            expect(p, L_PAREN_T);
+            int   user_count = 0;
+            FuncParam* user_params = parseFuncParams(p, &user_count);
+            expect(p, R_PAREN_T);
+            expect(p, COLON_T);
+
+            Ownership o = OWNERSHIP_NONE;
+            bool retNullable = false;
+            Token* retOwn = peek(p, 0);
+            if (retOwn->type == OWN_T)      { consume(p); o = OWNERSHIP_OWN; }
+            else if (retOwn->type == REF_T) { consume(p); o = OWNERSHIP_REF; }
+            if (o != OWNERSHIP_NONE && peek(p, 0)->type == QUESTION_MARK_T) {
+                consume(p); retNullable = true;
+            }
+
+            Token* ret = consume(p);
+            TokenType retType = ret->type;
+            char* retTypeName = (ret->type == VAR_T) ? (char*)ret->value : NULL;
+            if (retType == VAR_T && peek(p, 0)->type == LESS_T) {
+                char* mangled = maybe_consume_type_args_as_struct(
+                    p, retTypeName, TOK_LOC(ret));
+                if (mangled) retTypeName = mangled;
+            }
+            if (peek(p, 0)->type == QUESTION_MARK_T) {
+                consume(p); retNullable = true;
+            }
+
+            Stmt* body = parseBlock(p);
+
+            // Unary op disambiguation. `def -()` with no user params
+            // is a unary negation overload; the binary form had op_sub
+            // tentatively assigned. Same for `!()` / op_not which is
+            // already unary by default. `+` / `*` etc. don't have a
+            // unary form, so leave them alone.
+            if (user_count == 0 && method_name &&
+                strcmp(method_name, "op_sub") == 0)
+            {
+                free(method_name);
+                method_name = strdup("op_neg");
+                mname->value = method_name;
+            }
+
+            // Synthesize "<StructName><MethodName>" so the existing UFCS
+            // resolver finds it for `inst.method(args)` calls.
+            const size_t la = strlen(decl->name);
+            const size_t lb = strlen(mname->value);
+            char* combined = malloc(la + lb + 1);
+            memcpy(combined, decl->name, la);
+            memcpy(combined + la, mname->value, lb);
+            combined[la + lb] = 0;
+
+            // Build the parameter list. Static methods skip the
+            // implicit `self` slot so they're callable without an
+            // instance. Instance methods get `self: ref Type` first.
+            FuncParam* expanded;
+            int        expanded_count;
+            if (entry_static) {
+                expanded       = user_params;
+                expanded_count = user_count;
+            } else {
+                expanded = malloc(sizeof(FuncParam) * (user_count + 1));
+                expanded[0].type        = VAR_T;
+                expanded[0].name        = strdup("self");
+                expanded[0].type_name   = strdup(decl->name);
+                expanded[0].fn_sig      = NULL;
+                expanded[0].ownership   = OWNERSHIP_REF;
+                expanded[0].isNullable  = false;
+                expanded[0].isConst     = false;
+                for (int i = 0; i < user_count; ++i)
+                    expanded[i + 1] = user_params[i];
+                free(user_params);
+                expanded_count = user_count + 1;
+            }
+
+            Func* fn = makeFunc(combined, expanded, expanded_count,
+                                retType, o, body);
+            if (retTypeName) fn->signature->retTypeName = retTypeName;
+            if (fn->signature) fn->signature->retNullable = retNullable;
+            fn->type_params  = m_type_params;
+            fn->is_private   = entry_private;
+            fn->owner_struct = strdup(decl->name);
+            fn->is_static    = entry_static;
+            // Mirror onto the FuncSign so the analyzer (which works
+            // off FuncTable's FuncSign array) sees the same flags.
+            if (fn->signature) {
+                fn->signature->is_private   = entry_private;
+                fn->signature->is_static    = entry_static;
+                fn->signature->owner_struct = strdup(decl->name);
+            }
+
+            if (decl->method_count >= methods_cap) {
+                methods_cap = methods_cap ? methods_cap * 2 : 4;
+                decl->methods = realloc(decl->methods,
+                                        sizeof(Func*) * methods_cap);
+            }
+            decl->methods[decl->method_count++] = fn;
+            continue;
+        }
 
         Token* fname = expect(p, VAR_T);
         expect(p, COLON_T);
+
+        // Optional ownership modifier on the field type. Same syntax
+        // as parameter / return types: `own?`/`ref?` for nullable.
+        Ownership o = OWNERSHIP_NONE;
+        bool nullable = false;
+        if (peek(p, 0)->type == OWN_T) { consume(p); o = OWNERSHIP_OWN; }
+        else if (peek(p, 0)->type == REF_T) { consume(p); o = OWNERSHIP_REF; }
+        if (o != OWNERSHIP_NONE && peek(p, 0)->type == QUESTION_MARK_T) {
+            consume(p); nullable = true;
+        }
+
         Token* ftype = consume(p);
 
         if (decl->field_count >= cap) {
@@ -372,6 +679,9 @@ StructDecl* parseStructDecl(Parser* p) {
         StructField* f = &decl->fields[decl->field_count++];
         f->name      = (char*)fname->value;
         f->type      = ftype->type;
+        f->ownership = o;
+        f->is_nullable = nullable;
+        f->is_private  = entry_private;
         // VAR_T type carries a name (the struct's name); other types are
         // primitives where the C type is derivable from TokenType alone.
         f->type_name = (ftype->type == VAR_T) ? (char*)ftype->value : NULL;
@@ -380,6 +690,11 @@ StructDecl* parseStructDecl(Parser* p) {
         if (ftype->type == VAR_T && peek(p, 0)->type == LESS_T) {
             char* mangled = maybe_consume_type_args_as_struct(p, (char*)ftype->value, TOK_LOC(ftype));
             if (mangled) f->type_name = mangled;
+        }
+        // Postfix `?` after the type also marks nullable (matches the
+        // var-decl form). Keep both syntaxes accepted.
+        if (peek(p, 0)->type == QUESTION_MARK_T) {
+            consume(p); f->is_nullable = true;
         }
     }
     expect(p, R_BRACE_T);
@@ -444,11 +759,25 @@ Func** parseFunctions(Parser* p, int* num) {
             consume(p);
             o = OWNERSHIP_REF;
         }
+        bool retNullable2 = false;
+        if (o != OWNERSHIP_NONE && peek(p, 0)->type == QUESTION_MARK_T) {
+            consume(p);
+            retNullable2 = true;
+        }
 
         Token* ret = consume(p);
+        // Trailing `?` postfix nullable -- mirrors parseSingleFunction.
+        // Both parser paths now accept it; the analyzer / codegen consume
+        // retNullable identically regardless of which path produced it.
+        if (peek(p, 0)->type == QUESTION_MARK_T) {
+            consume(p);
+            retNullable2 = true;
+        }
         Stmt* body = parseBlock(p);
 
         functions[count++] = makeFunc(name->value, params, pCount, ret->type, o, body);
+        if (functions[count-1]->signature)
+            functions[count-1]->signature->retNullable = retNullable2;
 
         if(count >= size) {
             size *= 2;
@@ -469,14 +798,22 @@ ExternBlock* parseExternBlock(Parser* p) {
     char header[256] = {0};
     while(peek(p, 0)->type != MORE_T && peek(p, 0)->type != EOF_T) {
         Token* t = consume(p);
-        //rudimentary reconstruction of header name
-        if(strlen(header) > 0 && t->type != DOT_T) strcat(header, ""); //simple concat
-        //actually for "sys/types.h" etc we might need better logic, but for "math.h"
-        //we likely get VAR_T DOT_T VAR_T
-        //lets just append the token text if possible, but we dont have text easily for all tokens
-        //for now support simple "math.h"
+        //reconstruction of header name. We must NOT use token_type_name
+        //for keyword tokens that share spelling with a header path
+        //fragment -- e.g. STR_KEYWORD_T's name is "str", which would
+        //corrupt `extern <string.h>` into `<str.h>`. Map known keyword
+        //tokens back to their source spelling instead.
         if(t->type == VAR_T) strcat(header, (char*)t->value);
         else if(t->type == DOT_T) strcat(header, ".");
+        else if(t->type == STR_KEYWORD_T)    strcat(header, "string");
+        else if(t->type == INT_KEYWORD_T)    strcat(header, "int");
+        else if(t->type == USIZE_KEYWORD_T)  strcat(header, "usize");
+        else if(t->type == FLOAT_KEYWORD_T)  strcat(header, "float");
+        else if(t->type == DOUBLE_KEYWORD_T) strcat(header, "double");
+        else if(t->type == BOOL_KEYWORD_T)   strcat(header, "bool");
+        else if(t->type == CHAR_KEYWORD_T)   strcat(header, "char");
+        else if(t->type == VOID_KEYWORD_T)   strcat(header, "void");
+        else if(t->type == PTR_KEYWORD_T)    strcat(header, "ptr");
         else strcat(header, token_type_name(t->type)); //fallback
     }
     expect(p, MORE_T);
@@ -517,25 +854,48 @@ ExternBlock* parseExternBlock(Parser* p) {
              Ownership retOwn = OWNERSHIP_NONE;
              bool retNullable = false;
 
+             // Optional ownership prefix + nullable marker:
+             //     def f(): ref  T;     -> non-null borrowed pointer
+             //     def f(): ref? T;     -> nullable borrowed pointer
+             //     def f(): own  T;     -> owned pointer
+             //     def f(): own? T;     -> nullable owned pointer
+             // The `?` glues to the ownership keyword (matches var-decl
+             // syntax). Bare `T?` without ref/own isn't a meaningful type
+             // (non-pointers can't be null) and is rejected.
              Token* typeTok = peek(p, 0);
              if(typeTok->type == OWN_T || typeTok->type == REF_T) {
                  retOwn = (typeTok->type == OWN_T) ? OWNERSHIP_OWN : OWNERSHIP_REF;
                  consume(p);
+                 if (peek(p, 0)->type == QUESTION_MARK_T) {
+                     consume(p);
+                     retNullable = true;
+                 }
              }
 
              //primitive types or void
+             char* extern_ret_type_name = NULL;
              if(peek(p, 0)->type == VOID_KEYWORD_T) {
                  consume(p);
                  retType = VOID_KEYWORD_T;
              } else {
                  Token* retTok = consume(p);
                  retType = retTok->type; //assumption: its a type keyword
+                 // Capture the struct name when the return type is a
+                 // user-declared struct (VAR_T). Without this, downstream
+                 // FIELD_ACCESS_E on the call result fails with
+                 // "unknown struct type '(unnamed)'" because retTypeName
+                 // was hardcoded to NULL.
+                 if (retType == VAR_T && retTok->value) {
+                     extern_ret_type_name = (char*)retTok->value;
+                 }
              }
 
-             //postfix nullable marker: `: ptr?` (and also `: own ptr?`)
+             // Reject any leftover postfix `?` -- it's no longer the
+             // canonical syntax. `ref? T` / `own? T` is the only spelling.
              if (peek(p, 0)->type == QUESTION_MARK_T) {
-                 consume(p);
-                 retNullable = true;
+                 stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 0)),
+                     "nullable '?' goes BEFORE the type, glued to 'own' or "
+                     "'ref' (write 'ref? T' / 'own? T', not 'T?' / 'ref T?')");
              }
 
              expect(p, SEMICOLON_T);
@@ -545,10 +905,19 @@ ExternBlock* parseExternBlock(Parser* p) {
              sign->parameters = params;
              sign->paramNum = paramCount;
              sign->retType = retType;
-             sign->retTypeName = NULL;
+             sign->retTypeName = extern_ret_type_name;
              sign->retOwnership = retOwn;
              sign->isExtern = true; //iMPORTANT
              sign->retNullable = retNullable;
+             // Extern decls don't carry OOP metadata, but the analyzer
+             // unconditionally reads is_private/is_static/owner_struct on
+             // every FuncSign during overload resolution. Leaving them
+             // uninitialized makes the private-method check at the
+             // FUNC_CALL_E callsite dereference a garbage owner_struct
+             // pointer (silent crash on the first extern call). Zero them.
+             sign->is_private  = false;
+             sign->is_static   = false;
+             sign->owner_struct = NULL;
 
              if(block->count >= block->capacity) {
                  block->capacity *= 2;
@@ -572,6 +941,36 @@ Expr* parseExpr(Parser* p) {
         Token* op = consume(p);
         Expr* right = parseAnd(p);
         e = makeBinOp(TOK_LOC(op), e, op->type, right);
+    }
+    // Pipeline operator. Lowest precedence; binds left-to-right so
+    // `x |> f |> g` reads as `g(f(x))`. The RHS is parsed at the
+    // same precedence level so chained pipelines work, then we
+    // either inject the LHS as the first arg of an existing call
+    // (`x |> f(1, 2)` -> `f(x, 1, 2)`) or wrap a bare function name
+    // into a 1-arg call (`x |> f` -> `f(x)`).
+    while (peek(p, 0)->type == PIPE_T) {
+        Token* tok = consume(p);
+        Expr*  rhs = parseAnd(p);
+        if (rhs && rhs->type == FUNC_CALL_E) {
+            const int   old_n = rhs->as.func_call.count;
+            Expr** args       = malloc(sizeof(Expr*) * (old_n + 1));
+            args[0] = e;
+            for (int i = 0; i < old_n; ++i) args[i + 1] = rhs->as.func_call.params[i];
+            free(rhs->as.func_call.params);
+            rhs->as.func_call.params = args;
+            rhs->as.func_call.count  = old_n + 1;
+            e = rhs;
+        } else if (rhs && rhs->type == VAR_E) {
+            // Bare function reference: `x |> f` -> `f(x)`.
+            char* fn_name = strdup(rhs->as.var.name);
+            Expr** args   = malloc(sizeof(Expr*));
+            args[0]       = e;
+            e = makeFuncCall(TOK_LOC(tok), fn_name, args, 1);
+        } else {
+            stage_error(STAGE_PARSER, TOK_LOC(tok),
+                "RHS of |> must be a function call or function name");
+            e = rhs;   // recover with whatever we parsed
+        }
     }
     return e;
 }
@@ -676,6 +1075,56 @@ Expr* parseFactor(Parser* p) {
             // a less-than comparison and we fall through to the normal
             // primary handler below.
             char* call_name = (char*)t->value;
+
+            // Built-in pseudo-functions: sizeof(T) and addr_of(x). Both
+            // look like calls but expand to C operators in codegen.
+            // Intercept here -- before the template / generic call paths
+            // -- so a user can't accidentally shadow them with their own
+            // `def sizeof(...)`.
+            if (strcmp(call_name, "sizeof") == 0 && peek(p, 0)->type == L_PAREN_T) {
+                expect(p, L_PAREN_T);
+                Token* op = peek(p, 0);
+                Expr* sz = malloc(sizeof(Expr));
+                memset(sz, 0, sizeof(Expr));
+                sz->type = SIZEOF_E;
+                sz->loc  = TOK_LOC(t);
+                // Accept any primitive type keyword OR a VAR_T struct name.
+                switch (op->type) {
+                    case INT_KEYWORD_T: case USIZE_KEYWORD_T:
+                    case BOOL_KEYWORD_T: case CHAR_KEYWORD_T: case STR_KEYWORD_T:
+                    case FLOAT_KEYWORD_T: case DOUBLE_KEYWORD_T:
+                    case PTR_KEYWORD_T:
+                        sz->as.sizeof_op.operand_type = op->type;
+                        sz->as.sizeof_op.operand_type_name = NULL;
+                        consume(p);
+                        break;
+                    case VAR_T:
+                        sz->as.sizeof_op.operand_type = VAR_T;
+                        sz->as.sizeof_op.operand_type_name = strdup((char*)op->value);
+                        consume(p);
+                        break;
+                    default:
+                        stage_fatal(STAGE_PARSER, TOK_LOC(op),
+                            "sizeof expects a type (int, float, MyStruct, ...) "
+                            "got %s", token_type_name(op->type));
+                        break;
+                }
+                expect(p, R_PAREN_T);
+                base = sz;
+                goto var_after_call;
+            }
+            if (strcmp(call_name, "addr_of") == 0 && peek(p, 0)->type == L_PAREN_T) {
+                expect(p, L_PAREN_T);
+                Expr* inner = parseExpr(p);
+                expect(p, R_PAREN_T);
+                Expr* ao = malloc(sizeof(Expr));
+                memset(ao, 0, sizeof(Expr));
+                ao->type = ADDR_OF_E;
+                ao->loc  = TOK_LOC(t);
+                ao->as.addr_of.target = inner;
+                base = ao;
+                goto var_after_call;
+            }
             if (peek(p, 0)->type == LESS_T && looks_like_type_args(p, /*follow_paren_required=*/true)) {
                 TypeArgList* args_list = parseTypeArgs(p);
                 char* mangled = tpl_mangle(call_name, args_list);
@@ -700,6 +1149,50 @@ Expr* parseFactor(Parser* p) {
                 }
                 expect(p, R_PAREN_T);
                 base = makeFuncCall(TOK_LOC(t), call_name, args, count);
+            } else if (p->pos + 2 < p->count &&
+                       peek(p, 0)->type == L_BRACE_T &&
+                       peek(p, 1)->type == VAR_T &&
+                       peek(p, 2)->type == COLON_T) {
+                // Named struct literal: `Name{ field: expr, field: expr }`.
+                // The 3-token lookahead `{ IDENT :` disambiguates from the
+                // statement-block `{` that follows `if`/`while`/`for`/
+                // function bodies (those open with a stmt, not `IDENT:`).
+                consume(p);   // L_BRACE
+                int cap = 4, n = 0;
+                char** names  = malloc(sizeof(char*)  * cap);
+                Expr** values = malloc(sizeof(Expr*)  * cap);
+                while (peek(p, 0)->type != R_BRACE_T) {
+                    if (n > 0) expect(p, COMMA_T);
+                    if (peek(p, 0)->type != VAR_T) {
+                        stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 0)),
+                            "expected field name in struct literal '%s{...}'",
+                            call_name);
+                    }
+                    Token* fname = consume(p);
+                    expect(p, COLON_T);
+                    Expr* fval = parseExpr(p);
+                    if (n >= cap) {
+                        cap *= 2;
+                        names  = realloc(names,  sizeof(char*) * cap);
+                        values = realloc(values, sizeof(Expr*) * cap);
+                    }
+                    names[n]  = (char*)fname->value;
+                    values[n] = fval;
+                    ++n;
+                }
+                expect(p, R_BRACE_T);
+                Expr* sl = malloc(sizeof(Expr));
+                sl->type                       = STRUCT_LIT_E;
+                sl->loc                        = TOK_LOC(t);
+                sl->is_nullable                = false;
+                sl->analyzedType               = VAR_T;
+                sl->analyzed_type_name         = NULL;
+                sl->analyzed_fn_sig            = NULL;
+                sl->as.struct_lit.type_name    = call_name;
+                sl->as.struct_lit.field_names  = names;
+                sl->as.struct_lit.field_values = values;
+                sl->as.struct_lit.field_count  = n;
+                base = sl;
             } else if (peek(p, 0)->type == L_BRACKET_T) {
                 consume(p);
                 Expr* e = parseExpr(p);
@@ -719,6 +1212,7 @@ Expr* parseFactor(Parser* p) {
             //                         and falls back to field-call if not.
             //                         v1 prefers UFCS unconditionally.)
             //   - `.IDENT`         -> regular field access node.
+        var_after_call:
             while (peek(p, 0)->type == DOT_T) {
                 consume(p);
                 Token* fieldTok = expect(p, VAR_T);
@@ -766,6 +1260,7 @@ Expr* parseFactor(Parser* p) {
                 fa->as.field_access.field_name      = (char*)fieldTok->value;
                 fa->as.field_access.field_type      = VOID_KEYWORD_T;
                 fa->as.field_access.field_type_name = NULL;
+                fa->as.field_access.target_is_ptr   = false;
                 base = fa;
             }
             return base;
@@ -1090,6 +1585,19 @@ Program* parseProgram(Parser* p) {
             StructDecl* sd = parseStructDecl(p);
             sd->attrs = pending_attrs;
             prog->structs[prog->struct_count++] = sd;
+            // Drain inline methods into the program's function list.
+            // The functions were synthesized with mangled names like
+            // "<StructName><MethodName>" so the existing UFCS dispatch
+            // (`inst.method(args)` -> `<TypeName>method(inst, args)`)
+            // finds them with no analyzer changes.
+            for (int mi = 0; mi < sd->method_count; ++mi) {
+                if (prog->func_count >= func_cap) {
+                    func_cap = func_cap ? func_cap * 2 : 4;
+                    prog->functions = realloc(prog->functions,
+                                              sizeof(Func*) * func_cap);
+                }
+                prog->functions[prog->func_count++] = sd->methods[mi];
+            }
         } else if (peek(p, 0)->type == DEF_KEYWORD_T) {
             if (prog->func_count >= func_cap) {
                 func_cap *= 2;
@@ -1163,6 +1671,31 @@ Stmt* parseStatement(Parser* p) {
 
     bool isConst = false;
     switch (t->type) {
+        case DEFER_T: {
+            consume(p);
+            Stmt* d = malloc(sizeof(Stmt));
+            d->type = DEFER_S;
+            d->loc  = TOK_LOC(t);
+            // `defer { ... }` parses a block; `defer foo();` parses
+            // a single statement. Both compile to a code chunk that
+            // runs at function exit.
+            if (peek(p, 0)->type == L_BRACE_T) {
+                d->as.defer_stmt.body = parseBlock(p);
+            } else {
+                d->as.defer_stmt.body = parseStatement(p);
+            }
+            return d;
+        }
+        case UNSAFE_T: {
+            // `unsafe { ... }` parses to a regular block. Today it
+            // carries no semantic change -- raw pointer arithmetic
+            // and casts are already permitted at all sites. The
+            // keyword exists so reviewers can grep for the suspect
+            // areas; once an analyzer-side restriction lands the
+            // tag will gate it without touching call sites.
+            consume(p);
+            return parseBlock(p);
+        }
         case CONST_T: {
             consume(p);
             isConst = true;
@@ -1232,7 +1765,14 @@ Stmt* parseStatement(Parser* p) {
                         if (mangled) typeName = mangled;
                     }
                 }
-
+                // Postfix `?` after the type also marks the variable as
+                // nullable -- equivalent to `ref? T` / `own? T`. Both
+                // forms accepted; the prefix form pairs more naturally
+                // with `ref`/`own`, the postfix form is shorter.
+                if (peek(p, 0)->type == QUESTION_MARK_T) {
+                    consume(p);
+                    isNullable = true;
+                }
                 Expr *e = NULL;
                 if (peek(p, 0)->type == EQUALS_T) {
                     consume(p);
@@ -1351,9 +1891,10 @@ Stmt* parseStatement(Parser* p) {
 
                     s->type = FIELD_ASSIGN_S;
                     s->loc = TOK_LOC(startTok);
-                    s->as.field_assign.target     = lhs->as.field_access.target;
-                    s->as.field_assign.field_name = lhs->as.field_access.field_name;
-                    s->as.field_assign.value      = value;
+                    s->as.field_assign.target        = lhs->as.field_access.target;
+                    s->as.field_assign.field_name    = lhs->as.field_access.field_name;
+                    s->as.field_assign.value         = value;
+                    s->as.field_assign.target_is_ptr = false;
                 } else {
                     // Bare expression like `p.x;` — keep as expression stmt.
                     expect(p, SEMICOLON_T);
@@ -1398,6 +1939,67 @@ Stmt* parseStatement(Parser* p) {
                 s->type = EXPR_STMT_S;
                 s->loc = e->loc;  //use expressions location
                 s->as.expr_stmt = e;
+            } else if (peek(p, 1)->type == LESS_T) {
+                // Template at statement start. Parses through parseExpr so
+                // both forms work uniformly:
+                //   1. Bare template call:        `Each<Velocity>(tick);`
+                //   2. Template call followed by
+                //      a field-write / compound:  `Singleton<GameManager>().score++;`
+                //                                  `Singleton<GM>().score = 0;`
+                //                                  `Singleton<GM>().score += 1;`
+                //
+                // The parsed expression's shape tells us which path:
+                //   FUNC_CALL_E           -> plain expression statement
+                //   FIELD_ACCESS_E + '='/compound  -> FIELD_ASSIGN_S
+                // Anything else with a `<` start really IS a comparison
+                // (`a < b;`) and gets the diagnostic.
+                int saved_pos = p->pos;
+                Token* startTok = peek(p, 0);
+                Expr* e = parseExpr(p);
+                if (e && e->type == FUNC_CALL_E) {
+                    expect(p, SEMICOLON_T);
+                    s->type = EXPR_STMT_S;
+                    s->loc = e->loc;
+                    s->as.expr_stmt = e;
+                } else if (e && e->type == FIELD_ACCESS_E &&
+                           (peek(p, 0)->type == EQUALS_T ||
+                            is_compound_assign_tok(peek(p, 0)->type))) {
+                    // Same shape as the dedicated DOT_T field-assign branch
+                    // above, just rooted at a template-call result instead
+                    // of a bare variable.
+                    Token* opTok = consume(p);
+                    Expr* value;
+                    if (opTok->type == EQUALS_T) {
+                        value = parseExpr(p);
+                    } else {
+                        SourceLocation oloc = TOK_LOC(opTok);
+                        TokenType base = compound_op_base(opTok->type);
+                        Expr* rhs;
+                        if (opTok->type == PLUS_PLUS_T ||
+                            opTok->type == MINUS_MINUS_T) {
+                            rhs = makeIntLit(oloc, 1);
+                        } else {
+                            rhs = parseExpr(p);
+                        }
+                        value = makeBinOp(oloc, e, base, rhs);
+                    }
+                    expect(p, SEMICOLON_T);
+                    s->type = FIELD_ASSIGN_S;
+                    s->loc  = TOK_LOC(startTok);
+                    s->as.field_assign.target        = e->as.field_access.target;
+                    s->as.field_assign.field_name    = e->as.field_access.field_name;
+                    s->as.field_assign.value         = value;
+                    s->as.field_assign.target_is_ptr = false;
+                } else {
+                    // Wasn't actually a template call — restore the
+                    // cursor and fall through to the "unexpected token"
+                    // diagnostic, which is the right error for a bare
+                    // comparison expression at statement level.
+                    p->pos = saved_pos;
+                    stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 1)),
+                        "Unexpected token after variable: %s",
+                        token_type_name(peek(p, 1)->type));
+                }
             } else if (peek(p, 1)->type == R_BRACKET_T); //for = T[expr];
             else stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 1)), "Unexpected token after variable: %s", token_type_name(peek(p, 1)->type));
             return s;
@@ -1462,6 +2064,17 @@ Stmt* parseStatement(Parser* p) {
             expect(p, TO_T);
             Expr* maxE = parseExpr(p);
             expect(p, R_PAREN_T);
+
+            // Optional `as <label>` between the loop control and the
+            // body. Lets a nested loop break out of an outer level by
+            // name: `for(i: 0 to n) as outer { ... break outer; ... }`.
+            char* label = NULL;
+            if (peek(p, 0)->type == AS_T) {
+                consume(p);
+                Token* labTok = expect(p, VAR_T);
+                label = strdup((const char*)labTok->value);
+            }
+
             Stmt* b = parseBlock(p);
 
             s->type = FOR_S;
@@ -1470,6 +2083,35 @@ Stmt* parseStatement(Parser* p) {
             s->as.for_stmt.min = minE;
             s->as.for_stmt.max = maxE;
             s->as.for_stmt.body = b;
+            s->as.for_stmt.label = label;
+            return s;
+        }
+        case BREAK_T: {
+            Token* tk = consume(p);
+            Stmt* s = malloc(sizeof(Stmt));
+            s->type = BREAK_S;
+            s->loc  = TOK_LOC(tk);
+            s->as.break_stmt.label = NULL;
+            if (peek(p, 0)->type == VAR_T) {
+                s->as.break_stmt.label =
+                    strdup((const char*)consume(p)->value);
+            }
+            // Optional trailing semicolon -- accept either with or
+            // without to match Lync's lenient statement terminators.
+            if (peek(p, 0)->type == SEMICOLON_T) consume(p);
+            return s;
+        }
+        case CONTINUE_T: {
+            Token* tk = consume(p);
+            Stmt* s = malloc(sizeof(Stmt));
+            s->type = CONTINUE_S;
+            s->loc  = TOK_LOC(tk);
+            s->as.continue_stmt.label = NULL;
+            if (peek(p, 0)->type == VAR_T) {
+                s->as.continue_stmt.label =
+                    strdup((const char*)consume(p)->value);
+            }
+            if (peek(p, 0)->type == SEMICOLON_T) consume(p);
             return s;
         }
         case MATCH_T: {
@@ -1485,20 +2127,31 @@ Stmt* parseStatement(Parser* p) {
             while (peek(p, 0)->type != R_BRACE_T) {
                 Pattern* pattern = parsePattern(p);
                 expect(p, COLON_T);
-                expect(p, L_BRACE_T);
 
                 int stmtCount = 0;
                 int stmtsSize = 2;
                 branches[bCount].stmts = malloc(sizeof(Stmt*) * 2);
-                while (peek(p, 0)->type != R_BRACE_T) {
-                    branches[bCount].stmts[stmtCount++] = parseStatement(p);
 
-                    if(stmtCount >= stmtsSize) {
-                        stmtsSize *= 2;
-                        branches = realloc(branches, sizeof(MatchBranchStmt) * bSize);
+                if (peek(p, 0)->type == L_BRACE_T) {
+                    // Block form: `pattern: { stmt; stmt; ... }` -- run
+                    // every statement up to the matching brace.
+                    consume(p);  // L_BRACE
+                    while (peek(p, 0)->type != R_BRACE_T) {
+                        branches[bCount].stmts[stmtCount++] = parseStatement(p);
+                        if (stmtCount >= stmtsSize) {
+                            stmtsSize *= 2;
+                            branches[bCount].stmts = realloc(
+                                branches[bCount].stmts,
+                                sizeof(Stmt*) * stmtsSize);
+                        }
                     }
+                    expect(p, R_BRACE_T);
+                } else {
+                    // Single-statement form: `pattern: stmt;`. Friendlier
+                    // for short arms (`some(p): foo(p);`). parseStatement
+                    // consumes the trailing `;` itself.
+                    branches[bCount].stmts[stmtCount++] = parseStatement(p);
                 }
-                expect(p, R_BRACE_T);
 
                 branches[bCount].pattern = pattern;
                 branches[bCount++].stmtCount = stmtCount;
@@ -1522,10 +2175,24 @@ Stmt* parseStatement(Parser* p) {
         case FREE_T: {
             Token* freeTok = consume(p);
             Token* var = expect(p, VAR_T);
+            // Accept a single-level field-access path: `free l.items;`.
+            // Stored as the dotted string "l.items"; the analyzer
+            // splits on '.' to look up the symbol and verify the
+            // field's ownership. Multi-level chains (`a.b.c`) come
+            // later if anyone hits that case.
+            char namebuf[256];
+            int  off = (int)snprintf(namebuf, sizeof(namebuf), "%s",
+                                      (char*)var->value);
+            if (peek(p, 0)->type == DOT_T) {
+                consume(p);
+                Token* field = expect(p, VAR_T);
+                off += snprintf(namebuf + off, sizeof(namebuf) - off,
+                                ".%s", (char*)field->value);
+            }
             Stmt* s = malloc(sizeof(Stmt));
             s->type = FREE_S;
             s->loc = TOK_LOC(freeTok);
-            s->as.free_stmt.varName = var->value;
+            s->as.free_stmt.varName = strdup(namebuf);
             expect(p, SEMICOLON_T);
             return s;
         }
@@ -1601,8 +2268,17 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
             o = OWNERSHIP_REF;
         }
 
+        // Nullable marker glues to the ownership keyword: `ref? T` / `own? T`.
+        // Bare `T?` (no ref/own) is rejected because non-pointers can't be
+        // null. Postfix after the type is rejected too -- exactly one
+        // spelling.
         bool isNullable = false;
         if(peek(p, 0)->type == QUESTION_MARK_T) {
+            if (o == OWNERSHIP_NONE) {
+                stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 0)),
+                    "nullable '?' requires 'own' or 'ref' prefix "
+                    "(write 'ref? T' / 'own? T')");
+            }
             consume(p);
             isNullable = true;
         }
@@ -1626,6 +2302,13 @@ FuncParam* parseFuncParams(Parser* p, int* count) {
                 char* mangled = maybe_consume_type_args_as_struct(p, fp.type_name, TOK_LOC(type));
                 if (mangled) fp.type_name = mangled;
             }
+        }
+
+        // Reject postfix `?` after the type -- canonical form is `ref? T`.
+        if (peek(p, 0)->type == QUESTION_MARK_T) {
+            stage_fatal(STAGE_PARSER, TOK_LOC(peek(p, 0)),
+                "nullable '?' goes BEFORE the type, glued to 'own' or 'ref' "
+                "(write 'ref? T' / 'own? T', not 'T?' / 'ref T?')");
         }
 
         fps = realloc(fps, sizeof(FuncParam) * (counter + 1));
@@ -1810,8 +2493,14 @@ Func* makeFunc(char* name, FuncParam* params, int paramCount, TokenType ret, Own
     f->signature->retTypeName = NULL;   // struct-return support is a future turn
     f->signature->retOwnership = retOwnership;
     f->signature->isExtern = false;   // user functions are never extern (was uninit)
-    f->signature->retNullable = false;
+    f->signature->retNullable  = false;
+    f->signature->is_private   = false;
+    f->signature->is_static    = false;
+    f->signature->owner_struct = NULL;
     f->type_params = NULL;
+    f->is_private  = false;
+    f->owner_struct = NULL;
+    f->is_static    = false;
     return f;
 }
 bool check_func_sign(FuncSign* a, FuncSign* b) {

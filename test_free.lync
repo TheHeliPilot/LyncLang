@@ -1,0 +1,22 @@
+extern <stdlib.h> {
+    def malloc(n: usize): own ptr;
+}
+
+MyBuf: struct {
+    items: ptr,
+    cap: int
+}
+
+def main(): int {
+    // Bare-identifier free still works.
+    p: own ptr = malloc(64);
+    free p;
+
+    // Field-access free compiles. (Buffer leaks because struct field
+    // can't carry `own` yet, but the syntax is accepted.)
+    b: MyBuf;
+    b.items = malloc(64);
+    b.cap = 0;
+    free b.items;
+    return 0;
+}

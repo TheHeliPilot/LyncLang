@@ -68,6 +68,11 @@ typedef enum {
 
     //type keywords
     INT_KEYWORD_T,
+    USIZE_KEYWORD_T,        // unsigned size; emits as C `size_t`. Use in extern
+                            // decls for any libc fn that takes a size_t (malloc,
+                            // realloc, snprintf size, memcpy length) -- the
+                            // plain `int` mismatch is what blocks std.list /
+                            // std.string from compiling cleanly on 64-bit.
     BOOL_KEYWORD_T,
     STR_KEYWORD_T,
     CHAR_KEYWORD_T,
@@ -95,6 +100,15 @@ typedef enum {
     //other
 
     CONST_T,
+    PRIVATE_T,
+    PUBLIC_T,
+    STATIC_T,
+    DEFER_T,
+    PIPE_T,             // |>  (function pipeline)
+    UNSAFE_T,           // unsafe { ... }
+    BREAK_T,
+    CONTINUE_T,
+    AS_T,               // for ... as <label>; break <label>; continue <label>
     DOUBLE_SLASH_T,
     COMMENT_L_T,
     COMMENT_R_T,

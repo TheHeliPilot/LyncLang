@@ -1,90 +1,78 @@
 // =============================================================================
 // std.math — Math primitives for the Lync standard library.
 //
-// Provides generic min/max/clamp/abs/lerp helpers and libc-backed float math.
-// Constants are exposed as zero-argument functions.
+// Provides generic Min/Max/Clamp/Abs/Lerp helpers and PascalCase wrappers
+// over libc float math. Constants are exposed as zero-argument functions
+// (Lync has no top-level const declarations).
 //
-// Import entire module:   using std.math.*;
-// Import single binding:  using std.math.sqrt;
+// Import entire module:   include std.math.*;
+// Import single binding:  include std.math.Sqrt;
 // =============================================================================
 
-// ---------------------------------------------------------------------------
-// libc wrappers (float arithmetic via <math.h>)
-// ---------------------------------------------------------------------------
-
+// libc wrappers (lowercase to match the linker symbols). We expose the
+// `double` overloads from <math.h> so plain `2.0` literals (which are
+// double in Lync) work without explicit narrowing.
 extern <math.h> {
-    // Square root of x.
-    def sqrt(x: float): float;
-
-    // Largest integer value not greater than x.
-    def floor(x: float): float;
-
-    // Smallest integer value not less than x.
-    def ceil(x: float): float;
-
-    // x raised to the power y.
-    def pow(x: float, y: float): float;
-
-    // Sine of x (radians).
-    def sin(x: float): float;
-
-    // Cosine of x (radians).
-    def cos(x: float): float;
+    def sqrt(x: double): double;
+    def floor(x: double): double;
+    def ceil(x: double): double;
+    def pow(x: double, y: double): double;
+    def sin(x: double): double;
+    def cos(x: double): double;
+    def sqrtf(x: float): float;
+    def sinf(x: float): float;
+    def cosf(x: float): float;
 }
 
+// PascalCase public wrappers. Each name has a `double` and a `float`
+// overload; the analyzer picks based on argument types and the codegen
+// mangles them to distinct C symbols (Sqrt_double_double vs
+// Sqrt_float_float). Plain literal arithmetic (`Sqrt(16.0)`) hits the
+// double form; engine math that stays in 32-bit (`Sqrt(v.x)` where
+// v.x is float) hits the float form.
+def Sqrt(x: double): double         { return sqrt(x); }
+def Sqrt(x: float):  float          { return sqrtf(x); }
+def Floor(x: double): double        { return floor(x); }
+def Ceil(x: double):  double        { return ceil(x); }
+def Pow(x: double, y: double): double { return pow(x, y); }
+def Sin(x: double):  double         { return sin(x); }
+def Sin(x: float):   float          { return sinf(x); }
+def Cos(x: double):  double         { return cos(x); }
+def Cos(x: float):   float          { return cosf(x); }
+
 // ---------------------------------------------------------------------------
-// Constants (returned as functions; Lync has no top-level const declarations)
+// Constants
 // ---------------------------------------------------------------------------
 
-// Ratio of a circle's circumference to its diameter (~3.14159265358979).
-def pi(): float { return 3.14159265358979; }
-
-// Base of the natural logarithm (~2.71828182845905).
-def e(): float { return 2.71828182845905; }
-
-// Positive infinity (IEEE 754 float).
-def inf(): float { return 1.0 / 0.0; }
+def Pi():  float { return 3.14159265358979; }
+def E():   float { return 2.71828182845905; }
+def Inf(): float { return 1.0 / 0.0; }
 
 // ---------------------------------------------------------------------------
 // Generic helpers (duck-typed, monomorphised at compile time)
 // ---------------------------------------------------------------------------
 
-// Returns the smaller of a and b.
-def min<T>(a: T, b: T): T {
-    if (a < b) {
-        return a;
-    }
+def Min<T>(a: T, b: T): T {
+    if (a < b) { return a; }
     return b;
 }
 
-// Returns the larger of a and b.
-def max<T>(a: T, b: T): T {
-    if (a > b) {
-        return a;
-    }
+def Max<T>(a: T, b: T): T {
+    if (a > b) { return a; }
     return b;
 }
 
-// Clamps v to the inclusive range [lo, hi].
-def clamp<T>(v: T, lo: T, hi: T): T {
-    if (v < lo) {
-        return lo;
-    }
-    if (v > hi) {
-        return hi;
-    }
+def Clamp<T>(v: T, lo: T, hi: T): T {
+    if (v < lo) { return lo; }
+    if (v > hi) { return hi; }
     return v;
 }
 
-// Returns the absolute value of v.
-def abs<T>(v: T): T {
-    if (v < 0) {
-        return 0 - v;
-    }
+def Abs<T>(v: T): T {
+    if (v < 0) { return 0 - v; }
     return v;
 }
 
-// Linear interpolation: a + (b - a) * t.  t is always float.
-def lerp<T>(a: T, b: T, t: float): T {
+def Lerp<T>(a: T, b: T, t: float): T {
     return a + (b - a) * t;
 }

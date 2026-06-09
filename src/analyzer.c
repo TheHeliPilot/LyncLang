@@ -5,6 +5,11 @@
 //forward declaration
 void check_function_cleanup(Scope* scope);
 
+// Set by analyze_program for the duration of one analysis pass so the
+// function-call analyzer can queue + drain template instantiations
+// during UFCS method dispatch (e.g. `xs.Push(7)` -> ListPush<int>).
+static Program* g_analyzer_program = NULL;
+
 // Implicit numeric conversions follow C#'s "widening only" rule:
 //   char -> int -> float -> double
 // Going wider (lower rank to higher) is implicit. Going narrower
@@ -15,6 +20,11 @@ static int type_rank(TokenType t) {
     switch (t) {
         case CHAR_KEYWORD_T:   return 1;
         case INT_KEYWORD_T:    return 2;
+        // usize lives at rank 2 too -- same width on 64-bit platforms,
+        // implicit conversion both ways. Loses sign safety in theory; in
+        // practice every Lync int is positive at the call sites that care
+        // (lengths, counts, sizeof).
+        case USIZE_KEYWORD_T:  return 2;
         case FLOAT_KEYWORD_T:  return 3;
         case DOUBLE_KEYWORD_T: return 4;
         default:               return 0;   // not numeric
@@ -22,6 +32,12 @@ static int type_rank(TokenType t) {
 }
 static bool numeric_compatible(TokenType to, TokenType from) {
     if (to == from) return true;
+    // Function references decay to plain pointers, mirroring C's implicit
+    // function-to-pointer conversion. This is what makes
+    //   Each<Velocity>(tick);
+    // compile when `tick` is a `def` — the host's `Each<T>(cb: ptr)` slot
+    // accepts the function reference without an explicit cast.
+    if (to == PTR_KEYWORD_T && from == FN_T) return true;
     const int rt = type_rank(to);
     const int rf = type_rank(from);
     if (rt == 0 || rf == 0) return false;   // either side not numeric
@@ -353,10 +369,105 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 result = INT_KEYWORD_T;
                 break;
             }
+            // Visibility check. Private fields are only readable from
+            // inside the struct's own methods (functions whose first
+            // param has matching type -- which is exactly how the
+            // inline-method desugar names them).
+            if (fld->is_private) {
+                bool inside_method = false;
+                if (currentFunc &&
+                    currentFunc->paramNum > 0 &&
+                    currentFunc->parameters[0].type == VAR_T &&
+                    currentFunc->parameters[0].type_name &&
+                    strcmp(currentFunc->parameters[0].type_name,
+                           sd->name) == 0) {
+                    inside_method = true;
+                }
+                if (!inside_method) {
+                    stage_error(STAGE_ANALYZER, e->loc,
+                        "field '%s' on struct '%s' is private",
+                        fld->name, sd->name);
+                }
+            }
             e->as.field_access.field_type      = fld->type;
             e->as.field_access.field_type_name = fld->type_name;
             e->analyzed_type_name              = fld->type_name;
+            // Mark target_is_ptr when the target's source is a nullable
+            // VAR_T binding -- the C ABI has it as a pointer. Inside an
+            // unwrap (`some(p): p.field`) the analyzer cleared
+            // `is_unwrapped` but the underlying storage is still a
+            // pointer, so codegen must emit `->`.
+            if (e->as.field_access.target->type == VAR_E) {
+                Symbol* tsym = lookup(scope,
+                    e->as.field_access.target->as.var.name);
+                if (tsym && tsym->type == VAR_T &&
+                    (tsym->is_nullable ||
+                     tsym->ownership == OWNERSHIP_OWN ||
+                     tsym->ownership == OWNERSHIP_REF)) {
+                    e->as.field_access.target_is_ptr = true;
+                }
+            } else if (e->as.field_access.target->type == FUNC_CALL_E) {
+                // Field access on a function-call result: the result is a
+                // pointer when the callee returns either a nullable VAR_T
+                // (`def f(): T?`) or an owned/borrowed VAR_T (`def f(): own T`,
+                // `def f(): ref T`). Mirrors the FIELD_ASSIGN_S branch below.
+                FuncSign* rs = e->as.field_access.target->as.func_call.resolved_sign;
+                if (rs && rs->retType == VAR_T &&
+                    (rs->retNullable ||
+                     rs->retOwnership == OWNERSHIP_OWN ||
+                     rs->retOwnership == OWNERSHIP_REF)) {
+                    e->as.field_access.target_is_ptr = true;
+                }
+            }
             result = fld->type;
+            break;
+        }
+
+        case STRUCT_LIT_E: {
+            // `Name { field: expr, ... }`. Validate the named struct exists,
+            // every supplied field is a real field of that struct, and each
+            // value's type matches the field type. Missing fields are
+            // implicitly zero-initialised by the codegen path (designated
+            // initializer leaves them at 0 / NULL).
+            const char* tname = e->as.struct_lit.type_name;
+            StructDecl* sd = lookup_struct(g_struct_table, tname);
+            if (!sd) {
+                stage_error(STAGE_ANALYZER, e->loc,
+                            "unknown struct type '%s' in struct literal",
+                            tname ? tname : "(unnamed)");
+                result = VOID_KEYWORD_T;
+                break;
+            }
+            for (int fi = 0; fi < e->as.struct_lit.field_count; ++fi) {
+                const char* fname = e->as.struct_lit.field_names[fi];
+                StructField* fld  = lookup_field(sd, fname);
+                if (!fld) {
+                    stage_error(STAGE_ANALYZER, e->as.struct_lit.field_values[fi]->loc,
+                                "struct '%s' has no field '%s'",
+                                sd->name, fname);
+                    continue;
+                }
+                TokenType vt = analyze_expr(scope, funcTable,
+                                             e->as.struct_lit.field_values[fi],
+                                             currentFunc);
+                // Same loose-int-to-float / int-to-char relax the analyzer
+                // applies elsewhere. Strict mismatch is an error; widening
+                // is silent.
+                if (vt != fld->type &&
+                    !(fld->type == FLOAT_KEYWORD_T  && vt == INT_KEYWORD_T) &&
+                    !(fld->type == DOUBLE_KEYWORD_T && vt == INT_KEYWORD_T) &&
+                    !(fld->type == DOUBLE_KEYWORD_T && vt == FLOAT_KEYWORD_T) &&
+                    !(fld->type == CHAR_KEYWORD_T   && vt == INT_KEYWORD_T)) {
+                    stage_error(STAGE_ANALYZER,
+                                e->as.struct_lit.field_values[fi]->loc,
+                                "field '%s.%s' expects '%s', got '%s'",
+                                sd->name, fname,
+                                token_type_name(fld->type),
+                                token_type_name(vt));
+                }
+            }
+            e->analyzed_type_name = sd->name;
+            result = VAR_T;
             break;
         }
 
@@ -409,6 +520,42 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             //... (rest of UN_OP_E remains unchanged)
             TokenType operand = analyze_expr(scope, funcTable, e->as.un_op.expr, currentFunc);
 
+            // Unary op overload: `def -()` or `def !()` on the operand's
+            // struct type. Same rewrite trick as binary -- transform the
+            // UN_OP into a FUNC_CALL of `<TypeName>op_neg(x)` /
+            // `<TypeName>op_not(x)`. Codegen sees a regular call.
+            if (operand == VAR_T && e->as.un_op.expr->analyzed_type_name) {
+                const char* opname = NULL;
+                if (e->as.un_op.op == MINUS_T)         opname = "op_neg";
+                else if (e->as.un_op.op == NEGATION_T) opname = "op_not";
+                if (opname) {
+                    char fn_name[256];
+                    snprintf(fn_name, sizeof(fn_name), "%s%s",
+                             e->as.un_op.expr->analyzed_type_name, opname);
+                    FuncSign* matched = NULL;
+                    for (int i = 0; i < funcTable->count; ++i) {
+                        if (strcmp(funcTable->signs[i].name, fn_name) == 0 &&
+                            funcTable->signs[i].paramNum == 1) {
+                            matched = &funcTable->signs[i];
+                            break;
+                        }
+                    }
+                    if (matched) {
+                        Expr* arg = e->as.un_op.expr;
+                        e->type = FUNC_CALL_E;
+                        e->as.func_call.name          = strdup(fn_name);
+                        e->as.func_call.params        = malloc(sizeof(Expr*));
+                        e->as.func_call.params[0]     = arg;
+                        e->as.func_call.count         = 1;
+                        e->as.func_call.resolved_sign = matched;
+                        e->analyzedType               = matched->retType;
+                        e->analyzed_type_name         = matched->retTypeName;
+                        result = matched->retType;
+                        break;
+                    }
+                }
+            }
+
             if (e->as.un_op.op == MINUS_T) {
                 if (operand != INT_KEYWORD_T && operand != FLOAT_KEYWORD_T && operand != DOUBLE_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "unary '-' requires numeric type, got %s", token_type_name(operand));
@@ -426,13 +573,114 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
 
         case BIN_OP_E: {
             TokenType op = e->as.bin_op.op;
+
+            // Pre-flight for `x == null` / `null == x` / `x != null`:
+            // skip the "must be unwrapped" guard on a nullable VAR on
+            // the side that's being compared to null. The whole point
+            // of the comparison IS to test the null-state, so unwrap
+            // isn't required. We do this by temporarily marking the
+            // symbol as unwrapped for the analyze_expr call, restoring
+            // right after.
+            Symbol* unmark = NULL;
+            bool prev_unwrapped = false;
+            if ((op == DOUBLE_EQUALS_T || op == NOT_EQUALS_T) &&
+                ((e->as.bin_op.exprL->type == NULL_LIT_E ||
+                  e->as.bin_op.exprR->type == NULL_LIT_E))) {
+                Expr* nv = (e->as.bin_op.exprL->type == NULL_LIT_E)
+                    ? e->as.bin_op.exprR : e->as.bin_op.exprL;
+                if (nv->type == VAR_E) {
+                    Symbol* s = lookup(scope, nv->as.var.name);
+                    if (s && s->is_nullable && !s->is_unwrapped) {
+                        unmark = s;
+                        prev_unwrapped = s->is_unwrapped;
+                        s->is_unwrapped = true;
+                    }
+                }
+            }
+
             TokenType left = analyze_expr(scope, funcTable, e->as.bin_op.exprL, currentFunc);
             TokenType right = analyze_expr(scope, funcTable, e->as.bin_op.exprR, currentFunc);
+            if (unmark) unmark->is_unwrapped = prev_unwrapped;
 
-            //arithmetic: int/char/float/double
+            // Operator overload dispatch. When both operands are the same
+            // user struct type AND the operator has a matching method
+            // declared via `def +(other: T): R { ... }`, transform the
+            // BIN_OP node in place into a FUNC_CALL_E that calls the
+            // mangled `<TypeName>op_<name>` function. Subsequent stages
+            // see a regular function call and emit it like any other.
+            if (left == VAR_T && right == VAR_T &&
+                e->as.bin_op.exprL->analyzed_type_name &&
+                e->as.bin_op.exprR->analyzed_type_name &&
+                strcmp(e->as.bin_op.exprL->analyzed_type_name,
+                       e->as.bin_op.exprR->analyzed_type_name) == 0)
+            {
+                const char* opname = NULL;
+                switch (op) {
+                    case PLUS_T:          opname = "op_add"; break;
+                    case MINUS_T:         opname = "op_sub"; break;
+                    case STAR_T:          opname = "op_mul"; break;
+                    case SLASH_T:         opname = "op_div"; break;
+                    case PERCENT_T:       opname = "op_mod"; break;
+                    case DOUBLE_EQUALS_T: opname = "op_eq";  break;
+                    case NOT_EQUALS_T:    opname = "op_ne";  break;
+                    case LESS_T:          opname = "op_lt";  break;
+                    case MORE_T:          opname = "op_gt";  break;
+                    case LESS_EQUALS_T:   opname = "op_le";  break;
+                    case MORE_EQUALS_T:   opname = "op_ge";  break;
+                    default: opname = NULL;
+                }
+                if (opname) {
+                    char fn_name[256];
+                    snprintf(fn_name, sizeof(fn_name), "%s%s",
+                             e->as.bin_op.exprL->analyzed_type_name, opname);
+                    FuncSign* matched = NULL;
+                    for (int i = 0; i < funcTable->count; ++i) {
+                        if (strcmp(funcTable->signs[i].name, fn_name) == 0 &&
+                            funcTable->signs[i].paramNum == 2) {
+                            matched = &funcTable->signs[i];
+                            break;
+                        }
+                    }
+                    if (matched) {
+                        // Rewrite the bin_op node into a func_call.
+                        Expr* lhs = e->as.bin_op.exprL;
+                        Expr* rhs = e->as.bin_op.exprR;
+                        e->type = FUNC_CALL_E;
+                        e->as.func_call.name          = strdup(fn_name);
+                        e->as.func_call.params        = malloc(sizeof(Expr*) * 2);
+                        e->as.func_call.params[0]     = lhs;
+                        e->as.func_call.params[1]     = rhs;
+                        e->as.func_call.count         = 2;
+                        e->as.func_call.resolved_sign = matched;
+                        e->analyzedType               = matched->retType;
+                        e->analyzed_type_name         = matched->retTypeName;
+                        result = matched->retType;
+                        break;   // out of the BIN_OP_E switch case
+                    }
+                }
+            }
+
+            //arithmetic: int/usize/char/float/double, plus pointer arithmetic
+            //(ptr +/- int) used by stdlib container code that walks raw heap
+            //buffers (std.list / std.string).
             if (op == PLUS_T || op == MINUS_T || op == STAR_T || op == SLASH_T || op == PERCENT_T) {
-                bool isNumL = (left == INT_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
-                bool isNumR = (right == INT_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
+                bool isNumL = (left == INT_KEYWORD_T || left == USIZE_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
+                bool isNumR = (right == INT_KEYWORD_T || right == USIZE_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
+
+                // Pointer arithmetic short-circuit: ptr + int / int + ptr / ptr - int / ptr - ptr.
+                // The C backend handles these natively, we just have to allow them through here.
+                bool isPtrL = (left == PTR_KEYWORD_T || left == STR_KEYWORD_T);
+                bool isPtrR = (right == PTR_KEYWORD_T || right == STR_KEYWORD_T);
+                if ((op == PLUS_T || op == MINUS_T) && (isPtrL || isPtrR)) {
+                    if (op == PLUS_T && isPtrL && isNumR)        { result = left;  break; }
+                    if (op == PLUS_T && isPtrR && isNumL)        { result = right; break; }
+                    if (op == MINUS_T && isPtrL && isNumR)       { result = left;  break; }
+                    if (op == MINUS_T && isPtrL && isPtrR)       { result = INT_KEYWORD_T; break; }
+                    stage_error(STAGE_ANALYZER, e->loc, "invalid pointer arithmetic: %s %s %s",
+                                token_type_name(left), token_type_name(op), token_type_name(right));
+                    result = PTR_KEYWORD_T;
+                    break;
+                }
 
                 if (!isNumL || !isNumR) {
                      stage_error(STAGE_ANALYZER, e->loc, "operands of '%s' must be numeric, got %s and %s", token_type_name(op), token_type_name(left), token_type_name(right));
@@ -443,6 +691,11 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                         result = DOUBLE_KEYWORD_T;
                     } else if (left == FLOAT_KEYWORD_T || right == FLOAT_KEYWORD_T) {
                         result = FLOAT_KEYWORD_T;
+                    } else if (left == USIZE_KEYWORD_T || right == USIZE_KEYWORD_T) {
+                        // usize "wins" over int for arithmetic on counts/sizes
+                        // -- otherwise `cap * elem_size` (usize * int) demotes
+                        // back to int and re-introduces the size_t conflict.
+                        result = USIZE_KEYWORD_T;
                     } else {
                         result = INT_KEYWORD_T; //char promotes to int
                     }
@@ -450,8 +703,8 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             }
                 //comparison: numeric -> bool
             else if (op == LESS_T || op == MORE_T || op == LESS_EQUALS_T || op == MORE_EQUALS_T) {
-                bool isNumL = (left == INT_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
-                bool isNumR = (right == INT_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
+                bool isNumL = (left == INT_KEYWORD_T || left == USIZE_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
+                bool isNumR = (right == INT_KEYWORD_T || right == USIZE_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
 
                 if (!isNumL || !isNumR) {
                     stage_error(STAGE_ANALYZER, e->loc, "operands of '%s' must be numeric, got %s and %s", token_type_name(op), token_type_name(left), token_type_name(right));
@@ -460,9 +713,24 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             }
                 //equality: same type or numeric -> bool
             else if (op == DOUBLE_EQUALS_T || op == NOT_EQUALS_T) {
-                bool isNumL = (left == INT_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
-                bool isNumR = (right == INT_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
-                
+                bool isNumL = (left == INT_KEYWORD_T || left == USIZE_KEYWORD_T || left == CHAR_KEYWORD_T || left == FLOAT_KEYWORD_T || left == DOUBLE_KEYWORD_T);
+                bool isNumR = (right == INT_KEYWORD_T || right == USIZE_KEYWORD_T || right == CHAR_KEYWORD_T || right == FLOAT_KEYWORD_T || right == DOUBLE_KEYWORD_T);
+
+                // Allow `ptr == null` / `ptr != null`. The literal `null`
+                // analyzes as NULL_LIT_T; in C this compiles to `p == NULL`
+                // which is the canonical null-pointer check.
+                bool isPtrL  = (left  == PTR_KEYWORD_T || left  == STR_KEYWORD_T);
+                bool isPtrR  = (right == PTR_KEYWORD_T || right == STR_KEYWORD_T);
+                bool isNullL = (left  == NULL_LIT_T);
+                bool isNullR = (right == NULL_LIT_T);
+                bool ptr_null_compare =
+                    (isPtrL && isNullR) || (isNullL && isPtrR) ||
+                    (isPtrL && isPtrR);
+                if (ptr_null_compare) {
+                    result = BOOL_KEYWORD_T;
+                    break;
+                }
+
                 if (left != right) {
                     if (!(isNumL && isNumR)) {
                          stage_error(STAGE_ANALYZER, e->loc, "cannot compare %s with %s using '%s'", token_type_name(left), token_type_name(right), token_type_name(op));
@@ -485,6 +753,46 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             break;
         }
         case FUNC_CALL_E: {
+            // Static-method dispatch. The parser rewrote `Vec2.foo(x)`
+            // as `foo(Vec2, x)` (UFCS unconditionally injects the
+            // receiver). When the receiver is actually a *type name*
+            // (a registered struct) AND a matching static method
+            // `<TypeName><FnName>` exists, drop the bogus receiver and
+            // re-route the call to the static function. Same dispatch
+            // model the binary/unary op rewrites use; no analyzer
+            // surprises downstream.
+            if (e->as.func_call.count >= 1 &&
+                e->as.func_call.params[0]->type == VAR_E)
+            {
+                const char* recv_name = e->as.func_call.params[0]->as.var.name;
+                if (recv_name && lookup_struct(g_struct_table, recv_name)) {
+                    char fn_name[256];
+                    snprintf(fn_name, sizeof(fn_name), "%s%s",
+                             recv_name, e->as.func_call.name);
+                    FuncSign* matched = NULL;
+                    for (int i = 0; i < funcTable->count; ++i) {
+                        FuncSign* c = &funcTable->signs[i];
+                        if (c->is_static &&
+                            strcmp(c->name, fn_name) == 0 &&
+                            c->paramNum == e->as.func_call.count - 1) {
+                            matched = c;
+                            break;
+                        }
+                    }
+                    if (matched) {
+                        // Drop the receiver from the args list and
+                        // rename the call. Subsequent analysis sees
+                        // a regular static call with the right arity.
+                        for (int i = 1; i < e->as.func_call.count; ++i)
+                            e->as.func_call.params[i - 1] =
+                                e->as.func_call.params[i];
+                        --e->as.func_call.count;
+                        free(e->as.func_call.name);
+                        e->as.func_call.name = strdup(fn_name);
+                    }
+                }
+            }
+
             //handle built-in print function
             if(strcmp(e->as.func_call.name, "print") == 0) {
                 //...
@@ -625,14 +933,74 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                     break;
                 }
 
-                stage_error(STAGE_ANALYZER, e->loc,
-                            "no function '%s' takes %d arguments",
-                            e->as.func_call.name, e->as.func_call.count);
-                free(argTypes);
-                free(matches);
-                e->as.func_call.resolved_sign = NULL;
-                result = VOID_KEYWORD_T;
-                break;
+                // UFCS method-dispatch fallback. The parser already
+                // rewrote `xs.Push(7)` to `Push(xs, 7)`. If the first
+                // arg is a struct type S (templated or not), retry the
+                // lookup with name "<S><MethodName>" so plain
+                // `xs.Push(...)` finds `ListPush` automatically -- as
+                // long as the requested instantiation is already in the
+                // funcTable (the parser pre-queued it via the receiver's
+                // type-args at decl time, so e.g. xs's type instantiates
+                // to List__int and ListPush__int rides along). Cases
+                // that need a fresh instantiation discovered mid-analyze
+                // still require the explicit `xs.ListPush<int>(7)` form
+                // -- mid-analyze template drain is a deeper rework.
+                if (e->as.func_call.count >= 1) {
+                    Expr* recv = e->as.func_call.params[0];
+                    if (recv->analyzedType == VAR_T &&
+                        recv->analyzed_type_name) {
+                        const char* tn = recv->analyzed_type_name;
+                        const char* uu = strstr(tn, "__");
+                        char struct_base[128];
+                        int  bn = uu ? (int)(uu - tn) : (int)strlen(tn);
+                        if (bn > (int)sizeof(struct_base) - 1)
+                            bn = sizeof(struct_base) - 1;
+                        memcpy(struct_base, tn, bn);
+                        struct_base[bn] = 0;
+
+                        // Two candidate names:
+                        //   <Base><Method>           -- non-templated
+                        //                               or already-mangled
+                        //   <Base><Method><__args>   -- templated method
+                        //                               instantiation
+                        char cand[256];
+                        snprintf(cand, sizeof(cand), "%s%s",
+                                 struct_base, e->as.func_call.name);
+                        char cand_mangled[256];
+                        if (uu) {
+                            snprintf(cand_mangled, sizeof(cand_mangled),
+                                     "%s%s%s", struct_base,
+                                     e->as.func_call.name, uu);
+                        } else {
+                            cand_mangled[0] = 0;
+                        }
+                        for (int i = 0; i < funcTable->count; i++) {
+                            FuncSign* c = &funcTable->signs[i];
+                            if (c->paramNum != e->as.func_call.count) continue;
+                            if (strcmp(c->name, cand) == 0 ||
+                                (cand_mangled[0] && strcmp(c->name, cand_mangled) == 0)) {
+                                matches[matchCount++] = c;
+                            }
+                        }
+                        if (matchCount > 0) {
+                            // Rewrite call name to the resolved symbol.
+                            free(e->as.func_call.name);
+                            e->as.func_call.name =
+                                strdup(matches[0]->name);
+                        }
+                    }
+                }
+
+                if (matchCount == 0) {
+                    stage_error(STAGE_ANALYZER, e->loc,
+                                "no function '%s' takes %d arguments",
+                                e->as.func_call.name, e->as.func_call.count);
+                    free(argTypes);
+                    free(matches);
+                    e->as.func_call.resolved_sign = NULL;
+                    result = VOID_KEYWORD_T;
+                    break;
+                }
             }
 
             //find best type match. Exact wins; numeric-coercible accepts.
@@ -702,6 +1070,27 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             //store the resolved signature
             e->as.func_call.resolved_sign = match;
 
+            // Visibility check. Private inline methods can only be
+            // invoked from inside another method of the same struct
+            // (i.e. the caller's first param has matching type, the
+            // exact rule we already use for private fields).
+            if (match->is_private && match->owner_struct) {
+                bool inside_method = false;
+                if (currentFunc &&
+                    currentFunc->paramNum > 0 &&
+                    currentFunc->parameters[0].type == VAR_T &&
+                    currentFunc->parameters[0].type_name &&
+                    strcmp(currentFunc->parameters[0].type_name,
+                           match->owner_struct) == 0) {
+                    inside_method = true;
+                }
+                if (!inside_method) {
+                    stage_error(STAGE_ANALYZER, e->loc,
+                        "method '%s' on struct '%s' is private",
+                        match->name, match->owner_struct);
+                }
+            }
+
             //handle ownership transfer for own parameters
             for (int i = 0; i < match->paramNum; ++i) {
                 if (match->parameters[i].ownership == OWNERSHIP_OWN) {
@@ -732,6 +1121,14 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             //so var-decl + match analysis can enforce/handle it.
             if (match->retNullable) {
                 e->is_nullable = true;
+            }
+            // Propagate the struct return type name onto the call expr so
+            // chained field access (`KeyCode().W`, `e.Get<T>().field`) can
+            // resolve the LHS type. Without this the analyzer reports
+            // "unknown struct type '(unnamed)' on field access" because
+            // FIELD_ACCESS_E reads `target->analyzed_type_name`.
+            if (match->retType == VAR_T && match->retTypeName) {
+                e->analyzed_type_name = match->retTypeName;
             }
             free(argTypes);
             free(matches);
@@ -824,7 +1221,12 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 targetType = analyze_expr(scope, funcTable, e->as.match.var, currentFunc);
             }
 
-            bool isNullableMatch = (matchedSym && matchedSym->is_nullable);
+            // Same dual-source nullability check as MATCH_S: bare-var
+            // path reads the symbol's flag; expression path (nullable
+            // function call etc.) reads the analyzed expr's flag.
+            bool isNullableMatch =
+                (matchedSym && matchedSym->is_nullable) ||
+                e->as.match.var->is_nullable;
             bool hasDefault = false;
             bool hasSome = false, hasNull = false;
             TokenType resultType = VOID_KEYWORD_T;
@@ -889,6 +1291,30 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                     if (origSym) {
                         origSym->is_unwrapped = true;
                     }
+                }
+                else if (branch->pattern->type == SOME_PATTERN && !matchedSym &&
+                         e->as.match.var->is_nullable &&
+                         e->as.match.var->analyzed_type_name) {
+                    // Expression-match against a nullable function call
+                    // (e.g. `match e.Get<T>() { some(t): t.field }`).
+                    // No source Symbol to consult; pull the type from
+                    // the analyzed expression and declare the binding
+                    // as a non-nullable typed pointer.
+                    branchScope = make_scope(scope);
+                    declare(branchScope,
+                            branch->pattern->as.binding_name,
+                            VAR_T,
+                            OWNERSHIP_NONE,
+                            false, false, false, 0);
+                    Symbol* bindingSym =
+                        lookup(branchScope, branch->pattern->as.binding_name);
+                    if (bindingSym) {
+                        bindingSym->type_name =
+                            e->as.match.var->analyzed_type_name;
+                        bindingSym->is_nullable  = true;
+                        bindingSym->is_unwrapped = true;
+                    }
+                    branch->analyzed_type = VAR_T;
                 }
 
                 TokenType bodyType = analyze_expr(branchScope, funcTable, branch->caseRet, currentFunc);
@@ -962,6 +1388,22 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
             result = VOID_KEYWORD_T;
             break;
 
+        case SIZEOF_E:
+            // sizeof always yields a usize; the operand type is opaque to
+            // the analyzer (any type is a valid argument). Codegen handles
+            // emit details.
+            result = USIZE_KEYWORD_T;
+            break;
+
+        case ADDR_OF_E: {
+            // Recurse on the inner expression so any of its analyzers run
+            // (e.g. resolving VAR_E). The resulting type is `ptr` -- the
+            // caller hands it to memcpy or stores it in an `own ptr`.
+            (void)analyze_expr(scope, funcTable, e->as.addr_of.target, currentFunc);
+            result = PTR_KEYWORD_T;
+            break;
+        }
+
         default:
             stage_error(STAGE_ANALYZER, e->loc, "unknown expression type %d", e->type);
             result = INT_KEYWORD_T;
@@ -1007,8 +1449,13 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
 
             // Struct-typed declaration: validate the type name resolves to
             // a registered struct, declare the symbol, and stamp its
-            // type_name so field access on it resolves later. v1 doesn't
-            // support struct literals — only zero-init via VOID_E placeholder.
+            // type_name so field access on it resolves later. The RHS
+            // initializer (when not the VOID_E placeholder) gets analyzed
+            // so its embedded function calls receive `resolved_sign` —
+            // codegen needs that to emit the call. Skipping the analysis
+            // would land users with `EntityRef e = /* ERROR: unresolved
+            // function CreateEntity */;` even though the analyzer accepted
+            // the declaration.
             if (s->as.var_decl.varType == VAR_T) {
                 StructDecl* sd = lookup_struct(g_struct_table,
                                                s->as.var_decl.typeName);
@@ -1016,6 +1463,11 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                     stage_error(STAGE_ANALYZER, s->loc,
                                 "unknown type '%s' for variable '%s'",
                                 s->as.var_decl.typeName, s->as.var_decl.name);
+                }
+                if (s->as.var_decl.expr &&
+                    s->as.var_decl.expr->type != VOID_E) {
+                    (void)analyze_expr(scope, funcTable,
+                                       s->as.var_decl.expr, currentFunc);
                 }
                 declare(scope,
                         s->as.var_decl.name,
@@ -1205,6 +1657,31 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                             token_type_name(fld->type),
                             token_type_name(vt));
             }
+            // Same pointer-vs-value detection as FIELD_ACCESS_E. The
+            // target expression is a pointer in C terms when:
+            //   - it's a VAR_E referring to a nullable VAR_T symbol
+            //     (e.g. `p: ?PlayerData`); OR
+            //   - it's a FUNC_CALL_E whose extern signature has a
+            //     nullable VAR_T return (e.g. `TimeManager()` returning
+            //     `TimeManager?` -> emitted as `TimeManager*`).
+            Expr* tgt = s->as.field_assign.target;
+            if (tgt->type == VAR_E) {
+                Symbol* tsym = lookup(scope, tgt->as.var.name);
+                if (tsym && tsym->type == VAR_T &&
+                    (tsym->is_nullable ||
+                     tsym->ownership == OWNERSHIP_OWN ||
+                     tsym->ownership == OWNERSHIP_REF))
+                    s->as.field_assign.target_is_ptr = true;
+            } else if (tgt->type == FUNC_CALL_E) {
+                FuncSign* rs = tgt->as.func_call.resolved_sign;
+                // Same rule as FIELD_ACCESS_E: pointer-typed return either
+                // because of nullability OR ownership (`ref T` / `own T`).
+                if (rs && rs->retType == VAR_T &&
+                    (rs->retNullable ||
+                     rs->retOwnership == OWNERSHIP_OWN ||
+                     rs->retOwnership == OWNERSHIP_REF))
+                    s->as.field_assign.target_is_ptr = true;
+            }
             break;
         }
 
@@ -1377,6 +1854,15 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                 matchedSym = lookup(scope, s->as.match_stmt.var->as.var.name);
                 if (matchedSym) {
                     matchedType = matchedSym->type;
+                    // The discriminant of a `match` IS the unwrap site,
+                    // so it's allowed to refer to a nullable without
+                    // having been unwrapped first. Temporarily mark as
+                    // unwrapped to suppress the VAR_E "must be unwrapped"
+                    // error inside analyze_expr; restore right after.
+                    bool was_unwrapped = matchedSym->is_unwrapped;
+                    matchedSym->is_unwrapped = true;
+                    (void)analyze_expr(scope, funcTable, s->as.match_stmt.var, currentFunc);
+                    matchedSym->is_unwrapped = was_unwrapped;
                 } else {
                     stage_error(STAGE_ANALYZER, s->loc, "variable '%s' is not declared",
                                 s->as.match_stmt.var->as.var.name);
@@ -1386,8 +1872,13 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                 matchedType = analyze_expr(scope, funcTable, s->as.match_stmt.var, currentFunc);
             }
 
-            //determine if this is a nullable match
-            bool isNullableMatch = (matchedSym && matchedSym->is_nullable);
+            //determine if this is a nullable match. Two sources:
+            //  - bare-variable match: matchedSym->is_nullable (from declaration)
+            //  - expression match (e.g. match Get<X>(e) {...}): the call's
+            //    is_nullable was set by FUNC_CALL_E analysis when the
+            //    extern decl returns `T?`.
+            bool isNullableMatch = (matchedSym && matchedSym->is_nullable) ||
+                                   s->as.match_stmt.var->is_nullable;
 
             //validate pattern types
             bool hasSome = false, hasNull = false;
@@ -1423,7 +1914,15 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                 MatchBranchStmt* branch = &s->as.match_stmt.branches[i];
                 Scope* branchScope = make_scope(scope);
 
-                //for SOME_PATTERN, declare binding variable as non-nullable reference
+                //for SOME_PATTERN, declare binding variable as non-nullable reference.
+                //Two source shapes:
+                //  - bare variable match (`match v { some(p): ... }`):
+                //    matchedSym carries the type info.
+                //  - expression match (`match e.Get<T>() { some(p): ... }`):
+                //    matchedSym is null; pull the type from the analyzed
+                //    expression. is_nullable + analyzed_type_name were
+                //    set by FUNC_CALL_E analysis when the extern's
+                //    retNullable was true.
                 if (branch->pattern->type == SOME_PATTERN && matchedSym) {
                     //binding is always a reference (borrows from original), not a new owned variable
                     Ownership bindingOwnership = (matchedSym->ownership == OWNERSHIP_NONE)
@@ -1452,6 +1951,37 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
                     if (origSym) {
                         origSym->is_unwrapped = true;
                     }
+                }
+                else if (branch->pattern->type == SOME_PATTERN &&
+                         !matchedSym && isNullableMatch &&
+                         s->as.match_stmt.var->analyzed_type_name) {
+                    // Expression-match path: `match e.Get<T>() { some(t): ... }`.
+                    // No source variable to consult; pull the type out
+                    // of the analyzed expression. Bind `t` as a
+                    // non-nullable VAR_T pointer-borrow in the branch
+                    // scope. matchedType is VOID_KEYWORD_T here (we
+                    // didn't have a Symbol), but we know the expr's
+                    // analyzed_type_name names the underlying struct.
+                    declare(branchScope,
+                            branch->pattern->as.binding_name,
+                            VAR_T,
+                            OWNERSHIP_NONE,
+                            false, false, false, 0);
+                    Symbol* bindingSym =
+                        lookup(branchScope, branch->pattern->as.binding_name);
+                    if (bindingSym) {
+                        bindingSym->type_name =
+                            s->as.match_stmt.var->analyzed_type_name;
+                        // The binding IS a pointer at the C ABI level
+                        // (extern returns T*). Mark is_nullable so the
+                        // FIELD_ACCESS_E pointer-target detection fires
+                        // when the user writes `t.field`. is_unwrapped
+                        // ensures the analyzer doesn't demand another
+                        // unwrap on top of `some(t)`.
+                        bindingSym->is_nullable = true;
+                        bindingSym->is_unwrapped = true;
+                    }
+                    branch->analyzed_type = VAR_T;
                 }
 
                 //for VALUE_PATTERN, analyze the pattern expression
@@ -1518,9 +2048,44 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
         }
 
         case FREE_S: {
-            Symbol* sym = lookup(scope, s->as.free_stmt.varName);
+            // Two forms: bare identifier (`free p;`) and one-level
+            // field access (`free l.items;`). Split off the optional
+            // ".field" tail for the symbol lookup -- ownership /
+            // double-free tracking applies at the parent symbol
+            // (the field is part of its struct).
+            const char* name = s->as.free_stmt.varName;
+            const char* dot  = strchr(name, '.');
+            char base_name[128];
+            if (dot) {
+                int n = (int)(dot - name);
+                if (n > (int)sizeof(base_name) - 1) n = sizeof(base_name) - 1;
+                memcpy(base_name, name, n);
+                base_name[n] = 0;
+            } else {
+                snprintf(base_name, sizeof(base_name), "%s", name);
+            }
+            Symbol* sym = lookup(scope, base_name);
             if (sym == nullptr) {
-                stage_error(STAGE_ANALYZER, s->loc, "cannot free '%s', variable not declared", s->as.free_stmt.varName);
+                stage_error(STAGE_ANALYZER, s->loc,
+                    "cannot free '%s', variable not declared", base_name);
+                break;
+            }
+
+            // Field-access path: trust the API contract for now. The
+            // struct field can't yet carry `own` (parser limitation),
+            // so the analyzer can't enforce ownership through the
+            // dot. Skip the OWN/FREED/MOVED checks and just emit the
+            // free at codegen time. Once `own` on struct fields lands,
+            // tighten this branch.
+            if (dot) {
+                s->as.free_stmt.isArrayOfOwned = false;
+                s->as.free_stmt.arraySize = 0;
+                // base is a pointer in C iff it's an own/ref local --
+                // codegen needs to emit `base->field` in that case
+                // instead of `base.field`.
+                s->as.free_stmt.target_is_ptr =
+                    (sym->ownership == OWNERSHIP_OWN ||
+                     sym->ownership == OWNERSHIP_REF);
                 break;
             }
 
@@ -1584,6 +2149,12 @@ void defineAndAnalyzeFunc(FuncTable* table, Func* func) {
     copy.retNullable = func->signature->retNullable;   // CRITICAL: leaving uninit causes
                                                        // every call to be treated as
                                                        // potentially-null garbage.
+    // Mirror the OOP visibility / static metadata so the analyzer
+    // can enforce private + static rules off the FuncSign array.
+    copy.is_private   = func->signature->is_private;
+    copy.is_static    = func->signature->is_static;
+    copy.owner_struct = func->signature->owner_struct
+                          ? strdup(func->signature->owner_struct) : NULL;
 
     //deep copy parameters array
     if (copy.paramNum > 0) {
@@ -1651,6 +2222,11 @@ void analyze_program(Program* prog) {
     Scope* global = make_scope(nullptr);
     FuncTable* funcTable = make_funcTable();
 
+    // Make `prog` available to the function-call analyzer for UFCS
+    // method dispatch (which may need to queue+drain new template
+    // instantiations on the fly).
+    g_analyzer_program = prog;
+
     //initialize and process imports
     g_import_registry = make_import_registry();
     for (int i = 0; i < prog->imports->import_count; i++) {
@@ -1683,13 +2259,18 @@ void analyze_program(Program* prog) {
         }
     }
 
-    //0. Register extern functions
+    //0. Register extern functions. Duplicate decls (same name) are
+    //silently deduped -- multiple files often declare the same libc
+    //symbol (e.g. `extern <math.h> { def sqrtf(...); }` in both the
+    //engine prelude AND std.math). They both refer to the same C
+    //function so accepting the first and skipping the rest is safe;
+    //a hard error would force users to coordinate across modules.
     for (int i = 0; i < prog->ext_block_count; ++i) {
         ExternBlock* block = prog->externBlocks[i];
         for (int j = 0; j < block->count; ++j) {
             FuncSign* sign = block->signs[j];
             if(lookup_func_sign(funcTable, sign)) {
-                stage_error(STAGE_ANALYZER, NO_LOC, "Extern function '%s' already defined", sign->name);
+                continue;   // dedupe; first decl wins
             }
             if(funcTable->count >= funcTable->capacity) {
                 funcTable->capacity *= 2;

@@ -34,6 +34,14 @@ static char* x_strdup(const char* s) {
     return o;
 }
 
+static char* x_strndup(const char* s, size_t n) {
+    if (!s) return NULL;
+    char* o = malloc(n + 1);
+    memcpy(o, s, n);
+    o[n] = 0;
+    return o;
+}
+
 // Stringify a TypeArg for the mangled name. Primitive TokenType -> short
 // keyword; struct (VAR_T) -> the struct name verbatim. Keeps the mangled
 // name predictable and grep-friendly.
@@ -155,21 +163,173 @@ static int param_index(const TypeParamList* tp, const char* name) {
     return -1;
 }
 
+// Set by tpl_drain_pending for the duration of one clone -- subst_type
+// uses it to push newly-discovered struct instantiations (e.g. when a
+// generic def's parameter type `ref List<T>` instantiates as
+// `List__int`, that has to be queued for drain even though only the
+// outer template was originally pushed). Cleared after each instantiation.
+static Program* g_subst_prog       = NULL;
+static SourceLocation g_subst_loc  = {0};
+
+// Render a TypeArg's text the same way tpl_mangle does -- so the
+// substituted parts agree byte-for-byte with what the mangler would
+// have produced if the name had been concrete from the start.
+static const char* subst_type_arg_text(const TypeArg* a) {
+    switch (a->type) {
+        case INT_KEYWORD_T:    return "int";
+        case USIZE_KEYWORD_T:  return "usize";
+        case BOOL_KEYWORD_T:   return "bool";
+        case CHAR_KEYWORD_T:   return "char";
+        case STR_KEYWORD_T:    return "string";
+        case FLOAT_KEYWORD_T:  return "float";
+        case DOUBLE_KEYWORD_T: return "double";
+        case PTR_KEYWORD_T:    return "ptr";
+        case VAR_T:            return a->type_name ? a->type_name : "void";
+        default:               return "void";
+    }
+}
+
+// Try to substitute template params inside an already-mangled name like
+// "List__T" or "_list_ensure_cap__T". Returns the new x_strdup'd name on
+// success (caller frees the old), or NULL if no substitution applied.
+// `kind` is the pending-instantiation kind to queue (0 = func, 1 = struct);
+// pass -1 to skip the queueing (caller will handle pending separately).
+static char* try_subst_mangled(const char* name,
+                                const TypeParamList* tp,
+                                const TypeArgList* args,
+                                int kind) {
+    if (!name || !tp || !args || tp->count == 0 || args->count == 0) return NULL;
+    const char* sep = strstr(name, "__");
+    if (!sep) return NULL;
+    const char* args_str = sep + 2;
+
+    // Quick check: do any segments match a template param?
+    bool any_substituted = false;
+    {
+        const char* p = args_str;
+        while (*p) {
+            const char* q = p;
+            while (*q && *q != '_') ++q;
+            int len = (int)(q - p);
+            for (int i = 0; i < tp->count; ++i) {
+                if ((int)strlen(tp->names[i]) == len &&
+                    strncmp(tp->names[i], p, len) == 0) {
+                    any_substituted = true; break;
+                }
+            }
+            if (any_substituted) break;
+            p = (*q == '_') ? q + 1 : q;
+        }
+    }
+    if (!any_substituted) return NULL;
+
+    char buf[256];
+    int  off = (int)snprintf(buf, sizeof(buf), "%.*s__",
+                              (int)(sep - name), name);
+    bool first_arg = true;
+    const char* p = args_str;
+    while (*p && off < (int)sizeof(buf) - 1) {
+        const char* q = p;
+        while (*q && *q != '_') ++q;
+        int len = (int)(q - p);
+        if (!first_arg) buf[off++] = '_';
+        first_arg = false;
+        const char* repl = NULL;
+        for (int i = 0; i < tp->count; ++i) {
+            if ((int)strlen(tp->names[i]) == len &&
+                strncmp(tp->names[i], p, len) == 0) {
+                repl = subst_type_arg_text(&args->args[i]); break;
+            }
+        }
+        if (repl) {
+            off += snprintf(buf + off, sizeof(buf) - off, "%s", repl);
+        } else {
+            off += snprintf(buf + off, sizeof(buf) - off, "%.*s", len, p);
+        }
+        p = (*q == '_') ? q + 1 : q;
+    }
+    buf[off] = 0;
+
+    // Queue the substituted instantiation if a program is active.
+    if (kind >= 0 && g_subst_prog) {
+        int seg_count = 0;
+        for (const char* ap = args_str; *ap; ) {
+            ++seg_count;
+            while (*ap && *ap != '_') ++ap;
+            if (*ap == '_') ++ap;
+        }
+        TypeArgList* new_args = malloc(sizeof(TypeArgList));
+        new_args->count = 0;
+        new_args->args  = malloc(sizeof(TypeArg) * (seg_count > 0 ? seg_count : 1));
+        const char* ap = args_str;
+        while (*ap) {
+            const char* aq = ap;
+            while (*aq && *aq != '_') ++aq;
+            int alen = (int)(aq - ap);
+            const TypeArg* match = NULL;
+            for (int i = 0; i < tp->count; ++i) {
+                if ((int)strlen(tp->names[i]) == alen &&
+                    strncmp(tp->names[i], ap, alen) == 0) {
+                    match = &args->args[i]; break;
+                }
+            }
+            TypeArg* slot = &new_args->args[new_args->count++];
+            if (match) {
+                *slot = *match;
+                if (match->type == VAR_T && match->type_name)
+                    slot->type_name = x_strdup(match->type_name);
+            } else {
+                slot->type = VAR_T;
+                slot->type_name = x_strndup(ap, alen);
+            }
+            ap = (*aq == '_') ? aq + 1 : aq;
+        }
+        char* base_end = strstr(buf, "__");
+        char* base_name = base_end
+            ? x_strndup(buf, base_end - buf)
+            : x_strdup(buf);
+        tpl_push_pending(g_subst_prog, base_name, new_args,
+                          x_strdup(buf), g_subst_loc, kind);
+        free(base_name);
+    }
+    return x_strdup(buf);
+}
+
 // Substitute one type slot in-place. `type` is the TokenType field; `name`
 // is the corresponding type-name string (only meaningful when *type == VAR_T).
 // Returns true if a substitution happened.
+//
+// Two cases both handled here:
+//   1) Bare param: `T` -> the matching arg. Direct hit on param_index.
+//   2) Mangled embedded use: `List__T` -> `List__int`. This happens when
+//      a generic def writes `ref List<T>` for a parameter -- the parser
+//      eagerly mangles to `List__T` at parse time. At instantiation we
+//      have to walk the mangled segments, substitute any that refer to
+//      our template parameters, and re-mangle.
 static bool subst_type(TokenType* type, char** name,
                        const TypeParamList* tp, const TypeArgList* args) {
     if (*type != VAR_T || !*name) return false;
+
+    // Case 1: direct param match.
     int idx = param_index(tp, *name);
-    if (idx < 0 || idx >= args->count) return false;
-    const TypeArg* a = &args->args[idx];
-    *type = a->type;
-    if (a->type == VAR_T) {
-        *name = x_strdup(a->type_name);
-    } else {
-        *name = NULL;  // primitive types carry no name
+    if (idx >= 0 && idx < args->count) {
+        const TypeArg* a = &args->args[idx];
+        *type = a->type;
+        if (a->type == VAR_T) {
+            *name = x_strdup(a->type_name);
+        } else {
+            *name = NULL;  // primitive types carry no name
+        }
+        return true;
     }
+
+    // Case 2: mangled name like "List__T" or "Map__T_U". Delegate to
+    // try_subst_mangled which handles the parsing + re-mangling + pending
+    // queue (kind=struct since we're substituting a type slot).
+    char* sub = try_subst_mangled(*name, tp, args, /*kind=struct*/ 1);
+    if (!sub) return false;
+    *name = sub;
+    *type = VAR_T;
     return true;
 }
 
@@ -236,21 +396,22 @@ static Expr* clone_expr(const Expr* src, const TypeParamList* tp,
             e->as.bin_op.exprR = clone_expr(src->as.bin_op.exprR, tp, args, prog);
             break;
 
-        case FUNC_CALL_E:
+        case FUNC_CALL_E: {
             // The name might itself be a template use (e.g. inside list_push<T>
-            // we call list_grow<T>). The parser-time mangler has already
-            // baked the template-param name into the call name in that case
-            // by emitting "list_grow__T". We unmangle, re-substitute, and
-            // re-mangle here so that nested template calls follow the
-            // outer instantiation.
-            e->as.func_call.name = x_strdup(src->as.func_call.name);
-            // Note: nested template substitution happens in subst_call_name
-            // (called below from the top-level cloner). Most cases just keep
-            // the source name verbatim — concrete func calls don't change.
+            // we call _list_ensure_cap<T>). The parser-time mangler has
+            // already baked the template-param name into the call name as
+            // "_list_ensure_cap__T". try_subst_mangled walks the segments
+            // and re-mangles to "_list_ensure_cap__int" for an int
+            // instantiation, AND queues that as a new pending function.
+            char* subst = try_subst_mangled(src->as.func_call.name, tp, args,
+                                             /*kind=func*/ 0);
+            e->as.func_call.name = subst ? subst
+                                          : x_strdup(src->as.func_call.name);
             e->as.func_call.params = clone_expr_array(src->as.func_call.params,
                                                       src->as.func_call.count, tp, args, prog);
             e->as.func_call.resolved_sign = NULL;
             break;
+        }
 
         case ARRAY_DECL_E:
             e->as.arr_decl.values = clone_expr_array(src->as.arr_decl.values,
@@ -312,6 +473,24 @@ static Expr* clone_expr(const Expr* src, const TypeParamList* tp,
             e->as.field_access.target          = clone_expr(src->as.field_access.target, tp, args, prog);
             e->as.field_access.field_name      = x_strdup(src->as.field_access.field_name);
             e->as.field_access.field_type_name = NULL;  // analyzer fills
+            break;
+
+        case SIZEOF_E: {
+            // Substitute the operand type if it's a template parameter
+            // (`sizeof(T)` inside a template body becomes `sizeof(int)`
+            // at int-instantiation). Reuse subst_type for the
+            // primitive/struct split.
+            char* name_ptr = src->as.sizeof_op.operand_type_name
+                ? x_strdup(src->as.sizeof_op.operand_type_name) : NULL;
+            e->as.sizeof_op.operand_type      = src->as.sizeof_op.operand_type;
+            e->as.sizeof_op.operand_type_name = name_ptr;
+            (void)subst_type(&e->as.sizeof_op.operand_type,
+                              &e->as.sizeof_op.operand_type_name, tp, args);
+            break;
+        }
+
+        case ADDR_OF_E:
+            e->as.addr_of.target = clone_expr(src->as.addr_of.target, tp, args, prog);
             break;
     }
     return e;
@@ -439,10 +618,26 @@ static FuncSign* clone_sign(const FuncSign* src, const TypeParamList* tp,
 static Func* instantiate_func(const Func* tpl, const TypeArgList* args,
                               const char* mangled, Program* prog) {
     Func* f = malloc(sizeof(Func));
+    // Make `prog` visible to subst_type so it can queue any nested
+    // struct instantiations the substitution discovers (e.g. when a
+    // body parameter type was eagerly mangled to `List__T` at parse
+    // time and now becomes `List__int`).
+    Program* prev_prog = g_subst_prog;
+    SourceLocation prev_loc = g_subst_loc;
+    g_subst_prog = prog;
+    g_subst_loc  = tpl->signature ? (SourceLocation){0, 0, NULL} : (SourceLocation){0, 0, NULL};
     f->signature   = clone_sign(tpl->signature, tpl->type_params, args, mangled);
     f->body        = clone_stmt(tpl->body, tpl->type_params, args, prog);
+    g_subst_prog = prev_prog;
+    g_subst_loc  = prev_loc;
     f->attrs       = NULL;       // attrs don't carry across instantiations for v1
     f->type_params = NULL;       // concrete now
+    // Carry OOP affiliation across the monomorphisation so the analyzer's
+    // private/static dispatch sees the same metadata on the concrete fn
+    // that it would on the template.
+    f->is_private  = tpl->is_private;
+    f->is_static   = tpl->is_static;
+    f->owner_struct = tpl->owner_struct ? x_strdup(tpl->owner_struct) : NULL;
     return f;
 }
 
@@ -455,13 +650,22 @@ static StructDecl* instantiate_struct(const StructDecl* tpl, const TypeArgList* 
     d->type_params = NULL;
     d->field_count = tpl->field_count;
     d->fields      = malloc(sizeof(StructField) * tpl->field_count);
+
+    // Same prog-threading trick as instantiate_func: subst_type can
+    // discover nested template uses (a struct field of type Map<T> etc.)
+    // and needs to queue them for the drain.
+    Program* prev_prog = g_subst_prog;
+    SourceLocation prev_loc = g_subst_loc;
+    g_subst_prog = prog;
+    g_subst_loc  = tpl->loc;
     for (int i = 0; i < tpl->field_count; ++i) {
         d->fields[i] = tpl->fields[i];
         d->fields[i].name      = x_strdup(tpl->fields[i].name);
         d->fields[i].type_name = tpl->fields[i].type_name ? x_strdup(tpl->fields[i].type_name) : NULL;
         subst_type(&d->fields[i].type, &d->fields[i].type_name, tpl->type_params, args);
     }
-    (void)prog;
+    g_subst_prog = prev_prog;
+    g_subst_loc  = prev_loc;
     return d;
 }
 
@@ -476,6 +680,29 @@ static const Func* find_func_template(const Program* p, const char* name) {
             strcmp(f->signature->name, name) == 0) return f;
     }
     return NULL;
+}
+
+// True when `mangled` is already declared as a (non-template) function or
+// extern in the program. Used to short-circuit the template-resolution
+// path: when a host plugin emits `def Add__Health(...)` directly as an
+// extern, callers writing `Add<Health>(...)` should bind to that extern,
+// not error out asking for a missing template named `Add`.
+static bool is_concrete_func_declared(const Program* p, const char* mangled) {
+    for (int i = 0; i < p->func_count; ++i) {
+        Func* f = p->functions[i];
+        if (!f || !f->signature) continue;
+        if (f->type_params) continue;   // skip templates
+        if (strcmp(f->signature->name, mangled) == 0) return true;
+    }
+    for (int i = 0; i < p->ext_block_count; ++i) {
+        ExternBlock* eb = p->externBlocks[i];
+        if (!eb) continue;
+        for (int j = 0; j < eb->count; ++j) {
+            FuncSign* fs = eb->signs[j];
+            if (fs && fs->name && strcmp(fs->name, mangled) == 0) return true;
+        }
+    }
+    return false;
 }
 
 static const StructDecl* find_struct_template(const Program* p, const char* name) {
@@ -528,6 +755,14 @@ void tpl_drain_pending(Program* p, bool strict) {
         }
 
         if (pi->kind == 0) {
+            // If a concrete function/extern with the mangled name already
+            // exists (e.g. plugin-emitted `Add__Health`), the call site
+            // resolves directly to it — no template instantiation needed.
+            if (is_concrete_func_declared(p, pi->mangled_name)) {
+                tpl_remember(p, pi->mangled_name);
+                free(pi->mangled_name); free(pi->template_name); free(pi);
+                continue;
+            }
             const Func* tpl = find_func_template(p, pi->template_name);
             if (!tpl) {
                 if (!strict) { KEEP_PENDING(pi); continue; }
@@ -567,6 +802,71 @@ void tpl_drain_pending(Program* p, bool strict) {
             StructDecl* concrete = instantiate_struct(tpl, pi->type_args, pi->mangled_name, p);
             prog_add_struct(p, concrete);
             tpl_remember(p, pi->mangled_name);
+
+            // Eager method instantiation: every function template named
+            // `<StructBase><Method>` with matching type-param arity gets
+            // instantiated against the same args. This is what makes
+            // `xs.Push(7)` resolve to ListPush__int automatically.
+            //
+            // Skip if any of pi's type-args are themselves a template
+            // parameter name (e.g. `List__T` was pushed as an internal
+            // placeholder by the parser when it saw `ref List<T>`
+            // inside a generic def -- those are NOT real
+            // instantiations, just textual mangle placeholders, and
+            // forwarding them would emit broken `ListPush__T` C code).
+            bool args_concrete = true;
+            for (int a = 0; pi->type_args && a < pi->type_args->count; ++a) {
+                const TypeArg* ta = &pi->type_args->args[a];
+                if (ta->type == VAR_T && ta->type_name) {
+                    // Only accept VAR_T args that name a real struct
+                    // already instantiated. Bare template params (T, U)
+                    // never appear as struct names so they fail this.
+                    bool ok = false;
+                    for (int s = 0; s < p->struct_count; ++s) {
+                        if (p->structs[s] && p->structs[s]->name &&
+                            strcmp(p->structs[s]->name, ta->type_name) == 0) {
+                            ok = true; break;
+                        }
+                    }
+                    if (!ok) { args_concrete = false; break; }
+                }
+            }
+            if (args_concrete && tpl->type_params && pi->type_args) {
+                int base_len = (int)strlen(pi->template_name);
+                for (int fi = 0; fi < p->func_count; ++fi) {
+                    const Func* ftpl = p->functions[fi];
+                    if (!ftpl || !ftpl->signature || !ftpl->type_params) continue;
+                    if (ftpl->type_params->count != pi->type_args->count) continue;
+                    const char* fn = ftpl->signature->name;
+                    if (!fn) continue;
+                    if (strncmp(fn, pi->template_name, base_len) != 0) continue;
+                    // Suffix must be a valid PascalCase Method or
+                    // _underscore-prefixed internal helper. Stops
+                    // "ListNew" matching "ListNewer" too aggressively.
+                    char first = fn[base_len];
+                    if (first == 0) continue;          // exact match -- not a method
+                    if (!(first >= 'A' && first <= 'Z') && first != '_') continue;
+                    char* method_mangled = tpl_mangle(fn, pi->type_args);
+                    if (tpl_already_instantiated(p, method_mangled)) {
+                        free(method_mangled);
+                        continue;
+                    }
+                    // Clone the type-args list per instantiation so each
+                    // pending entry owns its own. The caller's
+                    // `pi->type_args` is freed below; sharing here would
+                    // double-free.
+                    TypeArgList* tal = malloc(sizeof(TypeArgList));
+                    tal->count = pi->type_args->count;
+                    tal->args  = malloc(sizeof(TypeArg) * tal->count);
+                    for (int a = 0; a < tal->count; ++a) {
+                        tal->args[a] = pi->type_args->args[a];
+                        if (tal->args[a].type == VAR_T && tal->args[a].type_name)
+                            tal->args[a].type_name = x_strdup(tal->args[a].type_name);
+                    }
+                    tpl_push_pending(p, x_strdup(fn), tal,
+                                      method_mangled, pi->use_loc, /*kind=func*/ 0);
+                }
+            }
         }
         free(pi->mangled_name); free(pi->template_name); free(pi);
     }
