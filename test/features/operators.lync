@@ -1,0 +1,19 @@
+include std.io.*;
+Vec2: struct { x: int, y: int }
+def Vec2.+(o: Vec2): Vec2 {
+    r: Vec2;
+    r.x = self.x + o.x;
+    r.y = self.y + o.y;
+    return r;
+}
+def main(): int {
+    a: Vec2;
+    a.x = 1;
+    a.y = 2;
+    b: Vec2;
+    b.x = 3;
+    b.y = 4;
+    c: Vec2 = a + b;
+    print("c", c.x, c.y);
+    return 0;
+}

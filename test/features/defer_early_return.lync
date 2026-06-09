@@ -1,0 +1,17 @@
+include std.io.*;
+def f(early: bool): int {
+    defer print("cleanup");
+    print("start");
+    if (early) {
+        print("returning early");
+        return 1;
+    }
+    print("normal path");
+    return 0;
+}
+def main(): int {
+    f(true);
+    print("---");
+    f(false);
+    return 0;
+}

@@ -1,0 +1,16 @@
+include std.io.*;
+Counter: struct { value: int }
+def Counter.inc(): void {
+    self.value = self.value + 1;
+}
+def Counter.get(): int {
+    return self.value;
+}
+def main(): int {
+    c: Counter;
+    c.value = 0;
+    c.inc();
+    c.inc();
+    print("count", c.get());
+    return 0;
+}

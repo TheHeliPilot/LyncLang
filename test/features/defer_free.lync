@@ -1,0 +1,7 @@
+include std.io.*;
+def main(): int {
+    p: own int = alloc 42;
+    defer free p;
+    print("allocated and will free at exit");
+    return 0;
+}

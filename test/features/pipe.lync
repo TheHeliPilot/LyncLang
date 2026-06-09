@@ -1,0 +1,8 @@
+include std.io.*;
+def dbl(x: int): int { return x * 2; }
+def inc(x: int): int { return x + 1; }
+def main(): int {
+    r: int = 5 |> dbl |> inc;
+    print("r", r);
+    return 0;
+}

@@ -27,6 +27,10 @@ typedef struct {
     bool is_unwrapped;
     bool is_array;
     int array_size;
+    // Set when a `defer free <this>` was seen: the variable is freed at
+    // scope exit, so it stays usable in the body but must NOT be reported
+    // as a leak by check_function_cleanup.
+    bool deferred_free;
 } Symbol;
 
 // Registered struct decls. Built at the start of analyze_program from

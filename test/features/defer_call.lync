@@ -1,0 +1,7 @@
+include std.io.*;
+def cleanup(x: int): void { print("cleanup", x); }
+def main(): int {
+    defer cleanup(42);
+    print("main body");
+    return 0;
+}

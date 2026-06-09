@@ -1,0 +1,8 @@
+include std.io.*;
+def main(): int {
+    print("a");
+    defer print("deferred-1");
+    defer print("deferred-2");
+    print("b");
+    return 0;
+}

@@ -590,7 +590,11 @@ Stmt* parseBlock(Parser*);
 
 Expr* parseExpr(Parser*);
 Expr* parseAnd(Parser*);
+Expr* parseBitOr(Parser*);
+Expr* parseBitXor(Parser*);
+Expr* parseBitAnd(Parser*);
 Expr* parseComparison(Parser*);
+Expr* parseShift(Parser*);
 Expr* parseAdd(Parser*);
 Expr* parseTerm(Parser*);
 Expr* parseFactor(Parser*);

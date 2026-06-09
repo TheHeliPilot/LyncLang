@@ -1,0 +1,16 @@
+include std.io.*;
+Vec2: struct { x: int, y: int }
+def Vec2.-(): Vec2 {
+    r: Vec2;
+    r.x = 0 - self.x;
+    r.y = 0 - self.y;
+    return r;
+}
+def main(): int {
+    a: Vec2;
+    a.x = 5;
+    a.y = 7;
+    b: Vec2 = -a;
+    print("neg", b.x, b.y);
+    return 0;
+}

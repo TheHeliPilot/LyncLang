@@ -1,0 +1,10 @@
+include std.io.*;
+def main(): int {
+    for (i: 0 to 3) as outer {
+        for (j: 0 to 3) {
+            if (j == 1) { continue outer; }
+            print("ij", i, j);
+        }
+    }
+    return 0;
+}

@@ -975,8 +975,37 @@ Expr* parseExpr(Parser* p) {
     return e;
 }
 Expr* parseAnd(Parser* p) {
-    Expr* e = parseComparison(p);
+    Expr* e = parseBitOr(p);
     while (peek(p, 0)->type == AND_T) {
+        Token* op = consume(p);
+        Expr* right = parseBitOr(p);
+        e = makeBinOp(TOK_LOC(op), e, op->type, right);
+    }
+    return e;
+}
+// Bitwise precedence ladder, between logical-AND and comparison, mirroring
+// C: `|` looser than `^` looser than `&`.
+Expr* parseBitOr(Parser* p) {
+    Expr* e = parseBitXor(p);
+    while (peek(p, 0)->type == BIT_OR_T) {
+        Token* op = consume(p);
+        Expr* right = parseBitXor(p);
+        e = makeBinOp(TOK_LOC(op), e, op->type, right);
+    }
+    return e;
+}
+Expr* parseBitXor(Parser* p) {
+    Expr* e = parseBitAnd(p);
+    while (peek(p, 0)->type == BIT_XOR_T) {
+        Token* op = consume(p);
+        Expr* right = parseBitAnd(p);
+        e = makeBinOp(TOK_LOC(op), e, op->type, right);
+    }
+    return e;
+}
+Expr* parseBitAnd(Parser* p) {
+    Expr* e = parseComparison(p);
+    while (peek(p, 0)->type == BIT_AND_T) {
         Token* op = consume(p);
         Expr* right = parseComparison(p);
         e = makeBinOp(TOK_LOC(op), e, op->type, right);
@@ -984,10 +1013,23 @@ Expr* parseAnd(Parser* p) {
     return e;
 }
 Expr* parseComparison(Parser* p) {
-    Expr* e = parseAdd(p);
+    Expr* e = parseShift(p);
     TokenType t = peek(p, 0)->type;
     while (t == LESS_T || t == MORE_T || t == LESS_EQUALS_T ||
            t == MORE_EQUALS_T || t == DOUBLE_EQUALS_T || t == NOT_EQUALS_T) {
+        Token* op = consume(p);
+        Expr* right = parseShift(p);
+        e = makeBinOp(TOK_LOC(op), e, op->type, right);
+        t = peek(p, 0)->type;
+    }
+    return e;
+}
+// Shift precedence, between comparison and additive (matches C: `<<`/`>>`
+// bind tighter than relational, looser than `+`/`-`).
+Expr* parseShift(Parser* p) {
+    Expr* e = parseAdd(p);
+    TokenType t = peek(p, 0)->type;
+    while (t == SHL_T || t == SHR_T) {
         Token* op = consume(p);
         Expr* right = parseAdd(p);
         e = makeBinOp(TOK_LOC(op), e, op->type, right);
@@ -2015,7 +2057,15 @@ Stmt* parseStatement(Parser* p) {
             Stmt* fe = nullptr;
             if (peek(p, 0)->type == ELSE_T) {
                 consume(p);
-                fe = parseBlock(p);
+                if (peek(p, 0)->type == IF_T) {
+                    // `else if (...)` -- parse the trailing if as a nested
+                    // statement so the chain links through falseStmt. The
+                    // analyzer + codegen already recurse into falseStmt, so
+                    // an IF_S there emits as `else if` naturally.
+                    fe = parseStatement(p);
+                } else {
+                    fe = parseBlock(p);
+                }
             }
 
             s->type = IF_S;

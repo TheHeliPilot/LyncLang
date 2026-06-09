@@ -40,6 +40,13 @@ typedef enum {
     AND_T,              //&&
     OR_T,               //||
 
+    //bitwise operators
+    BIT_AND_T,          //&
+    BIT_OR_T,           //|
+    BIT_XOR_T,          //^
+    SHL_T,              //<<
+    SHR_T,              //>>
+
     //punctuation
 
     SEMICOLON_T,

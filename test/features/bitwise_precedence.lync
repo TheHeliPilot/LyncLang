@@ -1,0 +1,8 @@
+include std.io.*;
+def main(): int {
+    print("shift_vs_add", 1 + 2 << 1);
+    print("and_then_eq", (4 & 2) == 0);
+    print("mask", 240 >> 4);
+    print("shl_or", 1 << 2 | 1);
+    return 0;
+}

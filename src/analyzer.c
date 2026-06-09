@@ -225,7 +225,8 @@ void declare(Scope* scope, char* name, TokenType type, Ownership ownership, bool
                     .is_dangling = false,
                     .is_unwrapped = false,
                     .is_array = isArray,
-                    .array_size = arraySize
+                    .array_size = arraySize,
+                    .deferred_free = false
             };
 }
 
@@ -746,6 +747,17 @@ TokenType analyze_expr(Scope* scope, FuncTable* funcTable, Expr* e, FuncSign* cu
                 if (right != BOOL_KEYWORD_T)
                     stage_error(STAGE_ANALYZER, e->loc, "right side of '%s' must be bool, got %s", token_type_name(op), token_type_name(right));
                 result = BOOL_KEYWORD_T;
+            }
+                //bitwise: integer op integer -> integer (no float/double)
+            else if (op == BIT_AND_T || op == BIT_OR_T || op == BIT_XOR_T ||
+                     op == SHL_T || op == SHR_T) {
+                bool isIntL = (left == INT_KEYWORD_T || left == USIZE_KEYWORD_T || left == CHAR_KEYWORD_T);
+                bool isIntR = (right == INT_KEYWORD_T || right == USIZE_KEYWORD_T || right == CHAR_KEYWORD_T);
+                if (!isIntL || !isIntR)
+                    stage_error(STAGE_ANALYZER, e->loc, "operands of '%s' must be integer, got %s and %s", token_type_name(op), token_type_name(left), token_type_name(right));
+                // usize "wins" so masks/shifts on size_t stay unsigned
+                result = (left == USIZE_KEYWORD_T || right == USIZE_KEYWORD_T)
+                             ? USIZE_KEYWORD_T : INT_KEYWORD_T;
             } else {
                 stage_error(STAGE_ANALYZER, e->loc, "unknown binary operator %s", token_type_name(op));
                 result = INT_KEYWORD_T;
@@ -2110,6 +2122,53 @@ void analyze_stmt(Scope* scope, FuncTable* funcTable, Stmt* s, FuncSign* current
             mark_dangling_refs(scope, sym->name);
             break;
         }
+
+        case DEFER_S: {
+            // A deferred statement executes at function exit (LIFO), not at
+            // its textual position. We must still analyze its body now so
+            // codegen sees resolved types -- print format specifiers, called
+            // function signatures, arithmetic operand types. Without this the
+            // body's expressions keep analyzedType == 0 and codegen emits
+            // garbage (e.g. print() with no format specifiers).
+            Stmt* body = s->as.defer_stmt.body;
+            if (!body) break;
+
+            if (body->type == FREE_S) {
+                // `defer free p`: run the normal free analysis so the free's
+                // codegen fields get populated, then rewind the ownership
+                // bookkeeping. The variable is not actually freed until scope
+                // exit, so it must stay usable for the rest of the body; the
+                // deferred_free flag tells check_function_cleanup it is
+                // accounted for (no false "memory leak").
+                const char* nm  = body->as.free_stmt.varName;
+                const char* dot = strchr(nm, '.');
+                char base[128];
+                if (dot) {
+                    int n = (int)(dot - nm);
+                    if (n > (int)sizeof(base) - 1) n = (int)sizeof(base) - 1;
+                    memcpy(base, nm, n);
+                    base[n] = 0;
+                } else {
+                    snprintf(base, sizeof(base), "%s", nm);
+                }
+                Symbol* sym = lookup(scope, base);
+                VarState saved = sym ? sym->state : ALIVE;
+                analyze_stmt(scope, funcTable, body, currentFunc);
+                if (sym) {
+                    sym->state         = saved;  // not freed until scope exit
+                    sym->deferred_free = true;   // ...but no leak
+                }
+            } else {
+                analyze_stmt(scope, funcTable, body, currentFunc);
+            }
+            break;
+        }
+
+        case BREAK_S:
+        case CONTINUE_S:
+            // No semantic state to check -- loop-membership + label
+            // resolution are handled structurally by the parser/codegen.
+            break;
     }
 }
 
@@ -2209,11 +2268,11 @@ void check_function_cleanup(Scope* scope) {
     for (int i = 0; i < scope->count; i++) {
         Symbol* s = &scope->symbols[i];
         if (s->ownership == OWNERSHIP_OWN) {
-            if (s->state == ALIVE) {
+            if (s->state == ALIVE && !s->deferred_free) {
                 //this is a leak!
                 stage_error(STAGE_ANALYZER, NO_LOC, "Memory leak: '%s' is not freed or moved", s->name);
             }
-            //if state is MOVED or FREED, we are happy.
+            //if state is MOVED, FREED, or deferred-freed, we are happy.
         }
     }
 }

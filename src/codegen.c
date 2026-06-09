@@ -650,6 +650,11 @@ void emit_expr(Expr* e, FILE* out, FuncSignToName* fstn) {
                 case MORE_EQUALS_T: fprintf(out, " >= "); break;
                 case AND_T: fprintf(out, " && "); break;
                 case OR_T: fprintf(out, " || "); break;
+                case BIT_AND_T: fprintf(out, " & "); break;
+                case BIT_OR_T: fprintf(out, " | "); break;
+                case BIT_XOR_T: fprintf(out, " ^ "); break;
+                case SHL_T: fprintf(out, " << "); break;
+                case SHR_T: fprintf(out, " >> "); break;
                 default: fprintf(out, " ??? "); break;
             }
 

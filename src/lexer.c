@@ -450,7 +450,11 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
         }
 
         if (c == '<') {
-            if (code[i + 1] == '=') {
+            if (code[i + 1] == '<') {
+                tokens[count++] = (Token){ .type = SHL_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+                i += 2;
+                column += 2;
+            } else if (code[i + 1] == '=') {
                 tokens[count++] = (Token){ .type = LESS_EQUALS_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
                 i += 2;
                 column += 2;
@@ -463,7 +467,11 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
         }
 
         if (c == '>') {
-            if (code[i + 1] == '=') {
+            if (code[i + 1] == '>') {
+                tokens[count++] = (Token){ .type = SHR_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+                i += 2;
+                column += 2;
+            } else if (code[i + 1] == '=') {
                 tokens[count++] = (Token){ .type = MORE_EQUALS_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
                 i += 2;
                 column += 2;
@@ -482,12 +490,11 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 column += 2;
                 goto resize_check;
             } else {
-                //error with recovery - suggest && instead
-                SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
-                add_error(g_error_collector, STAGE_LEXER, loc, "single '&' not supported, did you mean '&&'?");
+                // single '&' -- bitwise AND
+                tokens[count++] = (Token){ .type = BIT_AND_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
                 i++;
                 column++;
-                continue;
+                goto resize_check;
             }
         }
 
@@ -507,13 +514,19 @@ Token* tokenize(char* code, int* out_count, const char* filename) {
                 column += 2;
                 goto resize_check;
             } else {
-                //error with recovery - suggest || instead
-                SourceLocation loc = {.line = line, .column = start_col, .filename = filename};
-                add_error(g_error_collector, STAGE_LEXER, loc, "single '|' not supported, did you mean '||'?");
+                // single '|' -- bitwise OR
+                tokens[count++] = (Token){ .type = BIT_OR_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
                 i++;
                 column++;
-                continue;
+                goto resize_check;
             }
+        }
+
+        if (c == '^') {
+            tokens[count++] = (Token){ .type = BIT_XOR_T, .value = NULL, .line = line, .column = start_col, .filename = filename };
+            i++;
+            column++;
+            goto resize_check;
         }
 
         // `#[name]` -- treat the leading `#` as a no-op marker so
@@ -643,6 +656,11 @@ const char* token_type_name(TokenType type) {
         case NEGATION_T: return "!";
         case AND_T: return "&&";
         case OR_T: return "||";
+        case BIT_AND_T: return "&";
+        case BIT_OR_T: return "|";
+        case BIT_XOR_T: return "^";
+        case SHL_T: return "<<";
+        case SHR_T: return ">>";
         case SEMICOLON_T: return ";";
         case COLON_T: return ":";
         case L_PAREN_T: return "(";

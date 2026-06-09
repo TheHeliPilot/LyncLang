@@ -1,0 +1,15 @@
+include std.io.*;
+def classify(n: int): int {
+    if (n < 0) { print(n, "negative"); }
+    else if (n == 0) { print(n, "zero"); }
+    else if (n < 10) { print(n, "small"); }
+    else { print(n, "big"); }
+    return 0;
+}
+def main(): int {
+    classify(-5);
+    classify(0);
+    classify(3);
+    classify(100);
+    return 0;
+}
